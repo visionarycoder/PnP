@@ -86,6 +86,9 @@ public static class ConstantsDictionaryBuilder
     /// </summary>
     /// <typeparam name="T">The type containing the constants.</typeparam>
     /// <returns>A dictionary where keys are member names and values are member values.</returns>
+    /// <remarks>
+    /// If a field and property have the same name, the property value will overwrite the field value in the dictionary.
+    /// </remarks>
     public static Dictionary<string, object?> BuildFromAll<T>()
     {
         return BuildFromAll(typeof(T));
@@ -97,6 +100,9 @@ public static class ConstantsDictionaryBuilder
     /// </summary>
     /// <param name="type">The type containing the constants.</param>
     /// <returns>A dictionary where keys are member names and values are member values.</returns>
+    /// <remarks>
+    /// If a field and property have the same name, the property value will overwrite the field value in the dictionary.
+    /// </remarks>
     public static Dictionary<string, object?> BuildFromAll(Type type)
     {
         var dictionary = BuildFromConstants(type);

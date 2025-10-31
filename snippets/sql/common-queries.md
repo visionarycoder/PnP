@@ -184,14 +184,33 @@ LIMIT 20;
 ```
 
 **Notes**: 
-- Standard SQL syntax compatible with MySQL, PostgreSQL, SQL Server
-- Some functions may need adjustment for specific databases:
-  - MySQL: `DATE_SUB()`, `LIMIT`
-  - PostgreSQL: `INTERVAL`, `LIMIT`
-  - SQL Server: `DATEADD()`, `TOP`
-  - Oracle: `ADD_MONTHS()`, `ROWNUM`
+- Standard SQL syntax with database-specific variations noted below
+- **MySQL/MariaDB**: Uses `DATE_SUB()`, `LIMIT`
+  ```sql
+  WHERE order_date >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY)
+  ORDER BY order_date DESC
+  LIMIT 10;
+  ```
+- **PostgreSQL**: Uses `INTERVAL`, `LIMIT`
+  ```sql
+  WHERE order_date >= CURRENT_DATE - INTERVAL '30 days'
+  ORDER BY order_date DESC
+  LIMIT 10;
+  ```
+- **SQL Server**: Uses `DATEADD()`, `TOP`
+  ```sql
+  WHERE order_date >= DATEADD(day, -30, GETDATE())
+  ORDER BY order_date DESC
+  OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY;
+  ```
+- **Oracle**: Uses `ADD_MONTHS()`, `ROWNUM` or `FETCH FIRST`
+  ```sql
+  WHERE order_date >= CURRENT_DATE - 30
+  ORDER BY order_date DESC
+  FETCH FIRST 10 ROWS ONLY;
+  ```
 - Always test UPDATE/DELETE queries with SELECT first
 - Use transactions for critical data modifications
 - Consider adding indexes on frequently queried columns
-- LIMIT syntax varies: MySQL/PostgreSQL use LIMIT, SQL Server uses TOP
+- Test queries in your specific database environment
 - Related: [Window Functions](window-functions.md), [Performance Optimization](performance-optimization.md)

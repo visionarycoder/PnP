@@ -47,9 +47,9 @@ EXPOSE 3000
 CMD ["node", "dist/index.js"]
 
 # ============================================
-# Example 2: Python Application
+# Example 2: Python Application (Multi-stage for compiled dependencies)
 # ============================================
-FROM python:3.11-slim
+FROM python:3.11-slim AS builder
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -58,7 +58,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Install system dependencies
+# Install build dependencies (only in builder stage)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends gcc && \
     rm -rf /var/lib/apt/lists/*
@@ -66,8 +66,20 @@ RUN apt-get update && \
 # Copy requirements first (for caching)
 COPY requirements.txt .
 
-# Install Python dependencies
+# Install Python dependencies (including those that need compilation)
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Production stage - minimal image without build tools
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /app
+
+# Copy only the installed packages from builder
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application
 COPY . .

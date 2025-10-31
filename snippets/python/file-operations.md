@@ -31,8 +31,14 @@ class FileOperations:
         except FileNotFoundError:
             print(f"File not found: {filepath}")
             return ""
+        except PermissionError:
+            print(f"Permission denied: {filepath}")
+            return ""
+        except UnicodeDecodeError as e:
+            print(f"Encoding error reading file: {e}")
+            return ""
         except Exception as e:
-            print(f"Error reading file: {e}")
+            print(f"Unexpected error reading file: {e}")
             return ""
     
     @staticmethod

@@ -40,10 +40,15 @@ public static class RetryHelper
                 
                 await Task.Delay(delay);
             }
+            catch (Exception lastEx)
+            {
+                // If we get here, all retries failed - preserve original exception
+                throw new AggregateException($"Operation failed after {maxRetries} retries", lastEx);
+            }
         }
         
-        // If we get here, all retries failed
-        throw new Exception($"Operation failed after {maxRetries} retries");
+        // This should never be reached due to the catch block above
+        throw new InvalidOperationException("Unexpected code path");
     }
     
     /// <summary>

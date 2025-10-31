@@ -16,6 +16,8 @@ public static class StringExtensions
     /// <returns>Truncated string with ellipsis if needed</returns>
     public static string Truncate(this string value, int maxLength)
     {
+        const string ellipsis = "...";
+        
         if (string.IsNullOrEmpty(value))
             return value;
             
@@ -25,12 +27,12 @@ public static class StringExtensions
         if (value.Length <= maxLength)
             return value;
             
-        // Reserve 3 characters for ellipsis
-        int truncateAt = maxLength - 3;
+        // Reserve characters for ellipsis
+        int truncateAt = maxLength - ellipsis.Length;
         if (truncateAt <= 0)
-            return "...";
+            return ellipsis;
             
-        return value.Substring(0, truncateAt) + "...";
+        return value.Substring(0, truncateAt) + ellipsis;
     }
 }
 ```

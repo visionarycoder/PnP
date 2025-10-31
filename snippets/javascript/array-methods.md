@@ -118,6 +118,12 @@ const sortNumbers = arr => [...arr].sort((a, b) => a - b);
 const sortBy = (arr, keyFn) => [...arr].sort((a, b) => {
   const aKey = keyFn(a);
   const bKey = keyFn(b);
+  
+  // Handle string comparison properly
+  if (typeof aKey === 'string' && typeof bKey === 'string') {
+    return aKey.localeCompare(bKey);
+  }
+  
   return aKey < bKey ? -1 : aKey > bKey ? 1 : 0;
 });
 

@@ -1,0 +1,63 @@
+# .github/workflows/verify-copilot-instructions.yml
+name: Verify Copilot Instructions
+on:
+  pull_request:
+    paths:
+      - ".github/copilot-instructions.md"
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for version comparison
+      
+      - name: Ensure version bumped
+        run: |
+          # Check if copilot-instructions.md was changed
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep '.github/copilot-instructions.md' || true)
+          
+          if [ -n "$CHANGED" ]; then
+            echo "Copilot instructions file was modified, checking version..."
+            
+            # Extract version from base branch (handle case where file might not exist in base)
+            BASE_VER=$(git show origin/${{ github.base_ref }}:.github/copilot-instructions.md 2>/dev/null | grep -E '\*\*Version:\*\*\s*[0-9]+\.[0-9]+\.[0-9]+' | head -1 | sed -E 's/.*\*\*Version:\*\*\s*([0-9]+\.[0-9]+\.[0-9]+).*/\1/' | tr -d '\r' || echo "0.0.0")
+            
+            # Extract version from current HEAD
+            HEAD_VER=$(grep -E '\*\*Version:\*\*\s*[0-9]+\.[0-9]+\.[0-9]+' .github/copilot-instructions.md | head -1 | sed -E 's/.*\*\*Version:\*\*\s*([0-9]+\.[0-9]+\.[0-9]+).*/\1/' | tr -d '\r')
+            
+            echo "Base version: $BASE_VER"
+            echo "Head version: $HEAD_VER"
+            
+            if [ "$BASE_VER" = "$HEAD_VER" ]; then
+              echo "❌ ERROR: Version was not bumped in .github/copilot-instructions.md"
+              echo "Please update the version number when making changes to Copilot instructions."
+              exit 1
+            else
+              echo "✅ Version was properly bumped from $BASE_VER to $HEAD_VER"
+            fi
+          else
+            echo "No changes to copilot-instructions.md detected."
+          fi
+      
+      - name: Validate file format
+        run: |
+          echo "Validating copilot-instructions.md format..."
+          
+          # Check that file has required sections
+          if ! grep -q "^# GitHub Copilot Instructions" .github/copilot-instructions.md; then
+            echo "❌ ERROR: Missing main header"
+            exit 1
+          fi
+          
+          if ! grep -q "^\*\*Version:\*\*" .github/copilot-instructions.md; then
+            echo "❌ ERROR: Missing version information"
+            exit 1
+          fi
+          
+          if ! grep -q "## Changelog" .github/copilot-instructions.md; then
+            echo "❌ ERROR: Missing changelog section"
+            exit 1
+          fi
+          
+          echo "✅ File format validation passed"

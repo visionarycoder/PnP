@@ -1,0 +1,36 @@
+name: Update ADR Index
+
+on:
+  push:
+    paths:
+      - 'docs/architecture-decision-records/ADR-*.md'
+  workflow_dispatch:
+
+jobs:
+  update-adr-index:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install ADR tools
+        run: |
+          npm install -g adr-tools-lite
+
+      - name: Generate ADR index
+        run: |
+          adr generate-index docs/architecture-decision-records > docs/architecture-decision-records/index.md
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/architecture-decision-records/index.md
+          git commit -m "chore(adr): update ADR index"
+          git push

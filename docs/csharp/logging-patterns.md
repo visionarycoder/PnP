@@ -56,7 +56,7 @@ public class LogContext
         contextStorage.Value = context;
     }
     
-    public static T GetProperty&lt;T&gt;(string key, T defaultValue = default)
+    public static T GetProperty<T>(string key, T defaultValue = default)
     {
         var context = contextStorage.Value;
         if (context?.TryGetValue(key, out var value) == true && value is T typedValue)
@@ -178,9 +178,9 @@ public interface IOperationLogger
 {
     IOperationTracker BeginOperation(string operationName, 
         Dictionary<string, object> properties = null);
-    Task&lt;T&gt; LogOperationAsync&lt;T&gt;(string operationName, Func<Task&lt;T&gt;> operation, 
+    Task<T> LogOperationAsync<T>(string operationName, Func<Task<T>> operation, 
         Dictionary<string, object> properties = null);
-    T LogOperation&lt;T&gt;(string operationName, Func&lt;T&gt; operation, 
+    T LogOperation<T>(string operationName, Func<T> operation, 
         Dictionary<string, object> properties = null);
     Task LogOperationAsync(string operationName, Func<Task> operation, 
         Dictionary<string, object> properties = null);
@@ -217,7 +217,7 @@ public class OperationLogger : IOperationLogger
         return new OperationTracker(logger, operationName, properties);
     }
     
-    public async Task&lt;T&gt; LogOperationAsync&lt;T&gt;(string operationName, Func<Task&lt;T&gt;> operation, 
+    public async Task<T> LogOperationAsync<T>(string operationName, Func<Task<T>> operation, 
         Dictionary<string, object> properties = null)
     {
         using var tracker = BeginOperation(operationName, properties);
@@ -238,7 +238,7 @@ public class OperationLogger : IOperationLogger
         }
     }
     
-    public T LogOperation&lt;T&gt;(string operationName, Func&lt;T&gt; operation, 
+    public T LogOperation<T>(string operationName, Func<T> operation, 
         Dictionary<string, object> properties = null)
     {
         using var tracker = BeginOperation(operationName, properties);
@@ -306,8 +306,8 @@ public class OperationTracker : IOperationTracker
             ["StartTime"] = DateTime.UtcNow
         };
         
-        checkpoints = new List<OperationCheckpoint>();
-        metrics = new List<OperationMetric>();
+        checkpoints = new();
+        metrics = new();
         stopwatch = Stopwatch.StartNew();
         
         logger.LogInformation("Operation {OperationName} started with ID {OperationId}", 
@@ -420,7 +420,7 @@ public class AuditEvent
     public string IpAddress { get; set; }
     public string UserAgent { get; set; }
     public string CorrelationId { get; set; }
-    public Dictionary<string, object> Details { get; set; } = new Dictionary<string, object>();
+    public Dictionary<string, object> Details { get; set; } = new();
     public string SessionId { get; set; }
     public string TenantId { get; set; }
 }
@@ -567,7 +567,7 @@ public class AuditLogger : IAuditLogger
         
         // Use reflection to convert object properties to dictionary
         var properties = obj.GetType().GetProperties();
-        var result = new Dictionary<string, object>();
+        var result = new();
         
         foreach (var prop in properties)
         {
@@ -731,7 +731,7 @@ public class MetricCollector
     private double sum = 0;
     private double min = double.MaxValue;
     private double max = double.MinValue;
-    private readonly object lockObj = new object();
+    private readonly object lockObj = new();
     
     public string Name { get; }
     public MetricType Type { get; }
@@ -868,7 +868,7 @@ public class LogSanitizer : ILogSanitizer
     {
         if (properties == null) return null;
         
-        var sanitized = new Dictionary<string, object>();
+        var sanitized = new();
         
         foreach (var prop in properties)
         {
@@ -909,7 +909,7 @@ public class LogSanitizer : ILogSanitizer
         {
             // Convert to dictionary using reflection for sanitization
             var properties = obj.GetType().GetProperties();
-            var dict = new Dictionary<string, object>();
+            var dict = new();
             
             foreach (var prop in properties)
             {
@@ -989,7 +989,7 @@ public sealed class HighPerformanceLogger
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private object SanitizeArg&lt;T&gt;(T arg)
+    private object SanitizeArg<T>(T arg)
     {
         return sanitizer?.SanitizeObject(arg) ?? arg;
     }
@@ -1038,7 +1038,7 @@ public class AdvancedLoggingOptions
     public bool EnableOperationLogging { get; set; } = true;
     public bool EnableAuditLogging { get; set; } = true;
     public bool EnableMetrics { get; set; } = true;
-    public List<string> SensitiveKeys { get; set; } = new List<string>();
+    public List<string> SensitiveKeys { get; set; } = new();
 }
 ```
 

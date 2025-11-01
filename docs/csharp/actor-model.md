@@ -49,7 +49,7 @@ public interface IActorContext
     IActorRef Sender { get; }
     IActorSystem System { get; }
     ILogger Logger { get; }
-    Task<IActorRef> ActorOf&lt;T&gt;(string name = null) where T : ActorBase, new();
+    Task<IActorRef> ActorOf<T>(string name = null) where T : ActorBase, new();
     Task Tell(IActorRef target, IMessage message);
     Task<TResponse> Ask<TResponse>(IActorRef target, IMessage message, TimeSpan timeout);
     Task Stop(IActorRef actor);
@@ -72,7 +72,7 @@ public interface IActorRef
 public interface IActorSystem : IDisposable
 {
     string Name { get; }
-    Task<IActorRef> ActorOf&lt;T&gt;(string name = null) where T : ActorBase, new();
+    Task<IActorRef> ActorOf<T>(string name = null) where T : ActorBase, new();
     IActorRef GetActor(string path);
     Task Stop(IActorRef actor);
     Task Shutdown();
@@ -110,7 +110,7 @@ public class OneForOneStrategy : ISupervisionStrategy
     public OneForOneStrategy(SupervisionDirective defaultDirective = SupervisionDirective.Restart)
     {
         this.defaultDirective = defaultDirective;
-        exceptionDirectives = new Dictionary<Type, SupervisionDirective>();
+        exceptionDirectives = new();
     }
 
     public OneForOneStrategy Handle<TException>(SupervisionDirective directive) where TException : Exception
@@ -446,9 +446,9 @@ public class ActorContext : IActorContext
         sender = senderRef;
     }
 
-    public Task<IActorRef> ActorOf&lt;T&gt;(string name = null) where T : ActorBase, new()
+    public Task<IActorRef> ActorOf<T>(string name = null) where T : ActorBase, new()
     {
-        return system.ActorOf&lt;T&gt;(name);
+        return system.ActorOf<T>(name);
     }
 
     public Task Tell(IActorRef target, IMessage message)
@@ -555,14 +555,14 @@ public class ActorSystem : IActorSystem, IDisposable
         Name = name;
         this.serviceProvider = serviceProvider;
         this.logger = logger;
-        actors = new ConcurrentDictionary<string, IActorRef>();
+        actors = new();
     }
 
     public string Name { get; }
 
     public event EventHandler<ActorSystemEventArgs> ActorSystemEvent;
 
-    public async Task<IActorRef> ActorOf&lt;T&gt;(string name = null) where T : ActorBase, new()
+    public async Task<IActorRef> ActorOf<T>(string name = null) where T : ActorBase, new()
     {
         if (isShuttingDown) throw new InvalidOperationException("Actor system is shutting down");
 
@@ -576,7 +576,7 @@ public class ActorSystem : IActorSystem, IDisposable
 
         var actor = new T();
         var mailbox = new BoundedMailbox();
-        var actorLogger = serviceProvider.GetService<ILoggerFactory>()?.CreateLogger&lt;T&gt;();
+        var actorLogger = serviceProvider.GetService<ILoggerFactory>()?.CreateLogger<T>();
         
         var actorRef = new ActorRef(actorId, path, actor, mailbox, actorLogger);
         var context = new ActorContext(actorId, actorRef, this, actorLogger);
@@ -709,7 +709,7 @@ public record WorkFailedMessage(string WorkId, Exception Exception) : ActorMessa
 
 public class WorkerActor : ActorBase
 {
-    private readonly Dictionary<string, DateTime> activeWork = new Dictionary<string, DateTime>();
+    private readonly Dictionary<string, DateTime> activeWork = new();
 
     protected override async Task OnReceive(IMessage message)
     {
@@ -805,7 +805,7 @@ public record ChildActorTerminatedMessage(string ChildName, IActorRef ChildRef) 
 
 public class SupervisorActor : ActorBase
 {
-    private readonly Dictionary<string, IActorRef> children = new Dictionary<string, IActorRef>();
+    private readonly Dictionary<string, IActorRef> children = new();
 
     public override ISupervisionStrategy SupervisionStrategy =>
         new OneForOneStrategy()
@@ -942,7 +942,7 @@ public class ActorSystemBuilder
 // Performance monitoring for actor systems
 public class ActorSystemMetrics
 {
-    private readonly ConcurrentDictionary<string, ActorMetrics> actorMetrics = new ConcurrentDictionary<string, ActorMetrics>();
+    private readonly ConcurrentDictionary<string, ActorMetrics> actorMetrics = new();
 
     public void RecordMessage(string actorId, string messageType, TimeSpan processingTime, bool successful)
     {
@@ -982,12 +982,12 @@ public class ActorSystemMetrics
 
 public class ActorMetrics
 {
-    private readonly ConcurrentDictionary<string, long> messageTypeCounts = new ConcurrentDictionary<string, long>();
-    private readonly ConcurrentDictionary<string, long> lifecycleEventCounts = new ConcurrentDictionary<string, long>();
+    private readonly ConcurrentDictionary<string, long> messageTypeCounts = new();
+    private readonly ConcurrentDictionary<string, long> lifecycleEventCounts = new();
     private volatile long totalMessages = 0;
     private volatile long successfulMessages = 0;
     private volatile long totalProcessingTicks = 0;
-    private readonly object lockObject = new object();
+    private readonly object lockObject = new();
     private DateTime lastResetTime = DateTime.UtcNow;
 
     public long TotalMessages => totalMessages;
@@ -1080,7 +1080,7 @@ public class ClusteredActorSystem : ActorSystem, IRemoteActorSystem
     {
         localAddress = address;
         localPort = port;
-        remoteSystems = new ConcurrentDictionary<string, RemoteSystemInfo>();
+        remoteSystems = new();
     }
 
     public Task<IActorRef> ActorSelection(string path)
@@ -1149,7 +1149,7 @@ var worker1 = await actorSystem.ActorOf<WorkerActor>("worker1");
 var worker2 = await actorSystem.ActorOf<WorkerActor>("worker2");
 
 // Send work messages
-var workTasks = new List<Task>();
+var workTasks = new();
 
 for (int i = 1; i <= 10; i++)
 {
@@ -1216,7 +1216,7 @@ actorSystem.ActorSystemEvent += (sender, args) =>
 };
 
 // Create multiple actors to demonstrate monitoring
-var monitoredActors = new List<IActorRef>();
+var monitoredActors = new();
 
 for (int i = 1; i <= 5; i++)
 {
@@ -1259,7 +1259,7 @@ Console.WriteLine($"System Stats - Total Actors: {systemStats.TotalActors}, " +
 // Example 5: Concurrent Message Processing
 Console.WriteLine("\nConcurrent Message Processing Examples:");
 
-var concurrentWorkers = new List<IActorRef>();
+var concurrentWorkers = new();
 
 // Create a pool of worker actors
 for (int i = 1; i <= 5; i++)
@@ -1341,7 +1341,7 @@ foreach (var work in faultWorkTasks)
 Console.WriteLine("\nPerformance and Load Testing Examples:");
 
 const int loadTestMessages = 10000;
-var loadTestWorkers = new List<IActorRef>();
+var loadTestWorkers = new();
 
 // Create worker pool
 for (int i = 0; i < Environment.ProcessorCount; i++)

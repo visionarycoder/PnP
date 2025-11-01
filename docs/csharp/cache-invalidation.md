@@ -51,7 +51,7 @@ public class CacheInvalidationContext
     public string TriggerKey { get; set; }
     public string TriggerType { get; set; }
     public DateTime Timestamp { get; set; }
-    public IDictionary<string, object> Properties { get; set; } = new Dictionary<string, object>();
+    public IDictionary<string, object> Properties { get; set; } = new();
     public string UserId { get; set; }
     public string TenantId { get; set; }
 }
@@ -89,7 +89,7 @@ public class CacheInvalidationService : ICacheInvalidationService, IDisposable
         this.options = options?.Value ?? new CacheInvalidationOptions();
         this.logger = logger;
         
-        invalidationRules = new List<ICacheInvalidationRule>();
+        invalidationRules = new();
         invalidationStream = new Subject<CacheInvalidationEvent>();
         
         // Set up cleanup timer for expired invalidation records
@@ -461,7 +461,7 @@ public class CacheInvalidationService : ICacheInvalidationService, IDisposable
     private async Task<IEnumerable<string>> GetKeysFromRulesAsync(CacheInvalidationContext context,
         CancellationToken token)
     {
-        var allAdditionalKeys = new List<string>();
+        var allAdditionalKeys = new();
 
         foreach (var rule in invalidationRules)
         {
@@ -789,7 +789,7 @@ public class SmartCacheWarmingService : BackgroundService
             options.TopKeysCount, 
             token).ConfigureAwait(false);
 
-        var keysToWarm = new List<string>();
+        var keysToWarm = new();
         
         foreach (var key in frequentKeys)
         {
@@ -845,7 +845,7 @@ public class TimeBasedInvalidationRule : ICacheInvalidationRule
         TimeSpan maxAge,
         Func<CacheInvalidationContext, Task<DateTime?>> lastModifiedSelector)
     {
-        this.maxAge = maxAge;
+        maxAge = maxAge;
         this.lastModifiedSelector = lastModifiedSelector ?? throw new ArgumentNullException(nameof(lastModifiedSelector));
     }
 
@@ -916,7 +916,7 @@ public class CacheDependencyTracker : ICacheDependencyTracker
 
     public Task RemoveDependenciesAsync(string key, CancellationToken token = default)
     {
-        var keysToRemove = new List<string>();
+        var keysToRemove = new();
         
         foreach (var kvp in dependencies)
         {
@@ -1487,7 +1487,7 @@ public class MockCacheWarmingStrategy : ICacheWarmingStrategy
 
     public MockCacheWarmingStrategy(IDistributedCache cache)
     {
-        this.cache = cache;
+        cache = cache;
     }
 
     public async Task WarmCacheAsync(IEnumerable<string> keys, CancellationToken token = default)

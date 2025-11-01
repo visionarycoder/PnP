@@ -54,7 +54,7 @@ public static class BatchingExtensions
 
     private static IEnumerable<T[]> ChunkIterator<T>(IEnumerable<T> source, int size, int overlap)
     {
-        var buffer = new Queue<T>();
+        var buffer = new();
         
         foreach (var item in source)
         {
@@ -97,7 +97,7 @@ public static class BatchingExtensions
         Func<T, bool> predicate,
         bool includeDelimiter)
     {
-        var current = new List<T>();
+        var current = new();
         
         foreach (var item in source)
         {
@@ -109,7 +109,7 @@ public static class BatchingExtensions
                 if (current.Any())
                 {
                     yield return current;
-                    current = new List<T>();
+                    current = new();
                 }
             }
             else
@@ -139,7 +139,7 @@ public static class WindowingExtensions
 
     private static IEnumerable<T[]> SlidingWindowIterator<T>(IEnumerable<T> source, int windowSize)
     {
-        var buffer = new Queue<T>();
+        var buffer = new();
         
         foreach (var item in source)
         {
@@ -681,7 +681,7 @@ public static class AsyncLinqExtensions
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
 
-        var list = new List<T>();
+        var list = new();
         
         await foreach (var item in source.WithCancellation(cancellationToken))
         {
@@ -753,17 +753,17 @@ public static class PerformanceExtensions
 // Supporting classes
 public class Grouping<TKey, TElement> : IGrouping<TKey, TElement>
 {
-    private readonly List<TElement> _elements;
+    private readonly List<TElement> elements;
 
     public Grouping(TKey key, IEnumerable<TElement> elements)
     {
         Key = key;
-        _elements = elements.ToList();
+        elements = elements.ToList();
     }
 
     public TKey Key { get; }
 
-    public IEnumerator<TElement> GetEnumerator() => _elements.GetEnumerator();
+    public IEnumerator<TElement> GetEnumerator() => elements.GetEnumerator();
 
     System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
 }

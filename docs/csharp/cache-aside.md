@@ -55,7 +55,7 @@ public class CacheAsideOptions
     public int MaxConcurrentFactoryCalls { get; set; } = Environment.ProcessorCount;
     public bool EnableStatistics { get; set; } = true;
     public string[] Tags { get; set; } = Array.Empty<string>();
-    public IDictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>();
+    public IDictionary<string, object> Metadata { get; set; } = new();
 }
 
 // Multi-level cache-aside service
@@ -82,9 +82,9 @@ public class MultiLevelCacheAsideService<TKey, TValue> : ICacheAsideService<TKey
         this.defaultOptions = options?.Value ?? new CacheAsideOptions();
         this.logger = logger;
         
-        factorySemaphore = new SemaphoreSlim(defaultOptions.MaxConcurrentFactoryCalls, 
+        factorySemaphore = new(defaultOptions.MaxConcurrentFactoryCalls, 
             defaultOptions.MaxConcurrentFactoryCalls);
-        keySemaphores = new ConcurrentDictionary<TKey, SemaphoreSlim>();
+        keySemaphores = new();
         statistics = new CacheAsideStatistics();
         
         // Set up statistics timer
@@ -221,8 +221,8 @@ public class MultiLevelCacheAsideService<TKey, TValue> : ICacheAsideService<TKey
             AllowNullValues = defaultOptions.AllowNullValues
         };
 
-        var results = new Dictionary<TKey, TValue>();
-        var cacheMisses = new List<TKey>();
+        var results = new();
+        var cacheMisses = new();
 
         // Check memory cache first
         foreach (var key in keyList)
@@ -459,7 +459,7 @@ public class MultiLevelCacheAsideService<TKey, TValue> : ICacheAsideService<TKey
     private async Task<IDictionary<TKey, TValue>> GetManyFromDistributedCacheAsync(
         IEnumerable<TKey> keys, CacheAsideOptions options, CancellationToken token)
     {
-        var results = new Dictionary<TKey, TValue>();
+        var results = new();
         
         foreach (var key in keys)
         {
@@ -645,7 +645,7 @@ public class ReadThroughCacheService<TKey, TValue> : ICacheAsideService<TKey, TV
         {
             valueFactory = async keyList =>
             {
-                var results = new Dictionary<TKey, TValue>();
+                var results = new();
                 foreach (var key in keyList)
                 {
                     var value = await defaultValueFactory(key).ConfigureAwait(false);
@@ -683,7 +683,7 @@ public class ReadThroughCacheService<TKey, TValue> : ICacheAsideService<TKey, TV
         {
             valueFactory = async keyList =>
             {
-                var results = new Dictionary<TKey, TValue>();
+                var results = new();
                 foreach (var key in keyList)
                 {
                     var value = await defaultValueFactory(key).ConfigureAwait(false);
@@ -898,12 +898,12 @@ public class CachedRepository<TEntity, TKey> : ICachedRepository<TEntity, TKey>
 }
 
 // Supporting classes and interfaces
-public class CacheEntry&lt;T&gt;
+public class CacheEntry<T>
 {
     public T Value { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? ExpiresAt { get; set; }
-    public IDictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>();
+    public IDictionary<string, object> Metadata { get; set; } = new();
 }
 
 public enum CacheLevel
@@ -1071,7 +1071,7 @@ Console.WriteLine($"Cached: {user1Cached.Name}");
 var userIds = new[] { 2, 3, 4, 5 };
 var users = await cacheService.GetManyAsync(userIds, async ids =>
 {
-    var result = new Dictionary<int, User>();
+    var result = new();
     foreach (var id in ids)
     {
         result[id] = new User { Id = id, Name = $"User {id}", Email = $"user{id}@example.com" };
@@ -1110,7 +1110,7 @@ var popularUserIds = Enumerable.Range(100, 50).ToArray(); // Users 100-149
 await cacheService.WarmupAsync(popularUserIds, async ids =>
 {
     Console.WriteLine($"Warming up cache with {ids.Count()} popular users...");
-    var result = new Dictionary<int, User>();
+    var result = new();
     
     foreach (var id in ids)
     {

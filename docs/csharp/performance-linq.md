@@ -21,28 +21,28 @@ using System.Threading.Tasks;
 public static class PooledLinqExtensions
 {
     // Convert to array using ArrayPool for better memory management
-    public static T[] ToPooledArray&lt;T&gt;(this IEnumerable&lt;T&gt; source, out ArrayPool&lt;T&gt; pool)
+    public static T[] ToPooledArray<T>(this IEnumerable<T> source, out ArrayPool<T> pool)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
 
-        pool = ArrayPool&lt;T&gt;.Shared;
+        pool = ArrayPool<T>.Shared;
         
-        if (source is ICollection&lt;T&gt; collection)
+        if (source is ICollection<T> collection)
         {
             var array = pool.Rent(collection.Count);
             collection.CopyTo(array, 0);
             return array;
         }
 
-        var list = new List&lt;T&gt;(source);
+        var list = new List<T>(source);
         var pooledArray = pool.Rent(list.Count);
         list.CopyTo(pooledArray, 0);
         return pooledArray;
     }
 
     // Batch processing with memory pooling
-    public static IEnumerable<ReadOnlyMemory&lt;T&gt;> BatchPooled&lt;T&gt;(
-        this IEnumerable&lt;T&gt; source, 
+    public static IEnumerable<ReadOnlyMemory<T>> BatchPooled<T>(
+        this IEnumerable<T> source, 
         int batchSize)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
@@ -51,11 +51,11 @@ public static class PooledLinqExtensions
         return BatchPooledIterator(source, batchSize);
     }
 
-    private static IEnumerable<ReadOnlyMemory&lt;T&gt;> BatchPooledIterator&lt;T&gt;(
-        IEnumerable&lt;T&gt; source, 
+    private static IEnumerable<ReadOnlyMemory<T>> BatchPooledIterator<T>(
+        IEnumerable<T> source, 
         int batchSize)
     {
-        var pool = ArrayPool&lt;T&gt;.Shared;
+        var pool = ArrayPool<T>.Shared;
         var buffer = pool.Rent(batchSize);
         var count = 0;
 
@@ -67,14 +67,14 @@ public static class PooledLinqExtensions
                 
                 if (count == batchSize)
                 {
-                    yield return new ReadOnlyMemory&lt;T&gt;(buffer, 0, count);
+                    yield return new ReadOnlyMemory<T>(buffer, 0, count);
                     count = 0;
                 }
             }
 
             if (count > 0)
             {
-                yield return new ReadOnlyMemory&lt;T&gt;(buffer, 0, count);
+                yield return new ReadOnlyMemory<T>(buffer, 0, count);
             }
         }
         finally
@@ -206,8 +206,8 @@ public static class SpanLinqExtensions
     }
 
     // Fast binary search on sorted spans
-    public static int BinarySearchFast&lt;T&gt;(this ReadOnlySpan&lt;T&gt; span, T value) 
-        where T : IComparable&lt;T&gt;
+    public static int BinarySearchFast<T>(this ReadOnlySpan<T> span, T value) 
+        where T : IComparable<T>
     {
         var left = 0;
         var right = span.Length - 1;
@@ -240,8 +240,8 @@ public static class SpanLinqExtensions
     }
 
     // Fast equality comparison
-    public static bool SequenceEqualFast&lt;T&gt;(this ReadOnlySpan&lt;T&gt; first, ReadOnlySpan&lt;T&gt; second) 
-        where T : IEquatable&lt;T&gt;
+    public static bool SequenceEqualFast<T>(this ReadOnlySpan<T> first, ReadOnlySpan<T> second) 
+        where T : IEquatable<T>
     {
         return first.SequenceEqual(second);
     }
@@ -252,7 +252,7 @@ public static class ConcurrentLinqExtensions
 {
     // Parallel aggregation with partitioning
     public static TResult ParallelAggregate<T, TResult>(
-        this IEnumerable&lt;T&gt; source,
+        this IEnumerable<T> source,
         TResult seed,
         Func<TResult, T, TResult> func,
         Func<TResult, TResult, TResult> combiner,
@@ -262,7 +262,7 @@ public static class ConcurrentLinqExtensions
         if (func == null) throw new ArgumentNullException(nameof(func));
         if (combiner == null) throw new ArgumentNullException(nameof(combiner));
 
-        var parallelOptions = new ParallelQuery&lt;T&gt;(source);
+        var parallelOptions = new ParallelQuery<T>(source);
         
         if (maxDegreeOfParallelism.HasValue)
         {
@@ -273,7 +273,7 @@ public static class ConcurrentLinqExtensions
     }
 
     // Thread-safe counting with atomic operations
-    public static long CountAtomic&lt;T&gt;(this IEnumerable&lt;T&gt; source, Func<T, bool> predicate)
+    public static long CountAtomic<T>(this IEnumerable<T> source, Func<T, bool> predicate)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -292,9 +292,9 @@ public static class ConcurrentLinqExtensions
     }
 
     // Lock-free parallel processing with partitioner
-    public static void ParallelForEachPartitioned&lt;T&gt;(
-        this IEnumerable&lt;T&gt; source,
-        Action&lt;T&gt; action,
+    public static void ParallelForEachPartitioned<T>(
+        this IEnumerable<T> source,
+        Action<T> action,
         int partitionSize = 1000)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
@@ -307,7 +307,7 @@ public static class ConcurrentLinqExtensions
 
     // Concurrent collection building
     public static ConcurrentBag<TResult> SelectConcurrent<T, TResult>(
-        this IEnumerable&lt;T&gt; source,
+        this IEnumerable<T> source,
         Func<T, TResult> selector,
         int maxDegreeOfParallelism = -1)
     {
@@ -333,7 +333,7 @@ public static class ConcurrentLinqExtensions
 public static class OptimizedAlgorithmExtensions
 {
     // Fast median calculation using Quickselect algorithm
-    public static T QuickSelectMedian&lt;T&gt;(this IEnumerable&lt;T&gt; source) where T : IComparable&lt;T&gt;
+    public static T QuickSelectMedian<T>(this IEnumerable<T> source) where T : IComparable<T>
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
 
@@ -344,7 +344,7 @@ public static class OptimizedAlgorithmExtensions
         return QuickSelect(array, 0, array.Length - 1, medianIndex);
     }
 
-    private static T QuickSelect&lt;T&gt;(T[] array, int left, int right, int k) where T : IComparable&lt;T&gt;
+    private static T QuickSelect<T>(T[] array, int left, int right, int k) where T : IComparable<T>
     {
         if (left == right) return array[left];
 
@@ -358,7 +358,7 @@ public static class OptimizedAlgorithmExtensions
             return QuickSelect(array, pivotIndex + 1, right, k);
     }
 
-    private static int Partition&lt;T&gt;(T[] array, int left, int right) where T : IComparable&lt;T&gt;
+    private static int Partition<T>(T[] array, int left, int right) where T : IComparable<T>
     {
         var pivot = array[right];
         var i = left;
@@ -377,13 +377,13 @@ public static class OptimizedAlgorithmExtensions
     }
 
     // Optimized top-K selection using min-heap
-    public static IEnumerable&lt;T&gt; TopK&lt;T&gt;(this IEnumerable&lt;T&gt; source, int k, IComparer&lt;T&gt;? comparer = null)
+    public static IEnumerable<T> TopK<T>(this IEnumerable<T> source, int k, IComparer<T>? comparer = null)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
         if (k <= 0) throw new ArgumentOutOfRangeException(nameof(k));
 
-        comparer ??= Comparer&lt;T&gt;.Default;
-        var heap = new SortedSet&lt;T&gt;(comparer);
+        comparer ??= Comparer<T>.Default;
+        var heap = new SortedSet<T>(comparer);
 
         foreach (var item in source)
         {
@@ -402,7 +402,7 @@ public static class OptimizedAlgorithmExtensions
     }
 
     // Reservoir sampling for random selection
-    public static T[] ReservoirSample&lt;T&gt;(this IEnumerable&lt;T&gt; source, int sampleSize, Random? random = null)
+    public static T[] ReservoirSample<T>(this IEnumerable<T> source, int sampleSize, Random? random = null)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
         if (sampleSize <= 0) throw new ArgumentOutOfRangeException(nameof(sampleSize));
@@ -440,8 +440,8 @@ public static class OptimizedAlgorithmExtensions
     }
 
     // Bloom filter for membership testing
-    public static BloomFilter&lt;T&gt; ToBloomFilter&lt;T&gt;(
-        this IEnumerable&lt;T&gt; source,
+    public static BloomFilter<T> ToBloomFilter<T>(
+        this IEnumerable<T> source,
         int expectedElements,
         double falsePositiveRate = 0.01)
     {
@@ -450,7 +450,7 @@ public static class OptimizedAlgorithmExtensions
         if (falsePositiveRate <= 0 || falsePositiveRate >= 1) 
             throw new ArgumentOutOfRangeException(nameof(falsePositiveRate));
 
-        var bloomFilter = new BloomFilter&lt;T&gt;(expectedElements, falsePositiveRate);
+        var bloomFilter = new BloomFilter<T>(expectedElements, falsePositiveRate);
         
         foreach (var item in source)
         {
@@ -466,7 +466,7 @@ public static class StreamingExtensions
 {
     // Memory-efficient streaming operations
     public static IEnumerable<TResult> SelectStreaming<T, TResult>(
-        this IEnumerable&lt;T&gt; source,
+        this IEnumerable<T> source,
         Func<T, TResult> selector,
         int bufferSize = 1024)
     {
@@ -477,11 +477,11 @@ public static class StreamingExtensions
     }
 
     private static IEnumerable<TResult> SelectStreamingIterator<T, TResult>(
-        IEnumerable&lt;T&gt; source,
+        IEnumerable<T> source,
         Func<T, TResult> selector,
         int bufferSize)
     {
-        var buffer = new List&lt;T&gt;(bufferSize);
+        var buffer = new List<T>(bufferSize);
 
         foreach (var item in source)
         {
@@ -505,15 +505,15 @@ public static class StreamingExtensions
     }
 
     // Lazy evaluation with caching for expensive operations
-    public static IEnumerable&lt;T&gt; CachedEnumerable&lt;T&gt;(this IEnumerable&lt;T&gt; source)
+    public static IEnumerable<T> CachedEnumerable<T>(this IEnumerable<T> source)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
 
-        return new CachedEnumerable&lt;T&gt;(source);
+        return new CachedEnumerable<T>(source);
     }
 
     // Efficient paging without loading all data
-    public static IEnumerable&lt;T&gt; Page&lt;T&gt;(this IEnumerable&lt;T&gt; source, int pageNumber, int pageSize)
+    public static IEnumerable<T> Page<T>(this IEnumerable<T> source, int pageNumber, int pageSize)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
         if (pageNumber < 0) throw new ArgumentOutOfRangeException(nameof(pageNumber));
@@ -523,7 +523,7 @@ public static class StreamingExtensions
     }
 
     // Interleaved enumeration of multiple sequences
-    public static IEnumerable&lt;T&gt; Interleave&lt;T&gt;(this IEnumerable<IEnumerable&lt;T&gt;> sources)
+    public static IEnumerable<T> Interleave<T>(this IEnumerable<IEnumerable<T>> sources)
     {
         if (sources == null) throw new ArgumentNullException(nameof(sources));
 
@@ -562,22 +562,22 @@ public static class StreamingExtensions
 }
 
 // Supporting classes and data structures
-public class CachedEnumerable&lt;T&gt; : IEnumerable&lt;T&gt;
+public class CachedEnumerable<T> : IEnumerable<T>
 {
-    private readonly IEnumerable&lt;T&gt; _source;
-    private readonly List&lt;T&gt; _cache;
-    private IEnumerator&lt;T&gt;? _enumerator;
-    private bool _isFullyCached;
-    private readonly object _lock = new object();
+    private readonly IEnumerable<T> source;
+    private readonly List<T> cache;
+    private IEnumerator<T>? enumerator;
+    private bool isFullyCached;
+    private readonly object lockObj = new();
 
-    public CachedEnumerable(IEnumerable&lt;T&gt; source)
+    public CachedEnumerable(IEnumerable<T> source)
     {
-        _source = source ?? throw new ArgumentNullException(nameof(source));
-        _cache = new List&lt;T&gt;();
-        _isFullyCached = false;
+        this.source = source ?? throw new ArgumentNullException(nameof(source));
+        cache = new();
+        isFullyCached = false;
     }
 
-    public IEnumerator&lt;T&gt; GetEnumerator()
+    public IEnumerator<T> GetEnumerator()
     {
         return new CachedEnumerator(this);
     }
@@ -587,15 +587,15 @@ public class CachedEnumerable&lt;T&gt; : IEnumerable&lt;T&gt;
         return GetEnumerator();
     }
 
-    private class CachedEnumerator : IEnumerator&lt;T&gt;
+    private class CachedEnumerator : IEnumerator<T>
     {
-        private readonly CachedEnumerable&lt;T&gt; _parent;
-        private int _index;
+        private readonly CachedEnumerable<T> parent;
+        private int index;
 
-        public CachedEnumerator(CachedEnumerable&lt;T&gt; parent)
+        public CachedEnumerator(CachedEnumerable<T> parent)
         {
-            _parent = parent;
-            _index = -1;
+            parent = parent;
+            index = -1;
         }
 
         public T Current { get; private set; } = default!;
@@ -604,45 +604,45 @@ public class CachedEnumerable&lt;T&gt; : IEnumerable&lt;T&gt;
 
         public bool MoveNext()
         {
-            _index++;
+            index++;
 
-            lock (_parent._lock)
+            lock (parent.lockObj)
             {
                 // If we already have this item cached, return it
-                if (_index < _parent._cache.Count)
+                if (index < parent.cache.Count)
                 {
-                    Current = _parent._cache[_index];
+                    Current = parent.cache[index];
                     return true;
                 }
 
                 // If we've fully cached, no more items
-                if (_parent._isFullyCached)
+                if (parent.isFullyCached)
                 {
                     return false;
                 }
 
                 // Initialize enumerator if needed
-                _parent._enumerator ??= _parent._source.GetEnumerator();
+                parent.enumerator ??= parent.source.GetEnumerator();
 
                 // Try to get next item from source
-                if (_parent._enumerator.MoveNext())
+                if (parent.enumerator.MoveNext())
                 {
-                    Current = _parent._enumerator.Current;
-                    _parent._cache.Add(Current);
+                    Current = parent.enumerator.Current;
+                    parent.cache.Add(Current);
                     return true;
                 }
 
                 // No more items, mark as fully cached
-                _parent._isFullyCached = true;
-                _parent._enumerator.Dispose();
-                _parent._enumerator = null;
+                parent.isFullyCached = true;
+                parent.enumerator.Dispose();
+                parent.enumerator = null;
                 return false;
             }
         }
 
         public void Reset()
         {
-            _index = -1;
+            index = -1;
         }
 
         public void Dispose()
@@ -652,27 +652,27 @@ public class CachedEnumerable&lt;T&gt; : IEnumerable&lt;T&gt;
     }
 }
 
-public class BloomFilter&lt;T&gt;
+public class BloomFilter<T>
 {
-    private readonly BitArray _bits;
-    private readonly int _hashFunctions;
-    private readonly int _bitArraySize;
+    private readonly BitArray bits;
+    private readonly int hashFunctions;
+    private readonly int bitArraySize;
 
     public BloomFilter(int expectedElements, double falsePositiveRate)
     {
-        _bitArraySize = (int)Math.Ceiling(-expectedElements * Math.Log(falsePositiveRate) / (Math.Log(2) * Math.Log(2)));
-        _hashFunctions = (int)Math.Ceiling(_bitArraySize / (double)expectedElements * Math.Log(2));
-        _bits = new BitArray(_bitArraySize);
+        bitArraySize = (int)Math.Ceiling(-expectedElements * Math.Log(falsePositiveRate) / (Math.Log(2) * Math.Log(2)));
+        hashFunctions = (int)Math.Ceiling(bitArraySize / (double)expectedElements * Math.Log(2));
+        bits = new BitArray(bitArraySize);
     }
 
     public void Add(T item)
     {
         var hashes = GetHashes(item);
         
-        for (int i = 0; i < _hashFunctions; i++)
+        for (int i = 0; i < hashFunctions; i++)
         {
-            var index = Math.Abs((hashes[0] + i * hashes[1]) % _bitArraySize);
-            _bits[index] = true;
+            var index = Math.Abs((hashes[0] + i * hashes[1]) % bitArraySize);
+            bits[index] = true;
         }
     }
 
@@ -680,10 +680,10 @@ public class BloomFilter&lt;T&gt;
     {
         var hashes = GetHashes(item);
         
-        for (int i = 0; i < _hashFunctions; i++)
+        for (int i = 0; i < hashFunctions; i++)
         {
-            var index = Math.Abs((hashes[0] + i * hashes[1]) % _bitArraySize);
-            if (!_bits[index])
+            var index = Math.Abs((hashes[0] + i * hashes[1]) % bitArraySize);
+            if (!bits[index])
                 return false;
         }
         
@@ -702,38 +702,38 @@ public class BloomFilter&lt;T&gt;
 // BitArray for bloom filter
 public class BitArray
 {
-    private readonly uint[] _array;
-    private readonly int _length;
+    private readonly uint[] array;
+    private readonly int length;
 
     public BitArray(int length)
     {
-        _length = length;
-        _array = new uint[(length + 31) / 32];
+        length = length;
+        array = new uint[(length + 31) / 32];
     }
 
     public bool this[int index]
     {
         get
         {
-            if (index < 0 || index >= _length)
+            if (index < 0 || index >= length)
                 throw new ArgumentOutOfRangeException(nameof(index));
                 
             var arrayIndex = index / 32;
             var bitIndex = index % 32;
-            return (_array[arrayIndex] & (1u << bitIndex)) != 0;
+            return (array[arrayIndex] & (1u << bitIndex)) != 0;
         }
         set
         {
-            if (index < 0 || index >= _length)
+            if (index < 0 || index >= length)
                 throw new ArgumentOutOfRangeException(nameof(index));
                 
             var arrayIndex = index / 32;
             var bitIndex = index % 32;
             
             if (value)
-                _array[arrayIndex] |= (1u << bitIndex);
+                array[arrayIndex] |= (1u << bitIndex);
             else
-                _array[arrayIndex] &= ~(1u << bitIndex);
+                array[arrayIndex] &= ~(1u << bitIndex);
         }
     }
 }
@@ -755,8 +755,8 @@ public static class PerformanceMeasurement
         return (result, stopwatch.Elapsed, finalMemory - initialMemory);
     }
 
-    public static IEnumerable&lt;T&gt; WithPerformanceLogging&lt;T&gt;(
-        this IEnumerable&lt;T&gt; source,
+    public static IEnumerable<T> WithPerformanceLogging<T>(
+        this IEnumerable<T> source,
         string operationName = "Operation")
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
@@ -1118,7 +1118,7 @@ Console.WriteLine($"Strings are equal (fast): {areEqual}");
 **Notes**:
 
 - ArrayPool usage significantly reduces garbage collection pressure for temporary arrays
-- Span&lt;T&gt; and ReadOnlySpan&lt;T&gt; provide zero-allocation slicing and high-performance operations
+- Span<T> and ReadOnlySpan<T> provide zero-allocation slicing and high-performance operations
 - Vectorization can provide 4x-8x performance improvements for numerical computations when hardware supports it
 - Parallel operations should be used judiciously - they have overhead and may not benefit small datasets
 - Bloom filters are memory-efficient for large-scale membership testing with acceptable false positive rates
@@ -1130,7 +1130,7 @@ Console.WriteLine($"Strings are equal (fast): {areEqual}");
 
 **Prerequisites**:
 
-- .NET Core 2.1+ or .NET Framework 4.7.1+ for Span&lt;T&gt; support
+- .NET Core 2.1+ or .NET Framework 4.7.1+ for Span<T> support
 - .NET Core 3.0+ for hardware intrinsics and advanced vectorization
 - Understanding of memory management, garbage collection, and performance profiling
 - Knowledge of parallel programming concepts and thread safety

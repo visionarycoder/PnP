@@ -49,7 +49,7 @@ public interface ISagaStep
 
 public interface ISagaOrchestrator
 {
-    Task<ISaga> StartSagaAsync&lt;T&gt;(T sagaData, CancellationToken token = default) where T : class;
+    Task<ISaga> StartSagaAsync<T>(T sagaData, CancellationToken token = default) where T : class;
     Task<ISaga> StartSagaAsync(string sagaType, object sagaData, CancellationToken token = default);
     Task<ISaga> GetSagaAsync(Guid sagaId, CancellationToken token = default);
     Task<IEnumerable<ISaga>> GetActiveSagasAsync(CancellationToken token = default);
@@ -82,9 +82,9 @@ public interface ISagaContext
     IServiceProvider ServiceProvider { get; }
     CancellationToken CancellationToken { get; }
     void SetStepData(string key, object value);
-    T GetStepData&lt;T&gt;(string key);
+    T GetStepData<T>(string key);
     void SetSagaData(string key, object value);
-    T GetSagaData&lt;T&gt;(string key);
+    T GetSagaData<T>(string key);
 }
 
 // Enums
@@ -124,7 +124,7 @@ public class SagaStepResult
     public bool IsSuccess { get; set; }
     public string ErrorMessage { get; set; }
     public Exception Exception { get; set; }
-    public IDictionary<string, object> OutputData { get; set; } = new Dictionary<string, object>();
+    public IDictionary<string, object> OutputData { get; set; } = new();
     public TimeSpan? RetryAfter { get; set; }
     public bool ShouldCompensate { get; set; } = true;
 
@@ -170,8 +170,8 @@ public class Saga : ISaga
         SagaType = sagaType ?? throw new ArgumentNullException(nameof(sagaType));
         Status = SagaStatus.NotStarted;
         CreatedAt = DateTime.UtcNow;
-        Data = new Dictionary<string, object>();
-        steps = new List<SagaStep>();
+        Data = new();
+        steps = new();
         
         if (sagaData != null)
         {
@@ -291,7 +291,7 @@ public class SagaStep : ISagaStep
         StepName = stepName ?? throw new ArgumentNullException(nameof(stepName));
         StepOrder = stepOrder;
         Status = SagaStepStatus.NotStarted;
-        StepData = new Dictionary<string, object>();
+        StepData = new();
     }
 
     public string StepName { get; }
@@ -356,7 +356,7 @@ public class SagaContext : ISagaContext
         SagaId = saga.SagaId;
         SagaType = saga.SagaType;
         SagaData = saga.Data;
-        StepData = new Dictionary<string, object>();
+        StepData = new();
         ServiceProvider = serviceProvider;
         CancellationToken = cancellationToken;
     }
@@ -373,7 +373,7 @@ public class SagaContext : ISagaContext
         StepData[key] = value;
     }
 
-    public T GetStepData&lt;T&gt;(string key)
+    public T GetStepData<T>(string key)
     {
         if (StepData.TryGetValue(key, out var value))
         {
@@ -381,9 +381,9 @@ public class SagaContext : ISagaContext
                 return directValue;
             
             if (value is JsonElement jsonElement)
-                return JsonSerializer.Deserialize&lt;T&gt;(jsonElement.GetRawText());
+                return JsonSerializer.Deserialize<T>(jsonElement.GetRawText());
                 
-            return JsonSerializer.Deserialize&lt;T&gt;(JsonSerializer.Serialize(value));
+            return JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(value));
         }
         
         return default(T);
@@ -394,7 +394,7 @@ public class SagaContext : ISagaContext
         SagaData[key] = value;
     }
 
-    public T GetSagaData&lt;T&gt;(string key)
+    public T GetSagaData<T>(string key)
     {
         if (SagaData.TryGetValue(key, out var value))
         {
@@ -402,9 +402,9 @@ public class SagaContext : ISagaContext
                 return directValue;
                 
             if (value is JsonElement jsonElement)
-                return JsonSerializer.Deserialize&lt;T&gt;(jsonElement.GetRawText());
+                return JsonSerializer.Deserialize<T>(jsonElement.GetRawText());
                 
-            return JsonSerializer.Deserialize&lt;T&gt;(JsonSerializer.Serialize(value));
+            return JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(value));
         }
         
         return default(T);
@@ -419,7 +419,7 @@ public class InMemorySagaRepository : ISagaRepository
 
     public InMemorySagaRepository(ILogger<InMemorySagaRepository> logger = null)
     {
-        sagas = new ConcurrentDictionary<Guid, ISaga>();
+        sagas = new();
         this.logger = logger;
     }
 
@@ -482,13 +482,13 @@ public class SagaOrchestrator : ISagaOrchestrator, IDisposable
         this.repository = repository ?? throw new ArgumentNullException(nameof(repository));
         this.serviceProvider = serviceProvider;
         this.logger = logger;
-        sagaDefinitions = new ConcurrentDictionary<string, SagaDefinition>();
+        sagaDefinitions = new();
         
         // Start timeout monitoring timer
         timeoutTimer = new Timer(CheckTimeouts, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
     }
 
-    public Task<ISaga> StartSagaAsync&lt;T&gt;(T sagaData, CancellationToken token = default) where T : class
+    public Task<ISaga> StartSagaAsync<T>(T sagaData, CancellationToken token = default) where T : class
     {
         var sagaType = typeof(T).Name;
         return StartSagaAsync(sagaType, sagaData, token);
@@ -579,7 +579,7 @@ public class SagaOrchestrator : ISagaOrchestrator, IDisposable
         return false;
     }
 
-    public void RegisterSaga&lt;T&gt;(Action<SagaDefinitionBuilder> configure) where T : class
+    public void RegisterSaga<T>(Action<SagaDefinitionBuilder> configure) where T : class
     {
         var sagaType = typeof(T).Name;
         var builder = new SagaDefinitionBuilder(sagaType);
@@ -924,7 +924,7 @@ public class SagaDefinitionBuilder
 public class SagaDefinition
 {
     public string SagaType { get; set; }
-    public List<SagaStepDefinition> Steps { get; set; } = new List<SagaStepDefinition>();
+    public List<SagaStepDefinition> Steps { get; set; } = new();
     public TimeSpan Timeout { get; set; } = TimeSpan.FromHours(1);
 }
 
@@ -942,7 +942,7 @@ public class CreateOrderData
 {
     public string CustomerEmail { get; set; }
     public decimal TotalAmount { get; set; }
-    public List<OrderItem> Items { get; set; } = new List<OrderItem>();
+    public List<OrderItem> Items { get; set; } = new();
 }
 
 public class OrderItem
@@ -1016,7 +1016,7 @@ public class CreateOrderStepHandler : ISagaStepHandler<CreateOrderData>
 
 public class ReserveInventoryData
 {
-    public List<OrderItem> Items { get; set; } = new List<OrderItem>();
+    public List<OrderItem> Items { get; set; } = new();
 }
 
 public class ReserveInventoryStepHandler : ISagaStepHandler<ReserveInventoryData>
@@ -1034,7 +1034,7 @@ public class ReserveInventoryStepHandler : ISagaStepHandler<ReserveInventoryData
         {
             logger?.LogInformation("Reserving inventory for {ItemCount} items", data.Items.Count);
 
-            var reservations = new List<string>();
+            var reservations = new();
 
             foreach (var item in data.Items)
             {

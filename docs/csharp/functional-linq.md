@@ -16,13 +16,13 @@ using System.Collections.Immutable;
 // Maybe/Option monad for null-safe operations
 public readonly struct Maybe<T>
 {
-    private readonly T _value;
-    private readonly bool _hasValue;
+    private readonly T value;
+    private readonly bool hasValue;
 
     private Maybe(T value)
     {
-        _value = value;
-        _hasValue = value != null;
+        value = value;
+        hasValue = value != null;
     }
 
     public static Maybe<T> Some(T value) => 
@@ -30,48 +30,48 @@ public readonly struct Maybe<T>
 
     public static Maybe<T> None => default;
 
-    public bool HasValue => _hasValue;
+    public bool HasValue => hasValue;
     
-    public T Value => _hasValue ? _value : throw new InvalidOperationException("Maybe has no value");
+    public T Value => hasValue ? value : throw new InvalidOperationException("Maybe has no value");
 
     // Functor: map function over Maybe
     public Maybe<TResult> Map<TResult>(Func<T, TResult> func)
     {
-        return _hasValue ? Maybe<TResult>.Some(func(_value)) : Maybe<TResult>.None;
+        return hasValue ? Maybe<TResult>.Some(func(value)) : Maybe<TResult>.None;
     }
 
     // Monad: flatMap for chaining Maybe operations
     public Maybe<TResult> FlatMap<TResult>(Func<T, Maybe<TResult>> func)
     {
-        return _hasValue ? func(_value) : Maybe<TResult>.None;
+        return hasValue ? func(value) : Maybe<TResult>.None;
     }
 
     // Filter: conditional Maybe
     public Maybe<T> Filter(Func<T, bool> predicate)
     {
-        return _hasValue && predicate(_value) ? this : None;
+        return hasValue && predicate(value) ? this : None;
     }
 
     // GetOrElse: provide default value
     public T GetOrElse(T defaultValue)
     {
-        return _hasValue ? _value : defaultValue;
+        return hasValue ? value : defaultValue;
     }
 
     public T GetOrElse(Func<T> defaultFactory)
     {
-        return _hasValue ? _value : defaultFactory();
+        return hasValue ? value : defaultFactory();
     }
 
     // Fold: reduce Maybe to single value
     public TResult Fold<TResult>(TResult noneValue, Func<T, TResult> someFunc)
     {
-        return _hasValue ? someFunc(_value) : noneValue;
+        return hasValue ? someFunc(value) : noneValue;
     }
 
     public override string ToString()
     {
-        return _hasValue ? $"Some({_value})" : "None";
+        return hasValue ? $"Some({value})" : "None";
     }
 
     public static implicit operator Maybe<T>(T value) => Some(value);
@@ -234,7 +234,7 @@ public static class FunctionalLinq
     public static Func<T, TResult> Memoize<T, TResult>(this Func<T, TResult> func)
         where T : notnull
     {
-        var cache = new Dictionary<T, TResult>();
+        var cache = new();
         return input =>
         {
             if (cache.TryGetValue(input, out var cached))
@@ -378,7 +378,7 @@ public static class FunctionalLinq
     // Sequence operations for Maybe
     public static Maybe<IEnumerable<T>> Sequence<T>(this IEnumerable<Maybe<T>> source)
     {
-        var results = new List<T>();
+        var results = new();
         
         foreach (var maybe in source)
         {
@@ -495,65 +495,65 @@ public static class ImmutableCollectionExtensions
 // Function pipeline builder
 public class Pipeline<T>
 {
-    private readonly IEnumerable<T> _source;
+    private readonly IEnumerable<T> source;
 
     public Pipeline(IEnumerable<T> source)
     {
-        _source = source;
+        source = source;
     }
 
     public Pipeline<TResult> Map<TResult>(Func<T, TResult> selector)
     {
-        return new Pipeline<TResult>(_source.Select(selector));
+        return new Pipeline<TResult>(source.Select(selector));
     }
 
     public Pipeline<T> Filter(Func<T, bool> predicate)
     {
-        return new Pipeline<T>(_source.Where(predicate));
+        return new Pipeline<T>(source.Where(predicate));
     }
 
     public Pipeline<TResult> FlatMap<TResult>(Func<T, IEnumerable<TResult>> selector)
     {
-        return new Pipeline<TResult>(_source.SelectMany(selector));
+        return new Pipeline<TResult>(source.SelectMany(selector));
     }
 
     public Pipeline<T> Take(int count)
     {
-        return new Pipeline<T>(_source.Take(count));
+        return new Pipeline<T>(source.Take(count));
     }
 
     public Pipeline<T> Skip(int count)
     {
-        return new Pipeline<T>(_source.Skip(count));
+        return new Pipeline<T>(source.Skip(count));
     }
 
     public Pipeline<T> Distinct()
     {
-        return new Pipeline<T>(_source.Distinct());
+        return new Pipeline<T>(source.Distinct());
     }
 
     public Pipeline<T> OrderBy<TKey>(Func<T, TKey> keySelector)
     {
-        return new Pipeline<T>(_source.OrderBy(keySelector));
+        return new Pipeline<T>(source.OrderBy(keySelector));
     }
 
     public Pipeline<T> Tee(Action<T> action)
     {
-        return new Pipeline<T>(_source.Select(item => item.Tee(action)));
+        return new Pipeline<T>(source.Select(item => item.Tee(action)));
     }
 
     // Terminal operations
-    public List<T> ToList() => _source.ToList();
-    public T[] ToArray() => _source.ToArray();
-    public ImmutableList<T> ToImmutableList() => _source.ToImmutableList();
+    public List<T> ToList() => source.ToList();
+    public T[] ToArray() => source.ToArray();
+    public ImmutableList<T> ToImmutableList() => source.ToImmutableList();
     
     public TResult Fold<TResult>(TResult seed, Func<TResult, T, TResult> func)
     {
-        return _source.Aggregate(seed, func);
+        return source.Aggregate(seed, func);
     }
 
-    public Maybe<T> FirstMaybe() => _source.FirstOrDefault();
-    public Maybe<T> SingleMaybe() => _source.Count() == 1 ? _source.First() : Maybe<T>.None;
+    public Maybe<T> FirstMaybe() => source.FirstOrDefault();
+    public Maybe<T> SingleMaybe() => source.Count() == 1 ? source.First() : Maybe<T>.None;
 
     public static implicit operator Pipeline<T>(IEnumerable<T> source) => new(source);
     public static implicit operator Pipeline<T>(T[] source) => new(source);
@@ -663,7 +663,7 @@ public static class AsyncFunctional
         this IEnumerable<T> source,
         Func<T, Task<TResult>> selector)
     {
-        var results = new List<TResult>();
+        var results = new();
         
         foreach (var item in source)
         {
@@ -679,7 +679,7 @@ public static class AsyncFunctional
         this IEnumerable<T> source,
         Func<T, Task<bool>> predicate)
     {
-        var results = new List<T>();
+        var results = new();
         
         foreach (var item in source)
         {
@@ -717,15 +717,15 @@ public static class LazyFunctional
     // Thunk for delayed computation
     public class Thunk<T>
     {
-        private readonly Lazy<T> _lazy;
+        private readonly Lazy<T> lazy;
 
         public Thunk(Func<T> computation)
         {
-            _lazy = new Lazy<T>(computation);
+            lazy = new Lazy<T>(computation);
         }
 
-        public T Force() => _lazy.Value;
-        public bool IsForced => _lazy.IsValueCreated;
+        public T Force() => lazy.Value;
+        public bool IsForced => lazy.IsValueCreated;
 
         public static implicit operator Thunk<T>(Func<T> computation) => new(computation);
     }
@@ -804,7 +804,7 @@ public static class FunctionalExamples
         var countryValidation = Validation.ValidateNotEmpty(country, "Country is required");
 
         // This is a simplified version - in practice, you'd use a proper validation combinator
-        var errors = new List<string>();
+        var errors = new();
 
         emailValidation.Match(e => errors.Add(e), _ => { });
         passwordValidation.Match(e => errors.Add(e), _ => { });

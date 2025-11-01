@@ -417,7 +417,7 @@ public class WeakReferenceMemoizer<TKey, TResult> : IMemoizer<TKey, TResult>, ID
 
     private void CleanupDeadReferences(object state)
     {
-        var deadKeys = new List<TKey>();
+        var deadKeys = new();
         
         foreach (var kvp in cache)
         {
@@ -774,7 +774,7 @@ public class HierarchicalMemoizer : IHierarchicalMemoizer, IDisposable
     {
         this.defaultOptions = defaultOptions ?? new MemoizationOptions();
         this.logger = logger;
-        memoizers = new ConcurrentDictionary<string, object>();
+        memoizers = new();
     }
 
     public IMemoizer<TKey, TResult> GetMemoizer<TKey, TResult>(string nameSpace)
@@ -830,7 +830,7 @@ public class HierarchicalMemoizer : IHierarchicalMemoizer, IDisposable
 
     public IDictionary<string, IMemoizationStatistics> GetAllStatistics()
     {
-        var statistics = new Dictionary<string, IMemoizationStatistics>();
+        var statistics = new();
 
         foreach (var kvp in memoizers)
         {
@@ -875,7 +875,7 @@ public class MemoizationService : IMemoizationService, IDisposable
     {
         this.defaultOptions = options?.Value ?? new MemoizationOptions();
         this.logger = logger;
-        namedMemoizers = new ConcurrentDictionary<string, object>();
+        namedMemoizers = new();
     }
 
     public IMemoizer<TKey, TResult> CreateMemoizer<TKey, TResult>(string name = null, 
@@ -924,7 +924,7 @@ public class MemoizationService : IMemoizationService, IDisposable
 
     public IDictionary<string, IMemoizationStatistics> GetStatistics()
     {
-        var statistics = new Dictionary<string, IMemoizationStatistics>();
+        var statistics = new();
 
         foreach (var kvp in namedMemoizers)
         {

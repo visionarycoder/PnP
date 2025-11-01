@@ -250,7 +250,7 @@ public static class AsyncEnumerableExtensions
         this IAsyncEnumerable<T> source,
         CancellationToken cancellationToken = default)
     {
-        var list = new List<T>();
+        var list = new();
         await foreach (var item in source.WithCancellation(cancellationToken))
         {
             list.Add(item);
@@ -319,15 +319,15 @@ public static class AsyncEnumerableExtensions
 // Advanced async enumerable patterns
 public class AsyncDataProcessor<T>
 {
-    private readonly Func<T, Task<bool>> _filter;
-    private readonly Func<T, Task<T>> _transform;
+    private readonly Func<T, Task<bool>> filter;
+    private readonly Func<T, Task<T>> transform;
     
     public AsyncDataProcessor(
         Func<T, Task<bool>>? filter = null,
         Func<T, Task<T>>? transform = null)
     {
-        _filter = filter ?? (_ => Task.FromResult(true));
-        _transform = transform ?? (x => Task.FromResult(x));
+        this.filter = filter ?? (_ => Task.FromResult(true));
+        this.transform = transform ?? (x => Task.FromResult(x));
     }
 
     public async IAsyncEnumerable<T> ProcessAsync(
@@ -336,9 +336,9 @@ public class AsyncDataProcessor<T>
     {
         await foreach (var item in source.WithCancellation(cancellationToken))
         {
-            if (await _filter(item))
+            if (await filter(item))
             {
-                var transformed = await _transform(item);
+                var transformed = await transform(item);
                 yield return transformed;
             }
         }
@@ -354,7 +354,7 @@ public static class ParallelAsyncProcessor
         int maxConcurrency = Environment.ProcessorCount,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        using var semaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
+        using var semaphore = new(maxConcurrency, maxConcurrency);
         var tasks = new List<Task<TResult>>();
 
         await foreach (var item in source.WithCancellation(cancellationToken))

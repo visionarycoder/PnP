@@ -26,10 +26,10 @@ public interface IJwtService
 
 public class JwtService : IJwtService
 {
-    private readonly IConfiguration _configuration;
-    private readonly IUserRepository _userRepository;
-    private readonly IRefreshTokenRepository _refreshTokenRepository;
-    private readonly ILogger<JwtService> _logger;
+    private readonly IConfiguration configuration;
+    private readonly IUserRepository userRepository;
+    private readonly IRefreshTokenRepository refreshTokenRepository;
+    private readonly ILogger<JwtService> logger;
 
     public JwtService(
         IConfiguration configuration,
@@ -37,15 +37,15 @@ public class JwtService : IJwtService
         IRefreshTokenRepository refreshTokenRepository,
         ILogger<JwtService> logger)
     {
-        _configuration = configuration;
-        _userRepository = userRepository;
-        _refreshTokenRepository = refreshTokenRepository;
-        _logger = logger;
+        configuration = configuration;
+        this.userRepository = userRepository;
+        this.refreshTokenRepository = refreshTokenRepository;
+        this.logger = logger;
     }
 
     public async Task<TokenResponse> GenerateTokenAsync(string userId, string email, IEnumerable<string> roles)
     {
-        var jwtSettings = _configuration.GetSection("JwtSettings");
+        var jwtSettings = configuration.GetSection("JwtSettings");
         var key = Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!);
         
         // Create claims
@@ -83,8 +83,8 @@ public class JwtService : IJwtService
             Created = DateTime.UtcNow
         };
 
-        await _refreshTokenRepository.AddAsync(refreshTokenEntity);
-        await _refreshTokenRepository.SaveChangesAsync();
+        await refreshTokenRepository.AddAsync(refreshTokenEntity);
+        await refreshTokenRepository.SaveChangesAsync();
 
         return new TokenResponse
         {
@@ -97,14 +97,14 @@ public class JwtService : IJwtService
 
     public async Task<TokenResponse> RefreshTokenAsync(string refreshToken)
     {
-        var storedToken = await _refreshTokenRepository.GetByTokenAsync(refreshToken);
+        var storedToken = await refreshTokenRepository.GetByTokenAsync(refreshToken);
         
         if (storedToken == null || storedToken.IsRevoked || storedToken.ExpiryDate < DateTime.UtcNow)
         {
             throw new SecurityTokenException("Invalid or expired refresh token");
         }
 
-        var user = await _userRepository.GetByIdAsync(storedToken.UserId);
+        var user = await userRepository.GetByIdAsync(storedToken.UserId);
         if (user == null || !user.IsActive)
         {
             throw new SecurityTokenException("User not found or inactive");
@@ -115,24 +115,24 @@ public class JwtService : IJwtService
         storedToken.RevokedDate = DateTime.UtcNow;
         
         // Generate new tokens
-        var roles = await _userRepository.GetUserRolesAsync(user.Id);
+        var roles = await userRepository.GetUserRolesAsync(user.Id);
         var tokenResponse = await GenerateTokenAsync(user.Id, user.Email, roles);
 
-        await _refreshTokenRepository.SaveChangesAsync();
+        await refreshTokenRepository.SaveChangesAsync();
         
-        _logger.LogInformation("Token refreshed for user {UserId}", user.Id);
+        logger.LogInformation("Token refreshed for user {UserId}", user.Id);
         
         return tokenResponse;
     }
 
     public async Task RevokeTokenAsync(string refreshToken)
     {
-        var storedToken = await _refreshTokenRepository.GetByTokenAsync(refreshToken);
+        var storedToken = await refreshTokenRepository.GetByTokenAsync(refreshToken);
         if (storedToken != null)
         {
             storedToken.IsRevoked = true;
             storedToken.RevokedDate = DateTime.UtcNow;
-            await _refreshTokenRepository.SaveChangesAsync();
+            await refreshTokenRepository.SaveChangesAsync();
         }
     }
 
@@ -140,7 +140,7 @@ public class JwtService : IJwtService
     {
         try
         {
-            var jwtSettings = _configuration.GetSection("JwtSettings");
+            var jwtSettings = configuration.GetSection("JwtSettings");
             var key = Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!);
             
             var tokenHandler = new JwtSecurityTokenHandler();
@@ -161,7 +161,7 @@ public class JwtService : IJwtService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Token validation failed: {Error}", ex.Message);
+            logger.LogWarning("Token validation failed: {Error}", ex.Message);
             return null;
         }
     }
@@ -180,15 +180,15 @@ public class JwtService : IJwtService
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly IJwtService _jwtService;
-    private readonly IUserService _userService;
-    private readonly ILogger<AuthController> _logger;
+    private readonly IJwtService jwtService;
+    private readonly IUserService userService;
+    private readonly ILogger<AuthController> logger;
 
     public AuthController(IJwtService jwtService, IUserService userService, ILogger<AuthController> logger)
     {
-        _jwtService = jwtService;
-        _userService = userService;
-        _logger = logger;
+        jwtService = jwtService;
+        this.userService = userService;
+        this.logger = logger;
     }
 
     [HttpPost("login")]
@@ -203,10 +203,10 @@ public class AuthController : ControllerBase
             }
 
             // Authenticate user
-            var user = await _userService.AuthenticateAsync(request.Email, request.Password);
+            var user = await userService.AuthenticateAsync(request.Email, request.Password);
             if (user == null)
             {
-                _logger.LogWarning("Failed login attempt for email: {Email}", request.Email);
+                logger.LogWarning("Failed login attempt for email: {Email}", request.Email);
                 return Unauthorized(new { Message = "Invalid credentials" });
             }
 
@@ -217,19 +217,19 @@ public class AuthController : ControllerBase
             }
 
             // Generate tokens
-            var roles = await _userService.GetUserRolesAsync(user.Id);
-            var tokenResponse = await _jwtService.GenerateTokenAsync(user.Id, user.Email, roles);
+            var roles = await userService.GetUserRolesAsync(user.Id);
+            var tokenResponse = await jwtService.GenerateTokenAsync(user.Id, user.Email, roles);
 
             // Reset failed login attempts on successful login
-            await _userService.ResetFailedLoginAttemptsAsync(user.Id);
+            await userService.ResetFailedLoginAttemptsAsync(user.Id);
 
-            _logger.LogInformation("Successful login for user: {UserId}", user.Id);
+            logger.LogInformation("Successful login for user: {UserId}", user.Id);
 
             return Ok(tokenResponse);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during login for email: {Email}", request.Email);
+            logger.LogError(ex, "Error during login for email: {Email}", request.Email);
             return StatusCode(500, new { Message = "An error occurred during login" });
         }
     }
@@ -244,17 +244,17 @@ public class AuthController : ControllerBase
                 return BadRequest(new { Message = "Refresh token is required" });
             }
 
-            var tokenResponse = await _jwtService.RefreshTokenAsync(request.RefreshToken);
+            var tokenResponse = await jwtService.RefreshTokenAsync(request.RefreshToken);
             return Ok(tokenResponse);
         }
         catch (SecurityTokenException ex)
         {
-            _logger.LogWarning("Invalid refresh token attempt: {Error}", ex.Message);
+            logger.LogWarning("Invalid refresh token attempt: {Error}", ex.Message);
             return Unauthorized(new { Message = ex.Message });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during token refresh");
+            logger.LogError(ex, "Error during token refresh");
             return StatusCode(500, new { Message = "An error occurred during token refresh" });
         }
     }
@@ -267,17 +267,17 @@ public class AuthController : ControllerBase
         {
             if (!string.IsNullOrEmpty(request.RefreshToken))
             {
-                await _jwtService.RevokeTokenAsync(request.RefreshToken);
+                await jwtService.RevokeTokenAsync(request.RefreshToken);
             }
 
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            _logger.LogInformation("User logged out: {UserId}", userId);
+            logger.LogInformation("User logged out: {UserId}", userId);
 
             return Ok(new { Message = "Logged out successfully" });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during logout");
+            logger.LogError(ex, "Error during logout");
             return StatusCode(500, new { Message = "An error occurred during logout" });
         }
     }
@@ -397,19 +397,19 @@ public class UsersController : ControllerBase
 // Client-side usage example
 public class AuthService
 {
-    private readonly HttpClient _httpClient;
-    private readonly ILocalStorageService _localStorage;
+    private readonly HttpClient httpClient;
+    private readonly ILocalStorageService localStorage;
 
     public async Task<bool> LoginAsync(string email, string password)
     {
         var request = new { Email = email, Password = password };
-        var response = await _httpClient.PostAsJsonAsync("api/auth/login", request);
+        var response = await httpClient.PostAsJsonAsync("api/auth/login", request);
         
         if (response.IsSuccessStatusCode)
         {
             var tokenResponse = await response.Content.ReadFromJsonAsync<TokenResponse>();
-            await _localStorage.SetItemAsync("accessToken", tokenResponse!.AccessToken);
-            await _localStorage.SetItemAsync("refreshToken", tokenResponse.RefreshToken);
+            await localStorage.SetItemAsync("accessToken", tokenResponse!.AccessToken);
+            await localStorage.SetItemAsync("refreshToken", tokenResponse.RefreshToken);
             return true;
         }
         
@@ -418,17 +418,17 @@ public class AuthService
 
     public async Task<bool> RefreshTokenAsync()
     {
-        var refreshToken = await _localStorage.GetItemAsync<string>("refreshToken");
+        var refreshToken = await localStorage.GetItemAsync<string>("refreshToken");
         if (string.IsNullOrEmpty(refreshToken)) return false;
 
         var request = new { RefreshToken = refreshToken };
-        var response = await _httpClient.PostAsJsonAsync("api/auth/refresh", request);
+        var response = await httpClient.PostAsJsonAsync("api/auth/refresh", request);
         
         if (response.IsSuccessStatusCode)
         {
             var tokenResponse = await response.Content.ReadFromJsonAsync<TokenResponse>();
-            await _localStorage.SetItemAsync("accessToken", tokenResponse!.AccessToken);
-            await _localStorage.SetItemAsync("refreshToken", tokenResponse.RefreshToken);
+            await localStorage.SetItemAsync("accessToken", tokenResponse!.AccessToken);
+            await localStorage.SetItemAsync("refreshToken", tokenResponse.RefreshToken);
             return true;
         }
         

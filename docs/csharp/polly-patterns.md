@@ -1334,3 +1334,4 @@ Console.WriteLine("\nPolly integration pattern examples completed!");
 - [Exception Handling](exception-handling.md) - Structured exception handling strategies
 - [Logging Patterns](logging-patterns.md) - Comprehensive logging and observability
 - [Async Patterns](async-enumerable.md) - Asynchronous programming patterns
+- [Web Security](web-security.md) - See rate limiting middleware (Note: Bulkhead isolation provides resource protection similar to rate limiting but focuses on isolation rather than throttling)

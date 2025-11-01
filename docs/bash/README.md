@@ -4,7 +4,9 @@ Collection of useful Bash scripts and commands.
 
 ## Index
 
-*No specific files created yet. This directory is ready for bash script examples and command collections.*
+- [File Operations](file-operations.md) - File and directory manipulation commands
+- [Text Processing](text-processing.md) - grep, sed, awk, and text manipulation utilities
+- [System Administration](system-admin.md) - System monitoring, process management, and maintenance
 
 ## Categories
 

@@ -47,6 +47,15 @@ Collection of useful C# code snippets and patterns.
 - [Functional LINQ](functional-linq.md) - Functional programming with LINQ
 - [LINQ Extensions](linq-extensions.md) - Custom LINQ extensions
 
+### Security
+
+- [Azure Managed Identity](azure-managed-identity.md) - Azure Managed Identity integration patterns
+- [JWT Authentication](jwt-authentication.md) - JSON Web Token authentication system
+- [OAuth Integration](oauth-integration.md) - OAuth 2.0 and OpenID Connect implementation
+- [Password Security](password-security.md) - Secure password handling with Argon2id
+- [Role-Based Authorization](role-based-authorization.md) - RBAC and permission systems
+- [Web Security](web-security.md) - Comprehensive web security practices
+
 ### Utilities & Infrastructure
 
 - [Logging Patterns](logging-patterns.md) - Structured logging patterns

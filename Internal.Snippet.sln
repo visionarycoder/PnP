@@ -12,14 +12,20 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "algorithms", "algorithms", "{A1B2C3D4-E5F6-7890-ABCD-123456789013}"
 	ProjectSection(SolutionItems) = preProject
 		docs\algorithms\README.md = docs\algorithms\README.md
-		docs\algorithms\sorting-algorithms.md = docs\algorithms\sorting-algorithms.md
-		docs\algorithms\searching-algorithms.md = docs\algorithms\searching-algorithms.md
 		docs\algorithms\data-structures.md = docs\algorithms\data-structures.md
+		docs\algorithms\dynamic-programming.md = docs\algorithms\dynamic-programming.md
+		docs\algorithms\graph-algorithms.md = docs\algorithms\graph-algorithms.md
+		docs\algorithms\searching-algorithms.md = docs\algorithms\searching-algorithms.md
+		docs\algorithms\sorting-algorithms.md = docs\algorithms\sorting-algorithms.md
+		docs\algorithms\string-algorithms.md = docs\algorithms\string-algorithms.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "bash", "bash", "{A1B2C3D4-E5F6-7890-ABCD-123456789014}"
 	ProjectSection(SolutionItems) = preProject
 		docs\bash\README.md = docs\bash\README.md
+		docs\bash\file-operations.md = docs\bash\file-operations.md
+		docs\bash\system-admin.md = docs\bash\system-admin.md
+		docs\bash\text-processing.md = docs\bash\text-processing.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "cmd", "cmd", "{A1B2C3D4-E5F6-7890-ABCD-123456789015}"
@@ -35,6 +41,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "csharp", "csharp", "{A1B2C3
 		docs\csharp\actor-model.md = docs\csharp\actor-model.md
 		docs\csharp\async-enumerable.md = docs\csharp\async-enumerable.md
 		docs\csharp\async-lazy-loading.md = docs\csharp\async-lazy-loading.md
+		docs\csharp\azure-managed-identity.md = docs\csharp\azure-managed-identity.md
 		docs\csharp\cache-aside.md = docs\csharp\cache-aside.md
 		docs\csharp\cache-invalidation.md = docs\csharp\cache-invalidation.md
 		docs\csharp\cancellation-patterns.md = docs\csharp\cancellation-patterns.md
@@ -44,12 +51,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "csharp", "csharp", "{A1B2C3
 		docs\csharp\event-sourcing.md = docs\csharp\event-sourcing.md
 		docs\csharp\exception-handling.md = docs\csharp\exception-handling.md
 		docs\csharp\functional-linq.md = docs\csharp\functional-linq.md
+		docs\csharp\jwt-authentication.md = docs\csharp\jwt-authentication.md
 		docs\csharp\linq-extensions.md = docs\csharp\linq-extensions.md
 		docs\csharp\logging-patterns.md = docs\csharp\logging-patterns.md
 		docs\csharp\memoization.md = docs\csharp\memoization.md
 		docs\csharp\memory-pools.md = docs\csharp\memory-pools.md
 		docs\csharp\message-queue.md = docs\csharp\message-queue.md
 		docs\csharp\micro-optimizations.md = docs\csharp\micro-optimizations.md
+		docs\csharp\oauth-integration.md = docs\csharp\oauth-integration.md
+		docs\csharp\password-security.md = docs\csharp\password-security.md
 		docs\csharp\performance-linq.md = docs\csharp\performance-linq.md
 		docs\csharp\polly-patterns.md = docs\csharp\polly-patterns.md
 		docs\csharp\producer-consumer.md = docs\csharp\producer-consumer.md
@@ -57,11 +67,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "csharp", "csharp", "{A1B2C3
 		docs\csharp\query-optimization.md = docs\csharp\query-optimization.md
 		docs\csharp\reader-writer-locks.md = docs\csharp\reader-writer-locks.md
 		docs\csharp\retry-pattern.md = docs\csharp\retry-pattern.md
+		docs\csharp\role-based-authorization.md = docs\csharp\role-based-authorization.md
 		docs\csharp\saga-patterns.md = docs\csharp\saga-patterns.md
 		docs\csharp\span-operations.md = docs\csharp\span-operations.md
 		docs\csharp\string-truncate.md = docs\csharp\string-truncate.md
 		docs\csharp\task-combinators.md = docs\csharp\task-combinators.md
 		docs\csharp\vectorization.md = docs\csharp\vectorization.md
+		docs\csharp\web-security.md = docs\csharp\web-security.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "design-patterns", "design-patterns", "{A1B2C3D4-E5F6-7890-ABCD-123456789017}"
@@ -83,6 +95,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "design-patterns", "design-p
 		docs\design-patterns\memento.md = docs\design-patterns\memento.md
 		docs\design-patterns\observer.md = docs\design-patterns\observer.md
 		docs\design-patterns\prototype.md = docs\design-patterns\prototype.md
+		docs\design-patterns\proxy.md = docs\design-patterns\proxy.md
+		docs\design-patterns\readme.md = docs\design-patterns\readme.md
+		docs\design-patterns\singleton.md = docs\design-patterns\singleton.md
+		docs\design-patterns\state.md = docs\design-patterns\state.md
+		docs\design-patterns\strategy.md = docs\design-patterns\strategy.md
+		docs\design-patterns\template-method.md = docs\design-patterns\template-method.md
+		docs\design-patterns\visitor.md = docs\design-patterns\visitor.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docker", "docker", "{A1B2C3D4-E5F6-7890-ABCD-123456789018}"
@@ -108,6 +127,12 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "powershell", "powershell", "{A1B2C3D4-E5F6-7890-ABCD-123456789021}"
 	ProjectSection(SolutionItems) = preProject
 		docs\powershell\README.md = docs\powershell\README.md
+		docs\powershell\active-directory.md = docs\powershell\active-directory.md
+		docs\powershell\automation-scripts.md = docs\powershell\automation-scripts.md
+		docs\powershell\file-operations.md = docs\powershell\file-operations.md
+		docs\powershell\network-operations.md = docs\powershell\network-operations.md
+		docs\powershell\powershell-basics.md = docs\powershell\powershell-basics.md
+		docs\powershell\system-admin.md = docs\powershell\system-admin.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "python", "python", "{A1B2C3D4-E5F6-7890-ABCD-123456789022}"
@@ -125,11 +150,17 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "utilities", "utilities", "{A1B2C3D4-E5F6-7890-ABCD-123456789024}"
 	ProjectSection(SolutionItems) = preProject
 		docs\utilities\README.md = docs\utilities\README.md
+		docs\utilities\configuration-helpers.md = docs\utilities\configuration-helpers.md
+		docs\utilities\general-utilities.md = docs\utilities\general-utilities.md
+		docs\utilities\logging-utilities.md = docs\utilities\logging-utilities.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "web", "web", "{A1B2C3D4-E5F6-7890-ABCD-123456789025}"
 	ProjectSection(SolutionItems) = preProject
 		docs\web\README.md = docs\web\README.md
+		docs\web\accessibility.md = docs\web\accessibility.md
+		docs\web\css-layouts.md = docs\web\css-layouts.md
+		docs\web\html-templates.md = docs\web\html-templates.md
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesignPatterns.Creational", "src\DesignPatterns.Creational\DesignPatterns.Creational.csproj", "{3DADD3F0-45CA-49DE-83AF-E409E3E3770A}"

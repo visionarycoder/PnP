@@ -5,6 +5,7 @@
 **Language/Technology**: Docker
 
 **Code**:
+
 ```dockerfile
 # ============================================
 # Example 1: Node.js Application
@@ -189,6 +190,7 @@ CMD ["./main"]
 ```
 
 **Usage**:
+
 ```bash
 # Build image
 docker build -t my-app:latest .
@@ -213,6 +215,7 @@ docker run -d -p 3000:3000 -v $(pwd)/data:/app/data my-app:latest
 ```
 
 **Docker Compose Example**:
+
 ```yaml
 # docker-compose.yml
 version: '3.8'
@@ -248,6 +251,7 @@ volumes:
 ```
 
 **Best Practices**:
+
 ```dockerfile
 # Use specific version tags
 FROM node:18.17.0-alpine
@@ -298,7 +302,8 @@ ENTRYPOINT ["node"]
 CMD ["index.js"]
 ```
 
-**Notes**: 
+**Notes**:
+
 - Multi-stage builds reduce final image size
 - Alpine Linux images are smaller but may lack some tools
 - Always use specific version tags, avoid `latest`

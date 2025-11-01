@@ -1064,7 +1064,7 @@ public class EventAggregator : IEventPublisher, IEventSubscriber, IDisposable
 
         public EventHandlerWrapper(Func<T, IEventContext, Task> handler)
         {
-            this.handler = handler ?? throw new ArgumentNullException(nameof(handler));
+            handler = handler ?? throw new ArgumentNullException(nameof(handler));
         }
 
         public override async Task HandleAsync(IEvent eventData, CancellationToken token)

@@ -139,7 +139,7 @@ public class ParameterReplacer : ExpressionVisitor
 
     public ParameterReplacer(ParameterExpression oldParameter, ParameterExpression newParameter)
     {
-        this.oldParameter = oldParameter;
+        oldParameter = oldParameter;
         this.newParameter = newParameter;
     }
 
@@ -765,7 +765,7 @@ public class OptimizationSuggestionVisitor : ExpressionVisitor
 
     public OptimizationSuggestionVisitor(List<string> suggestions)
     {
-        this.suggestions = suggestions;
+        suggestions = suggestions;
     }
 
     protected override Expression VisitMethodCall(MethodCallExpression node)

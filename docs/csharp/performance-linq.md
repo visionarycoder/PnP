@@ -594,7 +594,7 @@ public class CachedEnumerable<T> : IEnumerable<T>
 
         public CachedEnumerator(CachedEnumerable<T> parent)
         {
-            this.parent = parent;
+            parent = parent;
             index = -1;
         }
 
@@ -707,7 +707,7 @@ public class BitArray
 
     public BitArray(int length)
     {
-        this.length = length;
+        length = length;
         array = new uint[(length + 31) / 32];
     }
 

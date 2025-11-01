@@ -967,7 +967,7 @@ public class OrderCreatedMessageHandler : IMessageHandler<OrderCreatedMessage>
 
     public OrderCreatedMessageHandler(ILogger<OrderCreatedMessageHandler> logger)
     {
-        this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task HandleAsync(OrderCreatedMessage message, IMessageContext context, CancellationToken token = default)
@@ -1008,7 +1008,7 @@ public class PaymentBatchHandler : IMessageBatchHandler<PaymentProcessedMessage>
 
     public PaymentBatchHandler(ILogger<PaymentBatchHandler> logger)
     {
-        this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task HandleBatchAsync(IMessageBatchContext<PaymentProcessedMessage> batchContext, CancellationToken token = default)

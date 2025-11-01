@@ -37,7 +37,7 @@ public class JwtService : IJwtService
         IRefreshTokenRepository refreshTokenRepository,
         ILogger<JwtService> logger)
     {
-        this.configuration = configuration;
+        configuration = configuration;
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.logger = logger;
@@ -186,7 +186,7 @@ public class AuthController : ControllerBase
 
     public AuthController(IJwtService jwtService, IUserService userService, ILogger<AuthController> logger)
     {
-        this.jwtService = jwtService;
+        jwtService = jwtService;
         this.userService = userService;
         this.logger = logger;
     }

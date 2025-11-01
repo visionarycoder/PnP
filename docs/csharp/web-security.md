@@ -107,7 +107,7 @@ public class SecurityHeadersMiddleware
         IOptions<WebSecurityOptions> options,
         ILogger<SecurityHeadersMiddleware> logger)
     {
-        this.next = next;
+        next = next;
         options = options.Value;
         this.logger = logger;
     }
@@ -204,7 +204,7 @@ public class CsrfProtectionService : ICsrfProtectionService
         IOptions<WebSecurityOptions> options,
         ILogger<CsrfProtectionService> logger)
     {
-        this.antiforgery = antiforgery;
+        antiforgery = antiforgery;
         options = options.Value.Csrf;
         this.logger = logger;
     }
@@ -401,7 +401,7 @@ public class InputValidationMiddleware
         IXssProtectionService xssProtection,
         ILogger<InputValidationMiddleware> logger)
     {
-        this.next = next;
+        next = next;
         this.xssProtection = xssProtection;
         this.logger = logger;
     }
@@ -454,7 +454,7 @@ public class RateLimitingMiddleware
         IMemoryCache cache,
         ILogger<RateLimitingMiddleware> logger)
     {
-        this.next = next;
+        next = next;
         options = options.Value.RateLimit;
         this.cache = cache;
         this.logger = logger;
@@ -527,7 +527,7 @@ public class SecurityController : ControllerBase
 
     public SecurityController(ILogger<SecurityController> logger)
     {
-        this.logger = logger;
+        logger = logger;
     }
 
     [HttpPost("csp-report")]
@@ -762,7 +762,7 @@ public class UserController : ControllerBase
         IXssProtectionService xssProtection,
         ICsrfProtectionService csrfProtection)
     {
-        this.xssProtection = xssProtection;
+        xssProtection = xssProtection;
         this.csrfProtection = csrfProtection;
     }
 
@@ -808,7 +808,7 @@ public class IndexModel : PageModel
 
     public IndexModel(IXssProtectionService xssProtection)
     {
-        this.xssProtection = xssProtection;
+        xssProtection = xssProtection;
     }
 
     public string SafeContent { get; set; } = string.Empty;

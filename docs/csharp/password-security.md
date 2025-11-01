@@ -417,7 +417,7 @@ public class HaveIBeenPwnedService : IHaveIBeenPwnedService
 
     public HaveIBeenPwnedService(HttpClient httpClient, ILogger<HaveIBeenPwnedService> logger)
     {
-        this.httpClient = httpClient;
+        httpClient = httpClient;
         this.logger = logger;
         httpClient.DefaultRequestHeaders.Add("User-Agent", "YourAppName");
     }

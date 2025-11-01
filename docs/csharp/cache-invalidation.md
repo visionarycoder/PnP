@@ -845,7 +845,7 @@ public class TimeBasedInvalidationRule : ICacheInvalidationRule
         TimeSpan maxAge,
         Func<CacheInvalidationContext, Task<DateTime?>> lastModifiedSelector)
     {
-        this.maxAge = maxAge;
+        maxAge = maxAge;
         this.lastModifiedSelector = lastModifiedSelector ?? throw new ArgumentNullException(nameof(lastModifiedSelector));
     }
 
@@ -1487,7 +1487,7 @@ public class MockCacheWarmingStrategy : ICacheWarmingStrategy
 
     public MockCacheWarmingStrategy(IDistributedCache cache)
     {
-        this.cache = cache;
+        cache = cache;
     }
 
     public async Task WarmCacheAsync(IEnumerable<string> keys, CancellationToken token = default)

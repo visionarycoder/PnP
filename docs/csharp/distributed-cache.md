@@ -1350,7 +1350,7 @@ public class MultiLevelCache
 
     public MultiLevelCache(IMemoryCache memoryCache, IAdvancedDistributedCache distributedCache)
     {
-        this.memoryCache = memoryCache;
+        memoryCache = memoryCache;
         this.distributedCache = distributedCache;
     }
 
@@ -1390,7 +1390,7 @@ public class ProductService
 
     public ProductService(MultiLevelCache cache)
     {
-        this.cache = cache;
+        cache = cache;
     }
 
     public async Task<Product> GetProductAsync(int productId)

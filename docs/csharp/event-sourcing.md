@@ -770,7 +770,7 @@ public class ConditionalSnapshotStrategy : ISnapshotStrategy
 
     public ConditionalSnapshotStrategy(Func<IAggregateRoot, bool> condition)
     {
-        this.condition = condition ?? throw new ArgumentNullException(nameof(condition));
+        condition = condition ?? throw new ArgumentNullException(nameof(condition));
     }
 
     public bool ShouldCreateSnapshot(IAggregateRoot aggregate)
@@ -1128,7 +1128,7 @@ public class BankAccountCommandHandler :
 
     public BankAccountCommandHandler(IEventSourcedRepository<BankAccount> repository)
     {
-        this.repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        repository = repository ?? throw new ArgumentNullException(nameof(repository));
     }
 
     public async Task HandleAsync(CreateBankAccountCommand command, CancellationToken token = default)
@@ -1165,7 +1165,7 @@ public class BankAccountQueryHandler : IQueryHandler<GetBankAccountQuery, BankAc
 
     public BankAccountQueryHandler(IEventSourcedRepository<BankAccount> repository)
     {
-        this.repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        repository = repository ?? throw new ArgumentNullException(nameof(repository));
     }
 
     public async Task<BankAccountView> HandleAsync(GetBankAccountQuery query, CancellationToken token = default)

@@ -683,7 +683,7 @@ public interface IEventSerializer
 {
     string Serialize(object obj);
     IEvent Deserialize(string data, string eventType);
-    T Deserialize&lt;T&gt;(string data);
+    T Deserialize<T>(string data);
 }
 
 public class JsonEventSerializer : IEventSerializer
@@ -719,12 +719,12 @@ public class JsonEventSerializer : IEventSerializer
         return (IEvent)JsonSerializer.Deserialize(data, type, options);
     }
 
-    public T Deserialize&lt;T&gt;(string data)
+    public T Deserialize<T>(string data)
     {
-        return JsonSerializer.Deserialize&lt;T&gt;(data, options);
+        return JsonSerializer.Deserialize<T>(data, options);
     }
 
-    public void RegisterEventType&lt;T&gt;() where T : IEvent
+    public void RegisterEventType<T>() where T : IEvent
     {
         eventTypes[typeof(T).Name] = typeof(T);
     }

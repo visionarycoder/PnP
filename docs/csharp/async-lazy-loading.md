@@ -14,23 +14,17 @@ using System.Collections.Concurrent;
 using System.Net.Http;
 
 // Basic AsyncLazy implementation
-public class AsyncLazy<T>
+public class AsyncLazy<T>(Func<Task<T>> taskFactory)
 {
-    private readonly Lazy<Task<T>> _lazy;
+    private readonly Lazy<Task<T>> lazy = new(taskFactory);
 
-    public AsyncLazy(Func<Task<T>> taskFactory)
+    public AsyncLazy(Func<T> valueFactory) : this(() => Task.FromResult(valueFactory()))
     {
-        _lazy = new Lazy<Task<T>>(taskFactory);
     }
 
-    public AsyncLazy(Func<T> valueFactory)
-    {
-        _lazy = new Lazy<Task<T>>(() => Task.FromResult(valueFactory()));
-    }
-
-    public Task<T> Value => _lazy.Value;
+    public Task<T> Value => lazy.Value;
     
-    public bool IsValueCreated => _lazy.IsValueCreated;
+    public bool IsValueCreated => lazy.IsValueCreated;
 
     public TaskAwaiter<T> GetAwaiter() => Value.GetAwaiter();
     
@@ -39,32 +33,27 @@ public class AsyncLazy<T>
 }
 
 // Thread-safe AsyncLazy with cancellation support
-public class AsyncLazyCancellable<T>
+public class AsyncLazyCancellable<T>(Func<CancellationToken, Task<T>> taskFactory)
 {
-    private readonly Func<CancellationToken, Task<T>> _taskFactory;
-    private readonly object _lock = new object();
-    private Task<T>? _cachedTask;
-
-    public AsyncLazyCancellable(Func<CancellationToken, Task<T>> taskFactory)
-    {
-        _taskFactory = taskFactory ?? throw new ArgumentNullException(nameof(taskFactory));
-    }
+    private readonly Func<CancellationToken, Task<T>> taskFactory = taskFactory ?? throw new ArgumentNullException(nameof(taskFactory));
+    private readonly object lockObj = new();
+    private Task<T>? cachedTask;
 
     public Task<T> GetValueAsync(CancellationToken cancellationToken = default)
     {
-        lock (_lock)
+        lock (lockObj)
         {
-            if (_cachedTask == null)
+            if (cachedTask == null)
             {
-                _cachedTask = _taskFactory(cancellationToken);
+                cachedTask = taskFactory(cancellationToken);
             }
-            else if (_cachedTask.IsCanceled && !cancellationToken.IsCancellationRequested)
+            else if (cachedTask.IsCanceled && !cancellationToken.IsCancellationRequested)
             {
                 // Previous task was cancelled, but new request isn't - retry
-                _cachedTask = _taskFactory(cancellationToken);
+                cachedTask = taskFactory(cancellationToken);
             }
 
-            return _cachedTask;
+            return cachedTask;
         }
     }
 
@@ -72,52 +61,46 @@ public class AsyncLazyCancellable<T>
     {
         get
         {
-            lock (_lock)
+            lock (lockObj)
             {
-                return _cachedTask?.IsCompletedSuccessfully == true;
+                return cachedTask?.IsCompletedSuccessfully == true;
             }
         }
     }
 
     public void Reset()
     {
-        lock (_lock)
+        lock (lockObj)
         {
-            _cachedTask = null;
+            cachedTask = null;
         }
     }
 }
 
 // AsyncLazy with expiration
-public class AsyncLazyWithExpiration<T>
+public class AsyncLazyWithExpiration<T>(Func<Task<T>> taskFactory, TimeSpan expiration)
 {
-    private readonly Func<Task<T>> _taskFactory;
-    private readonly TimeSpan _expiration;
-    private readonly object _lock = new object();
-    private Task<T>? _cachedTask;
-    private DateTime _creationTime;
-
-    public AsyncLazyWithExpiration(Func<Task<T>> taskFactory, TimeSpan expiration)
-    {
-        _taskFactory = taskFactory ?? throw new ArgumentNullException(nameof(taskFactory));
-        _expiration = expiration;
-    }
+    private readonly Func<Task<T>> taskFactory = taskFactory ?? throw new ArgumentNullException(nameof(taskFactory));
+    private readonly TimeSpan expiration = expiration;
+    private readonly object lockObj = new();
+    private Task<T>? cachedTask;
+    private DateTime creationTime;
 
     public Task<T> GetValueAsync()
     {
-        lock (_lock)
+        lock (lockObj)
         {
             var now = DateTime.UtcNow;
 
-            if (_cachedTask == null || 
-                _cachedTask.IsFaulted || 
-                now - _creationTime > _expiration)
+            if (cachedTask == null || 
+                cachedTask.IsFaulted || 
+                now - creationTime > expiration)
             {
-                _cachedTask = _taskFactory();
-                _creationTime = now;
+                cachedTask = taskFactory();
+                creationTime = now;
             }
 
-            return _cachedTask;
+            return cachedTask;
         }
     }
 
@@ -125,86 +108,67 @@ public class AsyncLazyWithExpiration<T>
     {
         get
         {
-            lock (_lock)
+            lock (lockObj)
             {
-                return _cachedTask != null && DateTime.UtcNow - _creationTime > _expiration;
+                return cachedTask != null && DateTime.UtcNow - creationTime > expiration;
             }
         }
     }
 }
 
 // Async memoization utility
-public class AsyncMemoizer<TKey, TValue> where TKey : notnull
+public class AsyncMemoizer<TKey, TValue>(Func<TKey, Task<TValue>> asyncFunc) where TKey : notnull
 {
-    private readonly Func<TKey, Task<TValue>> _asyncFunc;
-    private readonly ConcurrentDictionary<TKey, AsyncLazy<TValue>> _cache;
-
-    public AsyncMemoizer(Func<TKey, Task<TValue>> asyncFunc)
-    {
-        _asyncFunc = asyncFunc ?? throw new ArgumentNullException(nameof(asyncFunc));
-        _cache = new ConcurrentDictionary<TKey, AsyncLazy<TValue>>();
-    }
+    private readonly Func<TKey, Task<TValue>> asyncFunc = asyncFunc ?? throw new ArgumentNullException(nameof(asyncFunc));
+    private readonly ConcurrentDictionary<TKey, AsyncLazy<TValue>> cache = new();
 
     public Task<TValue> GetAsync(TKey key)
     {
-        var lazy = _cache.GetOrAdd(key, k => new AsyncLazy<TValue>(() => _asyncFunc(k)));
+        var lazy = cache.GetOrAdd(key, k => new AsyncLazy<TValue>(() => asyncFunc(k)));
         return lazy.Value;
     }
 
     public void Invalidate(TKey key)
     {
-        _cache.TryRemove(key, out _);
+        cache.TryRemove(key, out _);
     }
 
     public void Clear()
     {
-        _cache.Clear();
+        cache.Clear();
     }
 
-    public int CacheSize => _cache.Count;
+    public int CacheSize => cache.Count;
 }
 
 // Async lazy factory with dependency injection support
-public class AsyncLazyFactory<T>
+public class AsyncLazyFactory<T>(Func<IServiceProvider, Task<T>> factory, IServiceProvider serviceProvider)
 {
-    private readonly Func<IServiceProvider, Task<T>> _factory;
-    private readonly AsyncLazy<T> _lazy;
+    private readonly Func<IServiceProvider, Task<T>> factory = factory ?? throw new ArgumentNullException(nameof(factory));
+    private readonly AsyncLazy<T> lazy = new(() => factory(serviceProvider));
 
-    public AsyncLazyFactory(Func<IServiceProvider, Task<T>> factory, IServiceProvider serviceProvider)
-    {
-        _factory = factory ?? throw new ArgumentNullException(nameof(factory));
-        _lazy = new AsyncLazy<T>(() => _factory(serviceProvider));
-    }
-
-    public Task<T> GetValueAsync() => _lazy.Value;
+    public Task<T> GetValueAsync() => lazy.Value;
     
-    public bool IsValueCreated => _lazy.IsValueCreated;
+    public bool IsValueCreated => lazy.IsValueCreated;
 }
 
 // Async lazy collection for batch operations
-public class AsyncLazyCollection<T>
+public class AsyncLazyCollection<T>(Func<Task<T[]>> batchLoader)
 {
-    private readonly Func<Task<T[]>> _batchLoader;
-    private readonly AsyncLazy<T[]> _lazy;
-    private readonly ConcurrentDictionary<int, AsyncLazy<T>> _itemCache;
-
-    public AsyncLazyCollection(Func<Task<T[]>> batchLoader)
-    {
-        _batchLoader = batchLoader ?? throw new ArgumentNullException(nameof(batchLoader));
-        _lazy = new AsyncLazy<T[]>(batchLoader);
-        _itemCache = new ConcurrentDictionary<int, AsyncLazy<T>>();
-    }
+    private readonly Func<Task<T[]>> batchLoader = batchLoader ?? throw new ArgumentNullException(nameof(batchLoader));
+    private readonly AsyncLazy<T[]> lazy = new(batchLoader);
+    private readonly ConcurrentDictionary<int, AsyncLazy<T>> itemCache = new();
 
     public async Task<T[]> GetAllAsync()
     {
-        return await _lazy.Value;
+        return await lazy.Value;
     }
 
     public Task<T> GetItemAsync(int index)
     {
-        return _itemCache.GetOrAdd(index, i => new AsyncLazy<T>(async () =>
+        return itemCache.GetOrAdd(index, i => new AsyncLazy<T>(async () =>
         {
-            var items = await _lazy.Value;
+            var items = await lazy.Value;
             if (i < 0 || i >= items.Length)
                 throw new ArgumentOutOfRangeException(nameof(index));
             return items[i];
@@ -213,30 +177,24 @@ public class AsyncLazyCollection<T>
 
     public async Task<int> GetCountAsync()
     {
-        var items = await _lazy.Value;
+        var items = await lazy.Value;
         return items.Length;
     }
 }
 
 // Real-world examples
-public class ConfigurationService
+public class ConfigurationService(string configSource)
 {
-    private readonly AsyncLazyWithExpiration<AppConfig> _configLazy;
-    private readonly string _configSource;
+    private readonly string configSource = configSource;
+    private readonly AsyncLazyWithExpiration<AppConfig> configLazy = new(
+        () => LoadConfigurationAsync(configSource),
+        TimeSpan.FromMinutes(5)); // Refresh config every 5 minutes
 
-    public ConfigurationService(string configSource)
+    public Task<AppConfig> GetConfigurationAsync() => configLazy.GetValueAsync();
+
+    private static async Task<AppConfig> LoadConfigurationAsync(string source)
     {
-        _configSource = configSource;
-        _configLazy = new AsyncLazyWithExpiration<AppConfig>(
-            LoadConfigurationAsync,
-            TimeSpan.FromMinutes(5)); // Refresh config every 5 minutes
-    }
-
-    public Task<AppConfig> GetConfigurationAsync() => _configLazy.GetValueAsync();
-
-    private async Task<AppConfig> LoadConfigurationAsync()
-    {
-        Console.WriteLine($"Loading configuration from {_configSource}...");
+        Console.WriteLine($"Loading configuration from {source}...");
         
         // Simulate expensive config loading
         await Task.Delay(2000);
@@ -253,11 +211,11 @@ public class ConfigurationService
 
 public class DatabaseConnectionService
 {
-    private readonly AsyncLazyCancellable<IDbConnection> _connectionLazy;
+    private readonly AsyncLazyCancellable<IDbConnection> connectionLazy;
 
     public DatabaseConnectionService(string connectionString)
     {
-        _connectionLazy = new AsyncLazyCancellable<IDbConnection>(async cancellationToken =>
+        connectionLazy = new AsyncLazyCancellable<IDbConnection>(async cancellationToken =>
         {
             Console.WriteLine("Establishing database connection...");
             
@@ -272,41 +230,41 @@ public class DatabaseConnectionService
     }
 
     public Task<IDbConnection> GetConnectionAsync(CancellationToken cancellationToken = default) =>
-        _connectionLazy.GetValueAsync(cancellationToken);
+        connectionLazy.GetValueAsync(cancellationToken);
 
-    public void ResetConnection() => _connectionLazy.Reset();
+    public void ResetConnection() => connectionLazy.Reset();
 }
 
 public class CacheService<TKey, TValue> where TKey : notnull
 {
-    private readonly AsyncMemoizer<TKey, TValue> _memoizer;
+    private readonly AsyncMemoizer<TKey, TValue> memoizer;
 
     public CacheService(Func<TKey, Task<TValue>> valueFactory)
     {
-        _memoizer = new AsyncMemoizer<TKey, TValue>(valueFactory);
+        memoizer = new AsyncMemoizer<TKey, TValue>(valueFactory);
     }
 
-    public Task<TValue> GetAsync(TKey key) => _memoizer.GetAsync(key);
+    public Task<TValue> GetAsync(TKey key) => memoizer.GetAsync(key);
     
-    public void Invalidate(TKey key) => _memoizer.Invalidate(key);
+    public void Invalidate(TKey key) => memoizer.Invalidate(key);
     
-    public void Clear() => _memoizer.Clear();
+    public void Clear() => memoizer.Clear();
     
-    public int CacheSize => _memoizer.CacheSize;
+    public int CacheSize => memoizer.CacheSize;
 }
 
 public class ApiClientService
 {
-    private readonly AsyncMemoizer<string, string> _apiMemoizer;
-    private readonly HttpClient _httpClient;
+    private readonly AsyncMemoizer<string, string> apiMemoizer;
+    private readonly HttpClient httpClient;
 
     public ApiClientService(HttpClient httpClient)
     {
-        _httpClient = httpClient;
-        _apiMemoizer = new AsyncMemoizer<string, string>(FetchFromApiAsync);
+        httpClient = httpClient;
+        apiMemoizer = new AsyncMemoizer<string, string>(FetchFromApiAsync);
     }
 
-    public Task<string> GetDataAsync(string endpoint) => _apiMemoizer.GetAsync(endpoint);
+    public Task<string> GetDataAsync(string endpoint) => apiMemoizer.GetAsync(endpoint);
 
     private async Task<string> FetchFromApiAsync(string endpoint)
     {
@@ -314,58 +272,58 @@ public class ApiClientService
         
         // Simulate API call
         await Task.Delay(500);
-        var response = await _httpClient.GetStringAsync(endpoint);
+        var response = await httpClient.GetStringAsync(endpoint);
         
         return response;
     }
 
-    public void InvalidateCache(string endpoint) => _apiMemoizer.Invalidate(endpoint);
+    public void InvalidateCache(string endpoint) => apiMemoizer.Invalidate(endpoint);
 }
 
 public class ResourceManagerService
 {
-    private readonly AsyncLazyCollection<ResourceItem> _resourcesLazy;
+    private readonly AsyncLazyCollection<ResourceItem> resourcesLazy;
 
     public ResourceManagerService(Func<Task<ResourceItem[]>> resourceLoader)
     {
-        _resourcesLazy = new AsyncLazyCollection<ResourceItem>(resourceLoader);
+        resourcesLazy = new AsyncLazyCollection<ResourceItem>(resourceLoader);
     }
 
-    public Task<ResourceItem[]> GetAllResourcesAsync() => _resourcesLazy.GetAllAsync();
+    public Task<ResourceItem[]> GetAllResourcesAsync() => resourcesLazy.GetAllAsync();
     
-    public Task<ResourceItem> GetResourceAsync(int index) => _resourcesLazy.GetItemAsync(index);
+    public Task<ResourceItem> GetResourceAsync(int index) => resourcesLazy.GetItemAsync(index);
     
-    public Task<int> GetResourceCountAsync() => _resourcesLazy.GetCountAsync();
+    public Task<int> GetResourceCountAsync() => resourcesLazy.GetCountAsync();
 }
 
 // Advanced pattern: Async lazy with refresh trigger
 public class RefreshableAsyncLazy<T>
 {
-    private readonly Func<Task<T>> _factory;
-    private readonly object _lock = new object();
-    private AsyncLazy<T>? _currentLazy;
-    private int _version;
+    private readonly Func<Task<T>> factory;
+    private readonly object lockObj = new();
+    private AsyncLazy<T>? currentLazy;
+    private int version;
 
     public RefreshableAsyncLazy(Func<Task<T>> factory)
     {
-        _factory = factory ?? throw new ArgumentNullException(nameof(factory));
-        _currentLazy = new AsyncLazy<T>(factory);
+        factory = factory ?? throw new ArgumentNullException(nameof(factory));
+        currentLazy = new AsyncLazy<T>(factory);
     }
 
     public Task<T> GetValueAsync()
     {
-        lock (_lock)
+        lock (lockObj)
         {
-            return _currentLazy!.Value;
+            return currentLazy!.Value;
         }
     }
 
     public void Refresh()
     {
-        lock (_lock)
+        lock (lockObj)
         {
-            _currentLazy = new AsyncLazy<T>(_factory);
-            _version++;
+            currentLazy = new AsyncLazy<T>(factory);
+            version++;
         }
     }
 
@@ -373,9 +331,9 @@ public class RefreshableAsyncLazy<T>
     {
         get
         {
-            lock (_lock)
+            lock (lockObj)
             {
-                return _version;
+                return version;
             }
         }
     }
@@ -384,9 +342,9 @@ public class RefreshableAsyncLazy<T>
     {
         get
         {
-            lock (_lock)
+            lock (lockObj)
             {
-                return _currentLazy?.IsValueCreated == true;
+                return currentLazy?.IsValueCreated == true;
             }
         }
     }
@@ -410,11 +368,11 @@ public interface IDbConnection : IDisposable
 
 public class DatabaseConnection : IDbConnection
 {
-    private readonly string _connectionString;
+    private readonly string connectionString;
     
     public DatabaseConnection(string connectionString)
     {
-        _connectionString = connectionString;
+        connectionString = connectionString;
         IsOpen = true; // Simulate open connection
     }
     

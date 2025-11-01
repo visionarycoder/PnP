@@ -574,14 +574,14 @@ public class AsyncReaderWriterLock : IAsyncReaderWriterLock
 }
 
 // Lock-free reader pattern using versioning
-public class LockFreeReader&lt;T&gt; where T : class
+public class LockFreeReader<T> where T : class
 {
-    private volatile VersionedValue&lt;T&gt; current;
+    private volatile VersionedValue<T> current;
     private readonly ILogger logger;
 
     public LockFreeReader(T initialValue, ILogger logger = null)
     {
-        current = new VersionedValue&lt;T&gt;(initialValue, 0);
+        current = new VersionedValue<T>(initialValue, 0);
         this.logger = logger;
     }
 
@@ -605,7 +605,7 @@ public class LockFreeReader&lt;T&gt; where T : class
     public void Write(T newValue)
     {
         var oldSnapshot = current;
-        var newSnapshot = new VersionedValue&lt;T&gt;(newValue, oldSnapshot.Version + 1);
+        var newSnapshot = new VersionedValue<T>(newValue, oldSnapshot.Version + 1);
         
         // Atomic update using compare-and-swap
         var originalSnapshot = Interlocked.CompareExchange(ref current, newSnapshot, oldSnapshot);
@@ -632,7 +632,7 @@ public class LockFreeReader&lt;T&gt; where T : class
             return false;
         }
         
-        var newSnapshot = new VersionedValue&lt;T&gt;(newValue, expectedVersion + 1);
+        var newSnapshot = new VersionedValue<T>(newValue, expectedVersion + 1);
         var originalSnapshot = Interlocked.CompareExchange(ref current, newSnapshot, oldSnapshot);
         
         var success = ReferenceEquals(originalSnapshot, oldSnapshot);
@@ -649,7 +649,7 @@ public class LockFreeReader&lt;T&gt; where T : class
         {
             var oldSnapshot = current;
             var newValue = updateFunction(oldSnapshot.Value);
-            var newSnapshot = new VersionedValue&lt;T&gt;(newValue, oldSnapshot.Version + 1);
+            var newSnapshot = new VersionedValue<T>(newValue, oldSnapshot.Version + 1);
             
             var originalSnapshot = Interlocked.CompareExchange(ref current, newSnapshot, oldSnapshot);
             

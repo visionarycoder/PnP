@@ -40,7 +40,7 @@ public interface IMessage
 
 public interface IMessageQueue
 {
-    Task EnqueueAsync&lt;T&gt;(T message, CancellationToken token = default) where T : class;
+    Task EnqueueAsync<T>(T message, CancellationToken token = default) where T : class;
     Task EnqueueAsync(IMessage message, CancellationToken token = default);
     Task<IMessage> DequeueAsync(CancellationToken token = default);
     Task<IMessage> DequeueAsync(TimeSpan timeout, CancellationToken token = default);
@@ -73,7 +73,7 @@ public interface IMessageContext
 public interface IMessageRouter
 {
     Task RouteMessageAsync(IMessage message, CancellationToken token = default);
-    void RegisterRoute&lt;T&gt;(string queueName) where T : class;
+    void RegisterRoute<T>(string queueName) where T : class;
     void RegisterRoute(string messageType, string queueName);
     void RegisterRoute(Func<IMessage, bool> predicate, string queueName);
 }
@@ -114,7 +114,7 @@ public class Message : IMessage
     public string ReplyTo { get; set; }
 }
 
-public class TypedMessage&lt;T&gt; : Message where T : class
+public class TypedMessage<T> : Message where T : class
 {
     public TypedMessage(T payload)
     {
@@ -125,10 +125,10 @@ public class TypedMessage&lt;T&gt; : Message where T : class
 
     public T Payload { get; private set; }
 
-    public static TypedMessage&lt;T&gt; FromMessage(IMessage message)
+    public static TypedMessage<T> FromMessage(IMessage message)
     {
-        var payload = JsonSerializer.Deserialize&lt;T&gt;(message.Body);
-        return new TypedMessage&lt;T&gt;(payload)
+        var payload = JsonSerializer.Deserialize<T>(message.Body);
+        return new TypedMessage<T>(payload)
         {
             MessageId = message.MessageId,
             MessageType = message.MessageType,
@@ -165,9 +165,9 @@ public class InMemoryMessageQueue : IMessageQueue
 
     public string QueueName { get; }
 
-    public Task EnqueueAsync&lt;T&gt;(T message, CancellationToken token = default) where T : class
+    public Task EnqueueAsync<T>(T message, CancellationToken token = default) where T : class
     {
-        var typedMessage = new TypedMessage&lt;T&gt;(message);
+        var typedMessage = new TypedMessage<T>(message);
         return EnqueueAsync(typedMessage, token);
     }
 
@@ -379,7 +379,7 @@ public class MessageRouter : IMessageRouter
         routeRules = new List<RouteRule>();
     }
 
-    public void RegisterRoute&lt;T&gt;(string queueName) where T : class
+    public void RegisterRoute<T>(string queueName) where T : class
     {
         RegisterRoute(typeof(T).Name, queueName);
     }
@@ -576,20 +576,20 @@ public class MessageContext : IMessageContext
 }
 
 // Message processor/consumer
-public class MessageProcessor&lt;T&gt; : BackgroundService where T : class
+public class MessageProcessor<T> : BackgroundService where T : class
 {
     private readonly IMessageQueue queue;
-    private readonly IMessageHandler&lt;T&gt; handler;
+    private readonly IMessageHandler<T> handler;
     private readonly IDeadLetterQueue deadLetterQueue;
     private readonly MessageProcessorOptions options;
     private readonly ILogger logger;
 
     public MessageProcessor(
         IMessageQueue queue,
-        IMessageHandler&lt;T&gt; handler,
+        IMessageHandler<T> handler,
         IDeadLetterQueue deadLetterQueue = null,
         IOptions<MessageProcessorOptions> options = null,
-        ILogger<MessageProcessor&lt;T&gt;> logger = null)
+        ILogger<MessageProcessor<T>> logger = null)
     {
         this.queue = queue ?? throw new ArgumentNullException(nameof(queue));
         this.handler = handler ?? throw new ArgumentNullException(nameof(handler));
@@ -665,7 +665,7 @@ public class MessageProcessor&lt;T&gt; : BackgroundService where T : class
                 message.MessageId, message.MessageType);
 
             // Deserialize message
-            var typedMessage = JsonSerializer.Deserialize&lt;T&gt;(message.Body);
+            var typedMessage = JsonSerializer.Deserialize<T>(message.Body);
             
             // Handle message
             await handler.HandleAsync(typedMessage, context, stoppingToken).ConfigureAwait(false);
@@ -717,18 +717,18 @@ public class MessageProcessor&lt;T&gt; : BackgroundService where T : class
 }
 
 // Message batch processor for high-throughput scenarios
-public class MessageBatchProcessor&lt;T&gt; : BackgroundService where T : class
+public class MessageBatchProcessor<T> : BackgroundService where T : class
 {
     private readonly IMessageQueue queue;
-    private readonly IMessageBatchHandler&lt;T&gt; batchHandler;
+    private readonly IMessageBatchHandler<T> batchHandler;
     private readonly BatchProcessorOptions options;
     private readonly ILogger logger;
 
     public MessageBatchProcessor(
         IMessageQueue queue,
-        IMessageBatchHandler&lt;T&gt; batchHandler,
+        IMessageBatchHandler<T> batchHandler,
         IOptions<BatchProcessorOptions> options = null,
-        ILogger<MessageBatchProcessor&lt;T&gt;> logger = null)
+        ILogger<MessageBatchProcessor<T>> logger = null)
     {
         this.queue = queue ?? throw new ArgumentNullException(nameof(queue));
         this.batchHandler = batchHandler ?? throw new ArgumentNullException(nameof(batchHandler));
@@ -744,7 +744,7 @@ public class MessageBatchProcessor&lt;T&gt; : BackgroundService where T : class
         {
             try
             {
-                var batch = new List<BatchMessageItem&lt;T&gt;>();
+                var batch = new List<BatchMessageItem<T>>();
                 var batchTimeout = DateTime.UtcNow.Add(options.BatchTimeout);
 
                 // Collect batch
@@ -757,10 +757,10 @@ public class MessageBatchProcessor&lt;T&gt; : BackgroundService where T : class
                     {
                         try
                         {
-                            var payload = JsonSerializer.Deserialize&lt;T&gt;(message.Body);
+                            var payload = JsonSerializer.Deserialize<T>(message.Body);
                             var context = new MessageContext(message, queue);
                             
-                            batch.Add(new BatchMessageItem&lt;T&gt;
+                            batch.Add(new BatchMessageItem<T>
                             {
                                 Message = message,
                                 Payload = payload,
@@ -803,7 +803,7 @@ public class MessageBatchProcessor&lt;T&gt; : BackgroundService where T : class
         logger?.LogInformation("Batch message processor stopped for queue {QueueName}", queue.QueueName);
     }
 
-    private async Task ProcessBatchAsync(List<BatchMessageItem&lt;T&gt;> batch, CancellationToken stoppingToken)
+    private async Task ProcessBatchAsync(List<BatchMessageItem<T>> batch, CancellationToken stoppingToken)
     {
         var stopwatch = Stopwatch.StartNew();
         
@@ -811,7 +811,7 @@ public class MessageBatchProcessor&lt;T&gt; : BackgroundService where T : class
         {
             logger?.LogTrace("Processing batch of {BatchSize} messages", batch.Count);
 
-            var batchContext = new MessageBatchContext&lt;T&gt;(batch);
+            var batchContext = new MessageBatchContext<T>(batch);
             await batchHandler.HandleBatchAsync(batchContext, stoppingToken).ConfigureAwait(false);
 
             // Acknowledge all successful messages
@@ -862,35 +862,35 @@ public interface IMessageQueueManager
 
 public interface IMessageBatchHandler<in T> where T : class
 {
-    Task HandleBatchAsync(IMessageBatchContext&lt;T&gt; batchContext, CancellationToken token = default);
+    Task HandleBatchAsync(IMessageBatchContext<T> batchContext, CancellationToken token = default);
 }
 
 public interface IMessageBatchContext<out T> where T : class
 {
-    IEnumerable<BatchMessageItem&lt;T&gt;> Items { get; }
+    IEnumerable<BatchMessageItem<T>> Items { get; }
     void MarkSuccess(Guid messageId);
     void MarkFailure(Guid messageId, Exception exception = null);
     bool IsSuccess(Guid messageId);
 }
 
-public class BatchMessageItem&lt;T&gt; where T : class
+public class BatchMessageItem<T> where T : class
 {
     public IMessage Message { get; set; }
     public T Payload { get; set; }
     public IMessageContext Context { get; set; }
 }
 
-public class MessageBatchContext&lt;T&gt; : IMessageBatchContext&lt;T&gt; where T : class
+public class MessageBatchContext<T> : IMessageBatchContext<T> where T : class
 {
     private readonly ConcurrentDictionary<Guid, bool> processingResults;
 
-    public MessageBatchContext(IEnumerable<BatchMessageItem&lt;T&gt;> items)
+    public MessageBatchContext(IEnumerable<BatchMessageItem<T>> items)
     {
         Items = items ?? throw new ArgumentNullException(nameof(items));
         processingResults = new ConcurrentDictionary<Guid, bool>();
     }
 
-    public IEnumerable<BatchMessageItem&lt;T&gt;> Items { get; }
+    public IEnumerable<BatchMessageItem<T>> Items { get; }
 
     public void MarkSuccess(Guid messageId)
     {

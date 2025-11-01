@@ -49,7 +49,7 @@ public interface ISagaStep
 
 public interface ISagaOrchestrator
 {
-    Task<ISaga> StartSagaAsync&lt;T&gt;(T sagaData, CancellationToken token = default) where T : class;
+    Task<ISaga> StartSagaAsync<T>(T sagaData, CancellationToken token = default) where T : class;
     Task<ISaga> StartSagaAsync(string sagaType, object sagaData, CancellationToken token = default);
     Task<ISaga> GetSagaAsync(Guid sagaId, CancellationToken token = default);
     Task<IEnumerable<ISaga>> GetActiveSagasAsync(CancellationToken token = default);
@@ -82,9 +82,9 @@ public interface ISagaContext
     IServiceProvider ServiceProvider { get; }
     CancellationToken CancellationToken { get; }
     void SetStepData(string key, object value);
-    T GetStepData&lt;T&gt;(string key);
+    T GetStepData<T>(string key);
     void SetSagaData(string key, object value);
-    T GetSagaData&lt;T&gt;(string key);
+    T GetSagaData<T>(string key);
 }
 
 // Enums
@@ -373,7 +373,7 @@ public class SagaContext : ISagaContext
         StepData[key] = value;
     }
 
-    public T GetStepData&lt;T&gt;(string key)
+    public T GetStepData<T>(string key)
     {
         if (StepData.TryGetValue(key, out var value))
         {
@@ -381,9 +381,9 @@ public class SagaContext : ISagaContext
                 return directValue;
             
             if (value is JsonElement jsonElement)
-                return JsonSerializer.Deserialize&lt;T&gt;(jsonElement.GetRawText());
+                return JsonSerializer.Deserialize<T>(jsonElement.GetRawText());
                 
-            return JsonSerializer.Deserialize&lt;T&gt;(JsonSerializer.Serialize(value));
+            return JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(value));
         }
         
         return default(T);
@@ -394,7 +394,7 @@ public class SagaContext : ISagaContext
         SagaData[key] = value;
     }
 
-    public T GetSagaData&lt;T&gt;(string key)
+    public T GetSagaData<T>(string key)
     {
         if (SagaData.TryGetValue(key, out var value))
         {
@@ -402,9 +402,9 @@ public class SagaContext : ISagaContext
                 return directValue;
                 
             if (value is JsonElement jsonElement)
-                return JsonSerializer.Deserialize&lt;T&gt;(jsonElement.GetRawText());
+                return JsonSerializer.Deserialize<T>(jsonElement.GetRawText());
                 
-            return JsonSerializer.Deserialize&lt;T&gt;(JsonSerializer.Serialize(value));
+            return JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(value));
         }
         
         return default(T);
@@ -488,7 +488,7 @@ public class SagaOrchestrator : ISagaOrchestrator, IDisposable
         timeoutTimer = new Timer(CheckTimeouts, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
     }
 
-    public Task<ISaga> StartSagaAsync&lt;T&gt;(T sagaData, CancellationToken token = default) where T : class
+    public Task<ISaga> StartSagaAsync<T>(T sagaData, CancellationToken token = default) where T : class
     {
         var sagaType = typeof(T).Name;
         return StartSagaAsync(sagaType, sagaData, token);
@@ -579,7 +579,7 @@ public class SagaOrchestrator : ISagaOrchestrator, IDisposable
         return false;
     }
 
-    public void RegisterSaga&lt;T&gt;(Action<SagaDefinitionBuilder> configure) where T : class
+    public void RegisterSaga<T>(Action<SagaDefinitionBuilder> configure) where T : class
     {
         var sagaType = typeof(T).Name;
         var builder = new SagaDefinitionBuilder(sagaType);

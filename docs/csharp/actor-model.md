@@ -49,7 +49,7 @@ public interface IActorContext
     IActorRef Sender { get; }
     IActorSystem System { get; }
     ILogger Logger { get; }
-    Task<IActorRef> ActorOf&lt;T&gt;(string name = null) where T : ActorBase, new();
+    Task<IActorRef> ActorOf<T>(string name = null) where T : ActorBase, new();
     Task Tell(IActorRef target, IMessage message);
     Task<TResponse> Ask<TResponse>(IActorRef target, IMessage message, TimeSpan timeout);
     Task Stop(IActorRef actor);
@@ -72,7 +72,7 @@ public interface IActorRef
 public interface IActorSystem : IDisposable
 {
     string Name { get; }
-    Task<IActorRef> ActorOf&lt;T&gt;(string name = null) where T : ActorBase, new();
+    Task<IActorRef> ActorOf<T>(string name = null) where T : ActorBase, new();
     IActorRef GetActor(string path);
     Task Stop(IActorRef actor);
     Task Shutdown();
@@ -446,9 +446,9 @@ public class ActorContext : IActorContext
         sender = senderRef;
     }
 
-    public Task<IActorRef> ActorOf&lt;T&gt;(string name = null) where T : ActorBase, new()
+    public Task<IActorRef> ActorOf<T>(string name = null) where T : ActorBase, new()
     {
-        return system.ActorOf&lt;T&gt;(name);
+        return system.ActorOf<T>(name);
     }
 
     public Task Tell(IActorRef target, IMessage message)
@@ -562,7 +562,7 @@ public class ActorSystem : IActorSystem, IDisposable
 
     public event EventHandler<ActorSystemEventArgs> ActorSystemEvent;
 
-    public async Task<IActorRef> ActorOf&lt;T&gt;(string name = null) where T : ActorBase, new()
+    public async Task<IActorRef> ActorOf<T>(string name = null) where T : ActorBase, new()
     {
         if (isShuttingDown) throw new InvalidOperationException("Actor system is shutting down");
 
@@ -576,7 +576,7 @@ public class ActorSystem : IActorSystem, IDisposable
 
         var actor = new T();
         var mailbox = new BoundedMailbox();
-        var actorLogger = serviceProvider.GetService<ILoggerFactory>()?.CreateLogger&lt;T&gt;();
+        var actorLogger = serviceProvider.GetService<ILoggerFactory>()?.CreateLogger<T>();
         
         var actorRef = new ActorRef(actorId, path, actor, mailbox, actorLogger);
         var context = new ActorContext(actorId, actorRef, this, actorLogger);

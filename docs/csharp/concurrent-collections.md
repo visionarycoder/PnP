@@ -19,7 +19,7 @@ using System.Collections;
 using System.Runtime.InteropServices;
 
 // Lock-free stack implementation
-public class LockFreeStack&lt;T&gt; : IEnumerable&lt;T&gt; where T : class
+public class LockFreeStack<T> : IEnumerable<T> where T : class
 {
     private volatile Node head;
 
@@ -97,7 +97,7 @@ public class LockFreeStack&lt;T&gt; : IEnumerable&lt;T&gt; where T : class
         }
     }
 
-    public IEnumerator&lt;T&gt; GetEnumerator()
+    public IEnumerator<T> GetEnumerator()
     {
         var current = head;
         
@@ -112,7 +112,7 @@ public class LockFreeStack&lt;T&gt; : IEnumerable&lt;T&gt; where T : class
 }
 
 // Lock-free queue implementation using Michael & Scott algorithm
-public class LockFreeQueue&lt;T&gt; : IEnumerable&lt;T&gt; where T : class
+public class LockFreeQueue<T> : IEnumerable<T> where T : class
 {
     private volatile Node head;
     private volatile Node tail;
@@ -230,7 +230,7 @@ public class LockFreeQueue&lt;T&gt; : IEnumerable&lt;T&gt; where T : class
         }
     }
 
-    public IEnumerator&lt;T&gt; GetEnumerator()
+    public IEnumerator<T> GetEnumerator()
     {
         var current = head.Next; // Skip sentinel
 
@@ -245,7 +245,7 @@ public class LockFreeQueue&lt;T&gt; : IEnumerable&lt;T&gt; where T : class
 }
 
 // Thread-safe bounded buffer with backpressure
-public class BoundedBuffer&lt;T&gt; : IDisposable
+public class BoundedBuffer<T> : IDisposable
 {
     private readonly T[] buffer;
     private readonly int capacity;
@@ -339,9 +339,9 @@ public class BoundedBuffer&lt;T&gt; : IDisposable
         }
     }
 
-    public IEnumerable&lt;T&gt; TakeAll()
+    public IEnumerable<T> TakeAll()
     {
-        var items = new List&lt;T&gt;();
+        var items = new List<T>();
 
         lock (lockObject)
         {
@@ -430,16 +430,16 @@ public class AtomicCounter
 }
 
 // Thread-safe object pool
-public class ConcurrentObjectPool&lt;T&gt; : IDisposable where T : class
+public class ConcurrentObjectPool<T> : IDisposable where T : class
 {
-    private readonly ConcurrentQueue&lt;T&gt; objects = new ConcurrentQueue&lt;T&gt;();
-    private readonly Func&lt;T&gt; objectFactory;
-    private readonly Action&lt;T&gt; resetAction;
+    private readonly ConcurrentQueue<T> objects = new ConcurrentQueue<T>();
+    private readonly Func<T> objectFactory;
+    private readonly Action<T> resetAction;
     private readonly int maxSize;
     private volatile int currentSize = 0;
     private volatile bool isDisposed = false;
 
-    public ConcurrentObjectPool(Func&lt;T&gt; factory, Action&lt;T&gt; reset = null, int maxSize = 100)
+    public ConcurrentObjectPool(Func<T> factory, Action<T> reset = null, int maxSize = 100)
     {
         objectFactory = factory ?? throw new ArgumentNullException(nameof(factory));
         resetAction = reset;
@@ -448,7 +448,7 @@ public class ConcurrentObjectPool&lt;T&gt; : IDisposable where T : class
 
     public T Rent()
     {
-        if (isDisposed) throw new ObjectDisposedException(nameof(ConcurrentObjectPool&lt;T&gt;));
+        if (isDisposed) throw new ObjectDisposedException(nameof(ConcurrentObjectPool<T>));
 
         if (objects.TryDequeue(out var obj))
         {
@@ -506,7 +506,7 @@ public class ConcurrentObjectPool&lt;T&gt; : IDisposable where T : class
 }
 
 // Lock-free single-producer/single-consumer ring buffer
-public class SPSCRingBuffer&lt;T&gt; where T : struct
+public class SPSCRingBuffer<T> where T : struct
 {
     private readonly T[] buffer;
     private readonly int capacity;
@@ -975,22 +975,22 @@ public class ConcurrentCollectionStats
 }
 
 // Thread-safe priority queue
-public class ConcurrentPriorityQueue&lt;T&gt; : IDisposable
+public class ConcurrentPriorityQueue<T> : IDisposable
 {
-    private readonly SortedDictionary<int, ConcurrentQueue&lt;T&gt;> queues;
+    private readonly SortedDictionary<int, ConcurrentQueue<T>> queues;
     private readonly ReaderWriterLockSlim lockSlim;
     private volatile int totalCount = 0;
     private volatile bool isDisposed = false;
 
     public ConcurrentPriorityQueue()
     {
-        queues = new SortedDictionary<int, ConcurrentQueue&lt;T&gt;>(Comparer<int>.Create((x, y) => y.CompareTo(x))); // Higher priority first
+        queues = new SortedDictionary<int, ConcurrentQueue<T>>(Comparer<int>.Create((x, y) => y.CompareTo(x))); // Higher priority first
         lockSlim = new ReaderWriterLockSlim();
     }
 
     public void Enqueue(T item, int priority)
     {
-        if (isDisposed) throw new ObjectDisposedException(nameof(ConcurrentPriorityQueue&lt;T&gt;));
+        if (isDisposed) throw new ObjectDisposedException(nameof(ConcurrentPriorityQueue<T>));
 
         lockSlim.EnterReadLock();
         try
@@ -1003,7 +1003,7 @@ public class ConcurrentPriorityQueue&lt;T&gt; : IDisposable
                 {
                     if (!queues.TryGetValue(priority, out queue))
                     {
-                        queue = new ConcurrentQueue&lt;T&gt;();
+                        queue = new ConcurrentQueue<T>();
                         queues[priority] = queue;
                     }
                 }

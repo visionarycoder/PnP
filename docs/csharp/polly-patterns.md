@@ -90,23 +90,23 @@ public class ChaosEngineeringOptions
 // Custom policy result extensions
 public static class PolicyResultExtensions
 {
-    public static bool IsSuccess&lt;T&gt;(this PolicyResult&lt;T&gt; result)
+    public static bool IsSuccess<T>(this PolicyResult<T> result)
     {
         return result.Outcome == OutcomeType.Successful;
     }
 
-    public static bool IsFailure&lt;T&gt;(this PolicyResult&lt;T&gt; result)
+    public static bool IsFailure<T>(this PolicyResult<T> result)
     {
         return result.Outcome == OutcomeType.Failure;
     }
 
-    public static bool WasRetried&lt;T&gt;(this PolicyResult&lt;T&gt; result)
+    public static bool WasRetried<T>(this PolicyResult<T> result)
     {
         return result.Context.ContainsKey("retryCount") && 
                (int)result.Context["retryCount"] > 0;
     }
 
-    public static int GetRetryCount&lt;T&gt;(this PolicyResult&lt;T&gt; result)
+    public static int GetRetryCount<T>(this PolicyResult<T> result)
     {
         return result.Context.TryGetValue("retryCount", out var count) ? (int)count : 0;
     }
@@ -185,13 +185,13 @@ public class AdvancedPollyPolicyFactory
     }
 
     // Create timeout policy with cancellation support
-    public IAsyncPolicy&lt;T&gt; CreateTimeoutPolicy&lt;T&gt;(string policyName = "Timeout")
+    public IAsyncPolicy<T> CreateTimeoutPolicy<T>(string policyName = "Timeout")
     {
         var timeoutStrategy = options.Timeout.OptimisticTimeout 
             ? TimeoutStrategy.Optimistic 
             : TimeoutStrategy.Pessimistic;
 
-        return Policy.TimeoutAsync&lt;T&gt;(
+        return Policy.TimeoutAsync<T>(
             timeout: options.Timeout.Timeout,
             timeoutStrategy: timeoutStrategy,
             onTimeout: (context, timespan, task) =>
@@ -205,9 +205,9 @@ public class AdvancedPollyPolicyFactory
     }
 
     // Create bulkhead isolation policy
-    public IAsyncPolicy&lt;T&gt; CreateBulkheadPolicy&lt;T&gt;(string policyName = "Bulkhead")
+    public IAsyncPolicy<T> CreateBulkheadPolicy<T>(string policyName = "Bulkhead")
     {
-        return Policy.BulkheadAsync&lt;T&gt;(
+        return Policy.BulkheadAsync<T>(
             maxParallelization: options.Bulkhead.MaxParallelization,
             maxQueuingActions: options.Bulkhead.MaxQueuingActions,
             onBulkheadRejected: (context) =>
@@ -219,21 +219,21 @@ public class AdvancedPollyPolicyFactory
     }
 
     // Create chaos engineering policies for testing
-    public IAsyncPolicy&lt;T&gt; CreateChaosPolicy&lt;T&gt;(string policyName = "Chaos")
+    public IAsyncPolicy<T> CreateChaosPolicy<T>(string policyName = "Chaos")
     {
         if (!options.Chaos.Enabled)
         {
-            return Policy.NoOpAsync&lt;T&gt;();
+            return Policy.NoOpAsync<T>();
         }
 
         // Fault injection policy
-        var faultPolicy = MonkeyPolicy.InjectExceptionAsync&lt;T&gt;(with =>
+        var faultPolicy = MonkeyPolicy.InjectExceptionAsync<T>(with =>
             with.Fault(new InvalidOperationException("Chaos engineering fault injection"))
                 .InjectionRate(options.Chaos.FaultInjectionRate)
                 .Enabled());
 
         // Latency injection policy  
-        var latencyPolicy = MonkeyPolicy.InjectLatencyAsync&lt;T&gt;(with =>
+        var latencyPolicy = MonkeyPolicy.InjectLatencyAsync<T>(with =>
             with.Latency(TimeSpan.FromMilliseconds(
                 Random.Shared.Next(
                     (int)options.Chaos.MinLatency.TotalMilliseconds,
@@ -280,11 +280,11 @@ public class EnhancedPolicyRegistry
         this.metrics = new Dictionary<string, PolicyMetrics>();
     }
 
-    public async Task&lt;T&gt; ExecuteAsync&lt;T&gt;(string policyName, Func<Context, Task&lt;T&gt;> operation, Context context = null)
+    public async Task<T> ExecuteAsync<T>(string policyName, Func<Context, Task<T>> operation, Context context = null)
     {
         context ??= new Context(policyName);
         
-        var policy = registry.Get<IAsyncPolicy&lt;T&gt;>(policyName);
+        var policy = registry.Get<IAsyncPolicy<T>>(policyName);
         if (policy == null)
         {
             throw new ArgumentException($"Policy '{policyName}' not found in registry");
@@ -306,11 +306,11 @@ public class EnhancedPolicyRegistry
         }
     }
 
-    public async Task<PolicyResult&lt;T&gt;> ExecuteAndCaptureAsync&lt;T&gt;(string policyName, Func<Context, Task&lt;T&gt;> operation, Context context = null)
+    public async Task<PolicyResult<T>> ExecuteAndCaptureAsync<T>(string policyName, Func<Context, Task<T>> operation, Context context = null)
     {
         context ??= new Context(policyName);
         
-        var policy = registry.Get<IAsyncPolicy&lt;T&gt;>(policyName);
+        var policy = registry.Get<IAsyncPolicy<T>>(policyName);
         if (policy == null)
         {
             throw new ArgumentException($"Policy '{policyName}' not found in registry");
@@ -616,9 +616,9 @@ public class PollyPolicyBuilder
         return this;
     }
 
-    public PollyPolicyBuilder WithFallback&lt;T&gt;(Func<Context, Task&lt;T&gt;> fallbackAction, string name = "Fallback")
+    public PollyPolicyBuilder WithFallback<T>(Func<Context, Task<T>> fallbackAction, string name = "Fallback")
     {
-        var fallbackPolicy = Policy&lt;T&gt;
+        var fallbackPolicy = Policy<T>
             .Handle<Exception>()
             .FallbackAsync(
                 fallbackAction: fallbackAction,
@@ -649,13 +649,13 @@ public class PollyPolicyBuilder
         return Policy.WrapAsync(policies.ToArray());
     }
 
-    public IAsyncPolicy&lt;T&gt; Build&lt;T&gt;()
+    public IAsyncPolicy<T> Build<T>()
     {
-        var typedPolicies = policies.Cast<IAsyncPolicy&lt;T&gt;>().ToArray();
+        var typedPolicies = policies.Cast<IAsyncPolicy<T>>().ToArray();
         
         if (!typedPolicies.Any())
         {
-            return Policy.NoOpAsync&lt;T&gt;();
+            return Policy.NoOpAsync<T>();
         }
 
         if (typedPolicies.Length == 1)
@@ -696,8 +696,8 @@ public class ConditionalPolicyExecutor
         this.logger = logger;
     }
 
-    public async Task&lt;T&gt; ExecuteWithConditionsAsync&lt;T&gt;(
-        Func<Context, Task&lt;T&gt;> operation,
+    public async Task<T> ExecuteWithConditionsAsync<T>(
+        Func<Context, Task<T>> operation,
         params (string PolicyName, Func<Context, bool> Condition)[] conditionalPolicies)
     {
         var context = new Context(Guid.NewGuid().ToString());
@@ -720,8 +720,8 @@ public class ConditionalPolicyExecutor
         return await registry.ExecuteAsync(applicablePolicies.First(), operation, context).ConfigureAwait(false);
     }
 
-    public async Task&lt;T&gt; ExecuteWithDynamicPolicyAsync&lt;T&gt;(
-        Func<Context, Task&lt;T&gt;> operation,
+    public async Task<T> ExecuteWithDynamicPolicyAsync<T>(
+        Func<Context, Task<T>> operation,
         Func<Context, string> policySelector)
     {
         var context = new Context(Guid.NewGuid().ToString());

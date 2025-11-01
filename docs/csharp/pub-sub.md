@@ -28,14 +28,14 @@ using System.Reactive.Linq;
 // Core pub-sub interfaces
 public interface IEventPublisher
 {
-    Task PublishAsync&lt;T&gt;(string topic, T eventData, CancellationToken token = default) where T : class;
+    Task PublishAsync<T>(string topic, T eventData, CancellationToken token = default) where T : class;
     Task PublishAsync(string topic, IEvent eventData, CancellationToken token = default);
     Task PublishAsync(IEvent eventData, CancellationToken token = default);
 }
 
 public interface IEventSubscriber
 {
-    Task<ISubscription> SubscribeAsync&lt;T&gt;(string topic, Func<T, IEventContext, Task> handler, 
+    Task<ISubscription> SubscribeAsync<T>(string topic, Func<T, IEventContext, Task> handler, 
         CancellationToken token = default) where T : class;
     Task<ISubscription> SubscribeAsync(string topic, Func<IEvent, IEventContext, Task> handler,
         CancellationToken token = default);
@@ -112,7 +112,7 @@ public class Event : IEvent
     public int Priority { get; set; }
 }
 
-public class TypedEvent&lt;T&gt; : Event where T : class
+public class TypedEvent<T> : Event where T : class
 {
     public TypedEvent(T payload, string topic = null)
     {
@@ -124,10 +124,10 @@ public class TypedEvent&lt;T&gt; : Event where T : class
 
     public T Payload { get; private set; }
 
-    public static TypedEvent&lt;T&gt; FromEvent(IEvent eventData)
+    public static TypedEvent<T> FromEvent(IEvent eventData)
     {
-        var payload = JsonSerializer.Deserialize&lt;T&gt;(eventData.Data);
-        return new TypedEvent&lt;T&gt;(payload, eventData.Topic)
+        var payload = JsonSerializer.Deserialize<T>(eventData.Data);
+        return new TypedEvent<T>(payload, eventData.Topic)
         {
             EventId = eventData.EventId,
             EventType = eventData.EventType,
@@ -442,9 +442,9 @@ public class InMemoryEventBroker : IEventBroker, IDisposable
         this.logger = logger;
     }
 
-    public async Task PublishAsync&lt;T&gt;(string topic, T eventData, CancellationToken token = default) where T : class
+    public async Task PublishAsync<T>(string topic, T eventData, CancellationToken token = default) where T : class
     {
-        var typedEvent = new TypedEvent&lt;T&gt;(eventData, topic);
+        var typedEvent = new TypedEvent<T>(eventData, topic);
         await PublishAsync(topic, typedEvent, token).ConfigureAwait(false);
     }
 
@@ -503,12 +503,12 @@ public class InMemoryEventBroker : IEventBroker, IDisposable
             eventData.EventId, allSubscribers.Count, topic);
     }
 
-    public async Task<ISubscription> SubscribeAsync&lt;T&gt;(string topic, 
+    public async Task<ISubscription> SubscribeAsync<T>(string topic, 
         Func<T, IEventContext, Task> handler, CancellationToken token = default) where T : class
     {
         var wrappedHandler = new Func<IEvent, IEventContext, Task>(async (eventData, context) =>
         {
-            var typedEvent = JsonSerializer.Deserialize&lt;T&gt;(eventData.Data);
+            var typedEvent = JsonSerializer.Deserialize<T>(eventData.Data);
             await handler(typedEvent, context).ConfigureAwait(false);
         });
 
@@ -715,9 +715,9 @@ public class ReactiveEventBroker : IEventBroker, IDisposable
         this.logger = logger;
     }
 
-    public async Task PublishAsync&lt;T&gt;(string topic, T eventData, CancellationToken token = default) where T : class
+    public async Task PublishAsync<T>(string topic, T eventData, CancellationToken token = default) where T : class
     {
-        var typedEvent = new TypedEvent&lt;T&gt;(eventData, topic);
+        var typedEvent = new TypedEvent<T>(eventData, topic);
         await PublishAsync(topic, typedEvent, token).ConfigureAwait(false);
     }
 
@@ -754,12 +754,12 @@ public class ReactiveEventBroker : IEventBroker, IDisposable
         return Task.CompletedTask;
     }
 
-    public async Task<ISubscription> SubscribeAsync&lt;T&gt;(string topic, 
+    public async Task<ISubscription> SubscribeAsync<T>(string topic, 
         Func<T, IEventContext, Task> handler, CancellationToken token = default) where T : class
     {
         var wrappedHandler = new Func<IEvent, IEventContext, Task>(async (eventData, context) =>
         {
-            var typedEvent = JsonSerializer.Deserialize&lt;T&gt;(eventData.Data);
+            var typedEvent = JsonSerializer.Deserialize<T>(eventData.Data);
             await handler(typedEvent, context).ConfigureAwait(false);
         });
 
@@ -941,7 +941,7 @@ public class EventAggregator : IEventPublisher, IEventSubscriber, IDisposable
         this.logger = logger;
     }
 
-    public Task PublishAsync&lt;T&gt;(string topic, T eventData, CancellationToken token = default) where T : class
+    public Task PublishAsync<T>(string topic, T eventData, CancellationToken token = default) where T : class
     {
         return PublishAsync(eventData, token);
     }
@@ -970,10 +970,10 @@ public class EventAggregator : IEventPublisher, IEventSubscriber, IDisposable
             eventType.Name, eventHandlers?.Count ?? 0);
     }
 
-    public Task<ISubscription> SubscribeAsync&lt;T&gt;(string topic, 
+    public Task<ISubscription> SubscribeAsync<T>(string topic, 
         Func<T, IEventContext, Task> handler, CancellationToken token = default) where T : class
     {
-        var wrapper = new EventHandlerWrapper&lt;T&gt;(handler);
+        var wrapper = new EventHandlerWrapper<T>(handler);
         var eventHandlers = handlers.GetOrAdd(typeof(T), _ => new ConcurrentBag<EventHandlerWrapper>());
         eventHandlers.Add(wrapper);
 
@@ -1058,7 +1058,7 @@ public class EventAggregator : IEventPublisher, IEventSubscriber, IDisposable
         }
     }
 
-    private class EventHandlerWrapper&lt;T&gt; : EventHandlerWrapper where T : class
+    private class EventHandlerWrapper<T> : EventHandlerWrapper where T : class
     {
         private readonly Func<T, IEventContext, Task> handler;
 
@@ -1079,7 +1079,7 @@ public class EventAggregator : IEventPublisher, IEventSubscriber, IDisposable
                 {
                     typedEvent = directEvent;
                 }
-                else if (eventData is TypedEvent&lt;T&gt; typedEventWrapper)
+                else if (eventData is TypedEvent<T> typedEventWrapper)
                 {
                     typedEvent = typedEventWrapper.Payload;
                 }
@@ -1144,9 +1144,9 @@ public class PersistentEventBroker : IEventBroker, IDisposable
         this.logger = logger;
     }
 
-    public async Task PublishAsync&lt;T&gt;(string topic, T eventData, CancellationToken token = default) where T : class
+    public async Task PublishAsync<T>(string topic, T eventData, CancellationToken token = default) where T : class
     {
-        var typedEvent = new TypedEvent&lt;T&gt;(eventData, topic);
+        var typedEvent = new TypedEvent<T>(eventData, topic);
         await PublishAsync(topic, typedEvent, token).ConfigureAwait(false);
     }
 
@@ -1172,14 +1172,14 @@ public class PersistentEventBroker : IEventBroker, IDisposable
         logger?.LogTrace("Persistently stored and published event {EventId}", eventData.EventId);
     }
 
-    public async Task<ISubscription> SubscribeAsync&lt;T&gt;(string topic, 
+    public async Task<ISubscription> SubscribeAsync<T>(string topic, 
         Func<T, IEventContext, Task> handler, CancellationToken token = default) where T : class
     {
         // Subscribe to future events
         var subscription = await inmemoryBroker.SubscribeAsync(topic, handler, token).ConfigureAwait(false);
 
         // Replay historical events
-        await ReplayEventsForSubscription&lt;T&gt;(topic, handler, token).ConfigureAwait(false);
+        await ReplayEventsForSubscription<T>(topic, handler, token).ConfigureAwait(false);
 
         return subscription;
     }
@@ -1238,7 +1238,7 @@ public class PersistentEventBroker : IEventBroker, IDisposable
         }
     }
 
-    private async Task ReplayEventsForSubscription&lt;T&gt;(string topic, Func<T, IEventContext, Task> handler, 
+    private async Task ReplayEventsForSubscription<T>(string topic, Func<T, IEventContext, Task> handler, 
         CancellationToken token) where T : class
     {
         lock (storeLock)
@@ -1251,7 +1251,7 @@ public class PersistentEventBroker : IEventBroker, IDisposable
             {
                 try
                 {
-                    var payload = JsonSerializer.Deserialize&lt;T&gt;(eventData.Data);
+                    var payload = JsonSerializer.Deserialize<T>(eventData.Data);
                     var context = new EventContext(eventData, new Subscription(topic, null));
                     
                     await handler(payload, context).ConfigureAwait(false);

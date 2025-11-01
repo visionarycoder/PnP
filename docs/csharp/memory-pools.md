@@ -1,6 +1,6 @@
 # Memory Pools and ArrayPool Strategies
 
-**Description**: Advanced memory pooling techniques using ArrayPool&lt;T&gt;, custom object pools, and memory management strategies to reduce garbage collection pressure and improve performance in high-throughput applications.
+**Description**: Advanced memory pooling techniques using ArrayPool<T>, custom object pools, and memory management strategies to reduce garbage collection pressure and improve performance in high-throughput applications.
 
 **Language/Technology**: C# / .NET
 
@@ -21,13 +21,13 @@ using System.Threading.Tasks;
 public static class ArrayPoolExtensions
 {
     // Rent with automatic return using IDisposable
-    public static ArrayPoolRental&lt;T&gt; RentDisposable&lt;T&gt;(this ArrayPool&lt;T&gt; pool, int minimumLength)
+    public static ArrayPoolRental<T> RentDisposable<T>(this ArrayPool<T> pool, int minimumLength)
     {
-        return new ArrayPoolRental&lt;T&gt;(pool, minimumLength);
+        return new ArrayPoolRental<T>(pool, minimumLength);
     }
 
     // Rent and initialize array
-    public static T[] RentAndClear&lt;T&gt;(this ArrayPool&lt;T&gt; pool, int minimumLength)
+    public static T[] RentAndClear<T>(this ArrayPool<T> pool, int minimumLength)
     {
         var array = pool.Rent(minimumLength);
         Array.Clear(array, 0, minimumLength);
@@ -35,7 +35,7 @@ public static class ArrayPoolExtensions
     }
 
     // Safe return that handles null arrays
-    public static void SafeReturn&lt;T&gt;(this ArrayPool&lt;T&gt; pool, T[]? array, bool clearArray = false)
+    public static void SafeReturn<T>(this ArrayPool<T> pool, T[]? array, bool clearArray = false)
     {
         if (array != null)
         {
@@ -44,7 +44,7 @@ public static class ArrayPoolExtensions
     }
 
     // Resize array using pool
-    public static T[] Resize&lt;T&gt;(this ArrayPool&lt;T&gt; pool, T[] array, int currentLength, int newLength)
+    public static T[] Resize<T>(this ArrayPool<T> pool, T[] array, int currentLength, int newLength)
     {
         if (newLength <= array.Length)
         {
@@ -59,12 +59,12 @@ public static class ArrayPoolExtensions
     }
 
     // Convert IEnumerable to pooled array
-    public static (T[] array, int length) ToPooledArray&lt;T&gt;(
-        this IEnumerable&lt;T&gt; source, 
-        ArrayPool&lt;T&gt; pool, 
+    public static (T[] array, int length) ToPooledArray<T>(
+        this IEnumerable<T> source, 
+        ArrayPool<T> pool, 
         int initialCapacity = 4)
     {
-        if (source is ICollection&lt;T&gt; collection)
+        if (source is ICollection<T> collection)
         {
             var array = pool.Rent(collection.Count);
             collection.CopyTo(array, 0);
@@ -89,28 +89,28 @@ public static class ArrayPoolExtensions
 }
 
 // RAII wrapper for ArrayPool
-public readonly struct ArrayPoolRental&lt;T&gt; : IDisposable
+public readonly struct ArrayPoolRental<T> : IDisposable
 {
-    private readonly ArrayPool&lt;T&gt; _pool;
+    private readonly ArrayPool<T> _pool;
     public T[] Array { get; }
     public int Length { get; }
 
-    public ArrayPoolRental(ArrayPool&lt;T&gt; pool, int minimumLength)
+    public ArrayPoolRental(ArrayPool<T> pool, int minimumLength)
     {
         _pool = pool;
         Array = pool.Rent(minimumLength);
         Length = minimumLength;
     }
 
-    public ArrayPoolRental(ArrayPool&lt;T&gt; pool, T[] array, int length)
+    public ArrayPoolRental(ArrayPool<T> pool, T[] array, int length)
     {
         _pool = pool;
         Array = array;
         Length = length;
     }
 
-    public Span&lt;T&gt; AsSpan() => Array.AsSpan(0, Length);
-    public Memory&lt;T&gt; AsMemory() => Array.AsMemory(0, Length);
+    public Span<T> AsSpan() => Array.AsSpan(0, Length);
+    public Memory<T> AsMemory() => Array.AsMemory(0, Length);
 
     public void Dispose()
     {
@@ -119,30 +119,30 @@ public readonly struct ArrayPoolRental&lt;T&gt; : IDisposable
 }
 
 // Custom object pool for complex objects
-public abstract class ObjectPool&lt;T&gt; where T : class
+public abstract class ObjectPool<T> where T : class
 {
     public abstract T Get();
     public abstract void Return(T obj);
     
     // Disposable wrapper for automatic return
-    public ObjectPoolRental&lt;T&gt; GetDisposable()
+    public ObjectPoolRental<T> GetDisposable()
     {
-        return new ObjectPoolRental&lt;T&gt;(this, Get());
+        return new ObjectPoolRental<T>(this, Get());
     }
 }
 
 // Default object pool implementation
-public class DefaultObjectPool&lt;T&gt; : ObjectPool&lt;T&gt; where T : class, new()
+public class DefaultObjectPool<T> : ObjectPool<T> where T : class, new()
 {
-    private readonly ConcurrentBag&lt;T&gt; _objects = new();
-    private readonly Func&lt;T&gt; _objectFactory;
-    private readonly Action&lt;T&gt;? _resetAction;
+    private readonly ConcurrentBag<T> _objects = new();
+    private readonly Func<T> _objectFactory;
+    private readonly Action<T>? _resetAction;
     private readonly int _maxRetainedObjects;
     private int _currentCount;
 
     public DefaultObjectPool(
-        Func&lt;T&gt;? objectFactory = null, 
-        Action&lt;T&gt;? resetAction = null,
+        Func<T>? objectFactory = null, 
+        Action<T>? resetAction = null,
         int maxRetainedObjects = Environment.ProcessorCount * 2)
     {
         _objectFactory = objectFactory ?? (() => new T());
@@ -174,12 +174,12 @@ public class DefaultObjectPool&lt;T&gt; : ObjectPool&lt;T&gt; where T : class, n
 }
 
 // RAII wrapper for object pool
-public readonly struct ObjectPoolRental&lt;T&gt; : IDisposable where T : class
+public readonly struct ObjectPoolRental<T> : IDisposable where T : class
 {
-    private readonly ObjectPool&lt;T&gt; _pool;
+    private readonly ObjectPool<T> _pool;
     public T Object { get; }
 
-    public ObjectPoolRental(ObjectPool&lt;T&gt; pool, T obj)
+    public ObjectPoolRental(ObjectPool<T> pool, T obj)
     {
         _pool = pool;
         Object = obj;
@@ -255,9 +255,9 @@ public static class MemoryStreamPool
 }
 
 // Pooled list implementation
-public class PooledList&lt;T&gt; : IDisposable, IList&lt;T&gt;
+public class PooledList<T> : IDisposable, IList<T>
 {
-    private static readonly ArrayPool&lt;T&gt; Pool = ArrayPool&lt;T&gt;.Shared;
+    private static readonly ArrayPool<T> Pool = ArrayPool<T>.Shared;
     
     private T[] _array;
     private int _count;
@@ -293,7 +293,7 @@ public class PooledList&lt;T&gt; : IDisposable, IList&lt;T&gt;
         _array[_count++] = item;
     }
 
-    public void AddRange(IEnumerable&lt;T&gt; items)
+    public void AddRange(IEnumerable<T> items)
     {
         foreach (var item in items)
         {
@@ -352,8 +352,8 @@ public class PooledList&lt;T&gt; : IDisposable, IList&lt;T&gt;
         Array.Copy(_array, 0, array, arrayIndex, _count);
     }
 
-    public Span&lt;T&gt; AsSpan() => _array.AsSpan(0, _count);
-    public ReadOnlySpan&lt;T&gt; AsReadOnlySpan() => _array.AsSpan(0, _count);
+    public Span<T> AsSpan() => _array.AsSpan(0, _count);
+    public ReadOnlySpan<T> AsReadOnlySpan() => _array.AsSpan(0, _count);
 
     private void EnsureCapacity(int capacity)
     {
@@ -367,7 +367,7 @@ public class PooledList&lt;T&gt; : IDisposable, IList&lt;T&gt;
         }
     }
 
-    public IEnumerator&lt;T&gt; GetEnumerator()
+    public IEnumerator<T> GetEnumerator()
     {
         for (int i = 0; i < _count; i++)
         {
@@ -434,21 +434,21 @@ public class PooledDictionary<TKey, TValue> : IDisposable where TKey : notnull
 }
 
 // Memory-efficient buffer writer
-public class PooledBufferWriter&lt;T&gt; : IBufferWriter&lt;T&gt;, IDisposable
+public class PooledBufferWriter<T> : IBufferWriter<T>, IDisposable
 {
-    private readonly ArrayPool&lt;T&gt; _pool;
+    private readonly ArrayPool<T> _pool;
     private T[] _buffer;
     private int _index;
 
-    public PooledBufferWriter(ArrayPool&lt;T&gt;? pool = null, int initialCapacity = 256)
+    public PooledBufferWriter(ArrayPool<T>? pool = null, int initialCapacity = 256)
     {
-        _pool = pool ?? ArrayPool&lt;T&gt;.Shared;
+        _pool = pool ?? ArrayPool<T>.Shared;
         _buffer = _pool.Rent(initialCapacity);
         _index = 0;
     }
 
-    public ReadOnlyMemory&lt;T&gt; WrittenMemory => _buffer.AsMemory(0, _index);
-    public ReadOnlySpan&lt;T&gt; WrittenSpan => _buffer.AsSpan(0, _index);
+    public ReadOnlyMemory<T> WrittenMemory => _buffer.AsMemory(0, _index);
+    public ReadOnlySpan<T> WrittenSpan => _buffer.AsSpan(0, _index);
     public int WrittenCount => _index;
 
     public void Advance(int count)
@@ -459,19 +459,19 @@ public class PooledBufferWriter&lt;T&gt; : IBufferWriter&lt;T&gt;, IDisposable
         _index += count;
     }
 
-    public Memory&lt;T&gt; GetMemory(int sizeHint = 0)
+    public Memory<T> GetMemory(int sizeHint = 0)
     {
         EnsureCapacity(sizeHint);
         return _buffer.AsMemory(_index);
     }
 
-    public Span&lt;T&gt; GetSpan(int sizeHint = 0)
+    public Span<T> GetSpan(int sizeHint = 0)
     {
         EnsureCapacity(sizeHint);
         return _buffer.AsSpan(_index);
     }
 
-    public void Write(ReadOnlySpan&lt;T&gt; value)
+    public void Write(ReadOnlySpan<T> value)
     {
         EnsureCapacity(value.Length);
         value.CopyTo(_buffer.AsSpan(_index));
@@ -517,7 +517,7 @@ public class PooledBufferWriter&lt;T&gt; : IBufferWriter&lt;T&gt;, IDisposable
 public static class PooledStringOperations
 {
     // Join strings with pooled StringBuilder
-    public static string Join&lt;T&gt;(IEnumerable&lt;T&gt; values, string separator)
+    public static string Join<T>(IEnumerable<T> values, string separator)
     {
         return StringBuilderPool.Build(sb =>
         {
@@ -660,13 +660,13 @@ public class PoolPerformanceMonitor
 }
 
 // Monitored ArrayPool wrapper
-public class MonitoredArrayPool&lt;T&gt; : ArrayPool&lt;T&gt;
+public class MonitoredArrayPool<T> : ArrayPool<T>
 {
-    private readonly ArrayPool&lt;T&gt; _innerPool;
+    private readonly ArrayPool<T> _innerPool;
     private readonly PoolPerformanceMonitor _monitor;
     private readonly string _poolName;
 
-    public MonitoredArrayPool(ArrayPool&lt;T&gt; innerPool, PoolPerformanceMonitor monitor, string poolName)
+    public MonitoredArrayPool(ArrayPool<T> innerPool, PoolPerformanceMonitor monitor, string poolName)
     {
         _innerPool = innerPool;
         _monitor = monitor;
@@ -676,7 +676,7 @@ public class MonitoredArrayPool&lt;T&gt; : ArrayPool&lt;T&gt;
     public override T[] Rent(int minimumLength)
     {
         var array = _innerPool.Rent(minimumLength);
-        _monitor.RecordRent(_poolName, array.Length * Unsafe.SizeOf&lt;T&gt;());
+        _monitor.RecordRent(_poolName, array.Length * Unsafe.SizeOf<T>());
         return array;
     }
 
@@ -684,7 +684,7 @@ public class MonitoredArrayPool&lt;T&gt; : ArrayPool&lt;T&gt;
     {
         if (array != null)
         {
-            _monitor.RecordReturn(_poolName, array.Length * Unsafe.SizeOf&lt;T&gt;());
+            _monitor.RecordReturn(_poolName, array.Length * Unsafe.SizeOf<T>());
             _innerPool.Return(array, clearArray);
         }
     }
@@ -694,12 +694,12 @@ public class MonitoredArrayPool&lt;T&gt; : ArrayPool&lt;T&gt;
 public static class PooledBatchProcessor
 {
     public static async Task ProcessBatchesAsync<T, TResult>(
-        IEnumerable&lt;T&gt; source,
+        IEnumerable<T> source,
         Func<T[], Task<TResult[]>> processor,
         int batchSize,
         Action<TResult[]>? resultHandler = null)
     {
-        var pool = ArrayPool&lt;T&gt;.Shared;
+        var pool = ArrayPool<T>.Shared;
         var buffer = pool.Rent(batchSize);
         var count = 0;
 
@@ -739,11 +739,11 @@ public static class PooledBatchProcessor
     }
 
     public static IEnumerable<TResult> ProcessBatches<T, TResult>(
-        IEnumerable&lt;T&gt; source,
+        IEnumerable<T> source,
         Func<T[], TResult[]> processor,
         int batchSize)
     {
-        var pool = ArrayPool&lt;T&gt;.Shared;
+        var pool = ArrayPool<T>.Shared;
         var buffer = pool.Rent(batchSize);
         var count = 0;
 
@@ -1209,7 +1209,7 @@ Console.WriteLine($"With pooling: {stopwatch.ElapsedMilliseconds}ms");
 
 **Notes**:
 
-- ArrayPool&lt;T&gt; reduces garbage collection pressure by reusing arrays instead of allocating new ones
+- ArrayPool<T> reduces garbage collection pressure by reusing arrays instead of allocating new ones
 - RAII patterns with IDisposable ensure automatic return of pooled resources
 - Object pools work best for expensive-to-create objects like StringBuilder, MemoryStream, etc.
 - Pooled collections (PooledList, PooledDictionary) provide temporary high-performance collections
@@ -1222,7 +1222,7 @@ Console.WriteLine($"With pooling: {stopwatch.ElapsedMilliseconds}ms");
 
 **Prerequisites**:
 
-- .NET Core 2.1+ or .NET Framework 4.7.1+ for ArrayPool&lt;T&gt; and Span&lt;T&gt; support
+- .NET Core 2.1+ or .NET Framework 4.7.1+ for ArrayPool<T> and Span<T> support
 - Understanding of memory management and garbage collection in .NET
 - Knowledge of IDisposable pattern and resource management
 - Familiarity with performance profiling tools to measure allocation reduction
@@ -1230,7 +1230,7 @@ Console.WriteLine($"With pooling: {stopwatch.ElapsedMilliseconds}ms");
 
 **Related Snippets**:
 
-- [Span Operations](span-operations.md) - High-performance memory operations with Span&lt;T&gt;
+- [Span Operations](span-operations.md) - High-performance memory operations with Span<T>
 - [Performance LINQ](performance-linq.md) - Memory-efficient LINQ operations
 - [Vectorization](vectorization.md) - SIMD operations for numerical computations
 - [Micro Optimizations](micro-optimizations.md) - Low-level performance techniques

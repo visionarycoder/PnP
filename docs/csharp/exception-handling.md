@@ -74,7 +74,7 @@ public abstract class DomainException : Exception
         return this;
     }
 
-    public T GetData&lt;T&gt;(string key, T defaultValue = default)
+    public T GetData<T>(string key, T defaultValue = default)
     {
         if (ErrorData.TryGetValue(key, out var value) && value is T typedValue)
         {
@@ -364,9 +364,9 @@ public class DatabaseExceptionTransformer : IExceptionTransformer
 // Exception boundary pattern
 public interface IExceptionBoundary
 {
-    Task&lt;T&gt; ExecuteAsync&lt;T&gt;(Func<Task&lt;T&gt;> operation, ExceptionContext context = null);
+    Task<T> ExecuteAsync<T>(Func<Task<T>> operation, ExceptionContext context = null);
     Task ExecuteAsync(Func<Task> operation, ExceptionContext context = null);
-    T Execute&lt;T&gt;(Func&lt;T&gt; operation, ExceptionContext context = null);
+    T Execute<T>(Func<T> operation, ExceptionContext context = null);
     void Execute(Action operation, ExceptionContext context = null);
 }
 
@@ -386,7 +386,7 @@ public class ExceptionBoundary : IExceptionBoundary
         this.logger = logger;
     }
 
-    public async Task&lt;T&gt; ExecuteAsync&lt;T&gt;(Func<Task&lt;T&gt;> operation, ExceptionContext context = null)
+    public async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, ExceptionContext context = null)
     {
         context ??= new ExceptionContext();
         
@@ -418,7 +418,7 @@ public class ExceptionBoundary : IExceptionBoundary
         }, context).ConfigureAwait(false);
     }
 
-    public T Execute&lt;T&gt;(Func&lt;T&gt; operation, ExceptionContext context = null)
+    public T Execute<T>(Func<T> operation, ExceptionContext context = null)
     {
         context ??= new ExceptionContext();
         
@@ -602,7 +602,7 @@ public class MetricsExceptionHandler : IExceptionHandler
 }
 
 // Result pattern for exception-free error handling
-public readonly struct Result&lt;T&gt;
+public readonly struct Result<T>
 {
     private readonly T value;
     private readonly Exception exception;
@@ -627,11 +627,11 @@ public readonly struct Result&lt;T&gt;
         IsSuccess = false;
     }
 
-    public static Result&lt;T&gt; Success(T value) => new Result&lt;T&gt;(value);
-    public static Result&lt;T&gt; Failure(Exception exception) => new Result&lt;T&gt;(exception);
+    public static Result<T> Success(T value) => new Result<T>(value);
+    public static Result<T> Failure(Exception exception) => new Result<T>(exception);
 
-    public static implicit operator Result&lt;T&gt;(T value) => Success(value);
-    public static implicit operator Result&lt;T&gt;(Exception exception) => Failure(exception);
+    public static implicit operator Result<T>(T value) => Success(value);
+    public static implicit operator Result<T>(Exception exception) => Failure(exception);
 
     public Result<U> Map<U>(Func<T, U> mapper)
     {
@@ -660,9 +660,9 @@ public readonly struct Result&lt;T&gt;
     }
 
     public T ValueOr(T defaultValue) => IsSuccess ? value : defaultValue;
-    public T ValueOr(Func&lt;T&gt; defaultValueFactory) => IsSuccess ? value : defaultValueFactory();
+    public T ValueOr(Func<T> defaultValueFactory) => IsSuccess ? value : defaultValueFactory();
 
-    public void Match(Action&lt;T&gt; onSuccess, Action<Exception> onFailure)
+    public void Match(Action<T> onSuccess, Action<Exception> onFailure)
     {
         if (IsSuccess)
             onSuccess(value);
@@ -678,36 +678,36 @@ public readonly struct Result&lt;T&gt;
 
 public static class Result
 {
-    public static Result&lt;T&gt; Try&lt;T&gt;(Func&lt;T&gt; operation)
+    public static Result<T> Try<T>(Func<T> operation)
     {
         try
         {
-            return Result&lt;T&gt;.Success(operation());
+            return Result<T>.Success(operation());
         }
         catch (Exception ex)
         {
-            return Result&lt;T&gt;.Failure(ex);
+            return Result<T>.Failure(ex);
         }
     }
 
-    public static async Task<Result&lt;T&gt;> TryAsync&lt;T&gt;(Func<Task&lt;T&gt;> operation)
+    public static async Task<Result<T>> TryAsync<T>(Func<Task<T>> operation)
     {
         try
         {
             var result = await operation().ConfigureAwait(false);
-            return Result&lt;T&gt;.Success(result);
+            return Result<T>.Success(result);
         }
         catch (Exception ex)
         {
-            return Result&lt;T&gt;.Failure(ex);
+            return Result<T>.Failure(ex);
         }
     }
 
-    public static Result&lt;T&gt; From&lt;T&gt;(T value, Func<T, bool> predicate, Func<Exception> exceptionFactory)
+    public static Result<T> From<T>(T value, Func<T, bool> predicate, Func<Exception> exceptionFactory)
     {
         return predicate(value) 
-            ? Result&lt;T&gt;.Success(value) 
-            : Result&lt;T&gt;.Failure(exceptionFactory());
+            ? Result<T>.Success(value) 
+            : Result<T>.Failure(exceptionFactory());
     }
 }
 
@@ -766,30 +766,30 @@ public class ExceptionAggregator
 // Safe execution patterns
 public static class SafeExecution
 {
-    public static Result&lt;T&gt; Try&lt;T&gt;(Func&lt;T&gt; operation, ILogger logger = null)
+    public static Result<T> Try<T>(Func<T> operation, ILogger logger = null)
     {
         try
         {
-            return Result&lt;T&gt;.Success(operation());
+            return Result<T>.Success(operation());
         }
         catch (Exception ex)
         {
             logger?.LogError(ex, "Safe execution failed");
-            return Result&lt;T&gt;.Failure(ex);
+            return Result<T>.Failure(ex);
         }
     }
 
-    public static async Task<Result&lt;T&gt;> TryAsync&lt;T&gt;(Func<Task&lt;T&gt;> operation, ILogger logger = null)
+    public static async Task<Result<T>> TryAsync<T>(Func<Task<T>> operation, ILogger logger = null)
     {
         try
         {
             var result = await operation().ConfigureAwait(false);
-            return Result&lt;T&gt;.Success(result);
+            return Result<T>.Success(result);
         }
         catch (Exception ex)
         {
             logger?.LogError(ex, "Safe async execution failed");
-            return Result&lt;T&gt;.Failure(ex);
+            return Result<T>.Failure(ex);
         }
     }
 
@@ -817,7 +817,7 @@ public static class SafeExecution
         }
     }
 
-    public static T WithDefault&lt;T&gt;(Func&lt;T&gt; operation, T defaultValue, ILogger logger = null)
+    public static T WithDefault<T>(Func<T> operation, T defaultValue, ILogger logger = null)
     {
         try
         {
@@ -830,7 +830,7 @@ public static class SafeExecution
         }
     }
 
-    public static async Task&lt;T&gt; WithDefaultAsync&lt;T&gt;(Func<Task&lt;T&gt;> operation, T defaultValue, ILogger logger = null)
+    public static async Task<T> WithDefaultAsync<T>(Func<Task<T>> operation, T defaultValue, ILogger logger = null)
     {
         try
         {

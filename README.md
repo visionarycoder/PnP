@@ -16,7 +16,7 @@ This repository serves as a personal knowledge base of code snippets, solutions,
 
 ## Structure
 
-```
+```text
 snippets/
 ├── csharp/          # C# code snippets
 ├── python/          # Python code snippets
@@ -35,39 +35,51 @@ snippets/
 ## Categories
 
 ### 🔷 C# (`snippets/csharp/`)
+
 C# language snippets including LINQ queries, async/await patterns, extension methods, and .NET-specific solutions.
 
 ### 🐍 Python (`snippets/python/`)
+
 Python scripts and code snippets for data processing, automation, APIs, and common patterns.
 
 ### 🟨 JavaScript (`snippets/javascript/`)
+
 JavaScript and TypeScript snippets for web development, Node.js, and modern ES6+ patterns.
 
 ### 🗃️ SQL (`snippets/sql/`)
+
 SQL queries, stored procedures, optimization techniques, and database-specific solutions.
 
 ### 🐚 Bash (`snippets/bash/`)
+
 Bash scripts, one-liners, and shell commands for automation and system administration.
 
 ### 💻 PowerShell (`snippets/powershell/`)
+
 PowerShell scripts and cmdlets for Windows automation and administration.
 
 ### 🧮 Algorithms (`snippets/algorithms/`)
+
 Common algorithm implementations including sorting, searching, and data structure operations.
 
 ### 🏗️ Design Patterns (`snippets/design-patterns/`)
+
 Examples of software design patterns with practical implementations.
 
 ### 🌐 Web (`snippets/web/`)
+
 HTML, CSS, and web development snippets including responsive design and accessibility patterns.
 
 ### 🐳 Docker (`snippets/docker/`)
+
 Dockerfile examples, docker-compose configurations, and container management snippets.
 
 ### 🔀 Git (`snippets/git/`)
+
 Git commands, workflows, and useful aliases for version control.
 
 ### 🛠️ Utilities (`snippets/utilities/`)
+
 Cross-platform utility scripts and general-purpose tools.
 
 ## Usage
@@ -81,6 +93,7 @@ Cross-platform utility scripts and general-purpose tools.
 ### Using a Snippet
 
 Each snippet includes:
+
 - **Description**: What the snippet does
 - **Code**: The actual implementation
 - **Usage Example**: How to use the snippet
@@ -103,13 +116,13 @@ public static string Truncate(string value, int maxLength)
 ```
 
 **Usage**:
+
 ```csharp
 string result = StringHelper.Truncate("This is a long text", 10);
 // Output: "This is a..."
 ```
 
 **Notes**: Works with .NET Framework 4.5+ and .NET Core
-```
 
 ## Contributing
 
@@ -135,21 +148,23 @@ Use this template when adding new snippets:
 **Language/Technology**: [e.g., C#, Python, SQL]
 
 **Code**:
+
 ```[language]
 [Your code here]
 ```
 
 **Usage**:
+
 ```[language]
 [Usage example]
 ```
 
-**Notes**: 
+**Notes**:
+
 - [Any dependencies]
 - [Platform requirements]
 - [Performance considerations]
 - [Related snippets or alternatives]
-```
 
 ## License
 
@@ -157,4 +172,4 @@ This is a personal repository for internal use.
 
 ---
 
-*Last Updated: 2025-10-31*
+**Last Updated**: 2025-10-31

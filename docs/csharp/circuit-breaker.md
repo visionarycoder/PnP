@@ -510,10 +510,10 @@ public class BulkheadIsolation
 
     public async Task ExecuteAsync(Func<Task> operation, CancellationToken cancellationToken = default)
     {
-        await ExecuteAsync(async () =>
+        await ExecuteAsync<object>(async () =>
         {
             await operation().ConfigureAwait(false);
-            return Task.CompletedTask;
+            return null;
         }, cancellationToken).ConfigureAwait(false);
     }
 

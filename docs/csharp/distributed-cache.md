@@ -30,7 +30,7 @@ public interface IAdvancedDistributedCache : IDistributedCache
     Task&lt;T&gt; GetAsync&lt;T&gt;(string key, CancellationToken token = default);
     Task SetAsync&lt;T&gt;(string key, T value, DistributedCacheEntryOptions options = null, 
         CancellationToken token = default);
-    Task<bool> TryGetAsync&lt;T&gt;(string key, out T value, CancellationToken token = default);
+    Task<(bool found, T value)> TryGetAsync&lt;T&gt;(string key, CancellationToken token = default);
     Task<IDictionary<string, T>> GetManyAsync&lt;T&gt;(IEnumerable<string> keys, 
         CancellationToken token = default);
     Task SetManyAsync&lt;T&gt;(IDictionary<string, T> items, DistributedCacheEntryOptions options = null,
@@ -172,17 +172,16 @@ public class RedisDistributedCache : IAdvancedDistributedCache, IDisposable
         }
     }
 
-    public async Task<bool> TryGetAsync&lt;T&gt;(string key, out T value, CancellationToken token = default)
+    public async Task<(bool found, T value)> TryGetAsync&lt;T&gt;(string key, CancellationToken token = default)
     {
         try
         {
-            value = await GetAsync&lt;T&gt;(key, token).ConfigureAwait(false);
-            return !EqualityComparer&lt;T&gt;.Default.Equals(value, default(T));
+            var value = await GetAsync&lt;T&gt;(key, token).ConfigureAwait(false);
+            return (!EqualityComparer&lt;T&gt;.Default.Equals(value, default(T)), value);
         }
         catch
         {
-            value = default(T);
-            return false;
+            return (false, default(T));
         }
     }
 
@@ -415,20 +414,26 @@ public class CacheAsideService<TKey, TValue> : ICacheAsideService<TKey, TValue>
         var cacheKey = keyGenerator.GenerateKey(key);
         
         // Try to get from cache first
-        if (await cache.TryGetAsync<TValue>(cacheKey, out var cachedValue, token).ConfigureAwait(false))
+        var (found, cachedValue) = await cache.TryGetAsync<TValue>(cacheKey, token).ConfigureAwait(false);
+        if (found)
         {
             logger?.LogTrace("Cache hit for key {Key}", cacheKey);
             return cachedValue;
+        }
+        }
         }
 
         // Cache miss - get from data source with locking
         await semaphore.WaitAsync(token).ConfigureAwait(false);
         try
-        {
-            // Double-check cache after acquiring lock
-            if (await cache.TryGetAsync<TValue>(cacheKey, out cachedValue, token).ConfigureAwait(false))
+            var (foundAfterLock, cachedValue) = await cache.TryGetAsync<TValue>(cacheKey, token).ConfigureAwait(false);
+            if (foundAfterLock)
             {
                 logger?.LogTrace("Cache hit after lock for key {Key}", cacheKey);
+                return cachedValue;
+            }
+                return cachedValue;
+            }
                 return cachedValue;
             }
 
@@ -449,12 +454,15 @@ public class CacheAsideService<TKey, TValue> : ICacheAsideService<TKey, TValue>
         catch (Exception ex)
         {
             logger?.LogError(ex, "Error loading data for key {Key}", cacheKey);
-            
-            if (effectiveOptions.ReturnStaleOnError)
-            {
-                // Try to return stale data if available
-                if (await cache.TryGetAsync<TValue>(cacheKey, out var staleValue, token).ConfigureAwait(false))
+                var (foundStale, staleValue) = await cache.TryGetAsync<TValue>(cacheKey, token).ConfigureAwait(false);
+                if (foundStale)
                 {
+                    logger?.LogWarning("Returning stale cache value for key {Key} due to error", cacheKey);
+                    return staleValue;
+                }
+                    logger?.LogWarning("Returning stale cache value for key {Key} due to error", cacheKey);
+                    return staleValue;
+                }
                     logger?.LogWarning("Returning stale cache value for key {Key} due to error", cacheKey);
                     return staleValue;
                 }
@@ -1036,7 +1044,7 @@ public class WriteBehindStatistics : IWriteBehindStatistics
 // Extension methods for IDistributedCache
 public static class DistributedCacheExtensions
 {
-    public static string[] Tags { get; set; }
+    // Extension methods for IDistributedCache can be added here if needed.
 }
 ```
 
@@ -1349,14 +1357,17 @@ public class MultiLevelCache
     public async Task&lt;T&gt; GetAsync&lt;T&gt;(string key, Func<Task&lt;T&gt;> factory)
     {
         // Try memory cache first
-        if (memoryCache.TryGetValue(key, out T value))
+        var (found, value) = await distributedCache.TryGetAsync&lt;T&gt;(key);
+        if (found)
         {
+            // Cache in memory for faster access
+            memoryCache.Set(key, value, TimeSpan.FromMinutes(5));
             return value;
         }
-
-        // Try distributed cache
-        if (await distributedCache.TryGetAsync&lt;T&gt;(key, out value))
-        {
+            // Cache in memory for faster access
+            memoryCache.Set(key, value, TimeSpan.FromMinutes(5));
+            return value;
+        }
             // Cache in memory for faster access
             memoryCache.Set(key, value, TimeSpan.FromMinutes(5));
             return value;

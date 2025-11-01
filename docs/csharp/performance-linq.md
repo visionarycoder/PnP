@@ -564,17 +564,17 @@ public static class StreamingExtensions
 // Supporting classes and data structures
 public class CachedEnumerable<T> : IEnumerable<T>
 {
-    private readonly IEnumerable<T> _source;
-    private readonly List<T> _cache;
-    private IEnumerator<T>? _enumerator;
-    private bool _isFullyCached;
-    private readonly object _lock = new object();
+    private readonly IEnumerable<T> source;
+    private readonly List<T> cache;
+    private IEnumerator<T>? enumerator;
+    private bool isFullyCached;
+    private readonly object lockObj = new();
 
     public CachedEnumerable(IEnumerable<T> source)
     {
-        _source = source ?? throw new ArgumentNullException(nameof(source));
-        _cache = new List<T>();
-        _isFullyCached = false;
+        this.source = source ?? throw new ArgumentNullException(nameof(source));
+        cache = new();
+        isFullyCached = false;
     }
 
     public IEnumerator<T> GetEnumerator()
@@ -589,13 +589,13 @@ public class CachedEnumerable<T> : IEnumerable<T>
 
     private class CachedEnumerator : IEnumerator<T>
     {
-        private readonly CachedEnumerable<T> _parent;
-        private int _index;
+        private readonly CachedEnumerable<T> parent;
+        private int index;
 
         public CachedEnumerator(CachedEnumerable<T> parent)
         {
-            _parent = parent;
-            _index = -1;
+            this.parent = parent;
+            index = -1;
         }
 
         public T Current { get; private set; } = default!;
@@ -604,45 +604,45 @@ public class CachedEnumerable<T> : IEnumerable<T>
 
         public bool MoveNext()
         {
-            _index++;
+            index++;
 
-            lock (_parent._lock)
+            lock (parent.lockObj)
             {
                 // If we already have this item cached, return it
-                if (_index < _parent._cache.Count)
+                if (index < parent.cache.Count)
                 {
-                    Current = _parent._cache[_index];
+                    Current = parent.cache[index];
                     return true;
                 }
 
                 // If we've fully cached, no more items
-                if (_parent._isFullyCached)
+                if (parent.isFullyCached)
                 {
                     return false;
                 }
 
                 // Initialize enumerator if needed
-                _parent._enumerator ??= _parent._source.GetEnumerator();
+                parent.enumerator ??= parent.source.GetEnumerator();
 
                 // Try to get next item from source
-                if (_parent._enumerator.MoveNext())
+                if (parent.enumerator.MoveNext())
                 {
-                    Current = _parent._enumerator.Current;
-                    _parent._cache.Add(Current);
+                    Current = parent.enumerator.Current;
+                    parent.cache.Add(Current);
                     return true;
                 }
 
                 // No more items, mark as fully cached
-                _parent._isFullyCached = true;
-                _parent._enumerator.Dispose();
-                _parent._enumerator = null;
+                parent.isFullyCached = true;
+                parent.enumerator.Dispose();
+                parent.enumerator = null;
                 return false;
             }
         }
 
         public void Reset()
         {
-            _index = -1;
+            index = -1;
         }
 
         public void Dispose()
@@ -654,25 +654,25 @@ public class CachedEnumerable<T> : IEnumerable<T>
 
 public class BloomFilter<T>
 {
-    private readonly BitArray _bits;
-    private readonly int _hashFunctions;
-    private readonly int _bitArraySize;
+    private readonly BitArray bits;
+    private readonly int hashFunctions;
+    private readonly int bitArraySize;
 
     public BloomFilter(int expectedElements, double falsePositiveRate)
     {
-        _bitArraySize = (int)Math.Ceiling(-expectedElements * Math.Log(falsePositiveRate) / (Math.Log(2) * Math.Log(2)));
-        _hashFunctions = (int)Math.Ceiling(_bitArraySize / (double)expectedElements * Math.Log(2));
-        _bits = new BitArray(_bitArraySize);
+        bitArraySize = (int)Math.Ceiling(-expectedElements * Math.Log(falsePositiveRate) / (Math.Log(2) * Math.Log(2)));
+        hashFunctions = (int)Math.Ceiling(bitArraySize / (double)expectedElements * Math.Log(2));
+        bits = new BitArray(bitArraySize);
     }
 
     public void Add(T item)
     {
         var hashes = GetHashes(item);
         
-        for (int i = 0; i < _hashFunctions; i++)
+        for (int i = 0; i < hashFunctions; i++)
         {
-            var index = Math.Abs((hashes[0] + i * hashes[1]) % _bitArraySize);
-            _bits[index] = true;
+            var index = Math.Abs((hashes[0] + i * hashes[1]) % bitArraySize);
+            bits[index] = true;
         }
     }
 
@@ -680,10 +680,10 @@ public class BloomFilter<T>
     {
         var hashes = GetHashes(item);
         
-        for (int i = 0; i < _hashFunctions; i++)
+        for (int i = 0; i < hashFunctions; i++)
         {
-            var index = Math.Abs((hashes[0] + i * hashes[1]) % _bitArraySize);
-            if (!_bits[index])
+            var index = Math.Abs((hashes[0] + i * hashes[1]) % bitArraySize);
+            if (!bits[index])
                 return false;
         }
         
@@ -702,38 +702,38 @@ public class BloomFilter<T>
 // BitArray for bloom filter
 public class BitArray
 {
-    private readonly uint[] _array;
-    private readonly int _length;
+    private readonly uint[] array;
+    private readonly int length;
 
     public BitArray(int length)
     {
-        _length = length;
-        _array = new uint[(length + 31) / 32];
+        this.length = length;
+        array = new uint[(length + 31) / 32];
     }
 
     public bool this[int index]
     {
         get
         {
-            if (index < 0 || index >= _length)
+            if (index < 0 || index >= length)
                 throw new ArgumentOutOfRangeException(nameof(index));
                 
             var arrayIndex = index / 32;
             var bitIndex = index % 32;
-            return (_array[arrayIndex] & (1u << bitIndex)) != 0;
+            return (array[arrayIndex] & (1u << bitIndex)) != 0;
         }
         set
         {
-            if (index < 0 || index >= _length)
+            if (index < 0 || index >= length)
                 throw new ArgumentOutOfRangeException(nameof(index));
                 
             var arrayIndex = index / 32;
             var bitIndex = index % 32;
             
             if (value)
-                _array[arrayIndex] |= (1u << bitIndex);
+                array[arrayIndex] |= (1u << bitIndex);
             else
-                _array[arrayIndex] &= ~(1u << bitIndex);
+                array[arrayIndex] &= ~(1u << bitIndex);
         }
     }
 }

@@ -91,17 +91,17 @@ public static class PredicateOptimizer
 
 public class PredicateBuilder<T>
 {
-    private Expression<Func<T, bool>>? _predicate;
+    private Expression<Func<T, bool>>? predicate;
 
     public PredicateBuilder<T> And(Expression<Func<T, bool>> condition)
     {
-        _predicate = _predicate?.And(condition) ?? condition;
+        predicate = predicate?.And(condition) ?? condition;
         return this;
     }
 
     public PredicateBuilder<T> Or(Expression<Func<T, bool>> condition)
     {
-        _predicate = _predicate?.Or(condition) ?? condition;
+        predicate = predicate?.Or(condition) ?? condition;
         return this;
     }
 
@@ -115,37 +115,37 @@ public class PredicateBuilder<T>
         return condition ? Or(predicate) : this;
     }
 
-    public Expression<Func<T, bool>>? Build() => _predicate;
+    public Expression<Func<T, bool>>? Build() => predicate;
 
     public Func<T, bool> Compile(string? cacheKey = null)
     {
-        if (_predicate == null)
+        if (predicate == null)
             throw new InvalidOperationException("No predicates have been added");
             
-        return _predicate.CompileAndCache(cacheKey);
+        return predicate.CompileAndCache(cacheKey);
     }
 
     public static implicit operator Expression<Func<T, bool>>?(PredicateBuilder<T> builder)
     {
-        return builder._predicate;
+        return builder.predicate;
     }
 }
 
 // Parameter replacement visitor
 public class ParameterReplacer : ExpressionVisitor
 {
-    private readonly ParameterExpression _oldParameter;
-    private readonly ParameterExpression _newParameter;
+    private readonly ParameterExpression oldParameter;
+    private readonly ParameterExpression newParameter;
 
     public ParameterReplacer(ParameterExpression oldParameter, ParameterExpression newParameter)
     {
-        _oldParameter = oldParameter;
-        _newParameter = newParameter;
+        this.oldParameter = oldParameter;
+        this.newParameter = newParameter;
     }
 
     protected override Expression VisitParameter(ParameterExpression node)
     {
-        return node == _oldParameter ? _newParameter : base.VisitParameter(node);
+        return node == oldParameter ? newParameter : base.VisitParameter(node);
     }
 }
 
@@ -298,7 +298,7 @@ public static class QueryOptimizer
 // Query performance monitoring
 public class QueryPerformanceMonitor
 {
-    private readonly ConcurrentDictionary<string, QueryStats> _stats = new();
+    private readonly ConcurrentDictionary<string, QueryStats> stats = new();
 
     public T MonitorQuery<T>(string queryName, Func<T> queryExecution)
     {
@@ -327,7 +327,7 @@ public class QueryPerformanceMonitor
 
     private void UpdateStats(string queryName, TimeSpan elapsed, long memoryUsed, bool successful)
     {
-        _stats.AddOrUpdate(queryName,
+        stats.AddOrUpdate(queryName,
             new QueryStats
             {
                 QueryName = queryName,
@@ -360,12 +360,12 @@ public class QueryPerformanceMonitor
 
     public QueryStats GetStats(string queryName)
     {
-        return _stats.TryGetValue(queryName, out var stats) ? stats : new QueryStats { QueryName = queryName };
+        return stats.TryGetValue(queryName, out var stats) ? stats : new QueryStats { QueryName = queryName };
     }
 
     public IEnumerable<QueryStats> GetAllStats()
     {
-        return _stats.Values.ToList();
+        return stats.Values.ToList();
     }
 
     public string GeneratePerformanceReport()
@@ -713,7 +713,7 @@ public class QueryPlanAnalyzer
 
     private List<string> GenerateOptimizationSuggestions(Expression expression)
     {
-        var suggestions = new List<string>();
+        var suggestions = new();
         var visitor = new OptimizationSuggestionVisitor(suggestions);
         visitor.Visit(expression);
         return suggestions;
@@ -761,11 +761,11 @@ public class ComplexityVisitor : ExpressionVisitor
 
 public class OptimizationSuggestionVisitor : ExpressionVisitor
 {
-    private readonly List<string> _suggestions;
+    private readonly List<string> suggestions;
 
     public OptimizationSuggestionVisitor(List<string> suggestions)
     {
-        _suggestions = suggestions;
+        this.suggestions = suggestions;
     }
 
     protected override Expression VisitMethodCall(MethodCallExpression node)
@@ -775,19 +775,19 @@ public class OptimizationSuggestionVisitor : ExpressionVisitor
             case "Where":
                 if (HasMultipleWhereClause(node))
                 {
-                    _suggestions.Add("Consider combining multiple Where clauses into a single predicate for better performance");
+                    suggestions.Add("Consider combining multiple Where clauses into a single predicate for better performance");
                 }
                 break;
                 
             case "OrderBy":
                 if (HasUnnecessaryOrdering(node))
                 {
-                    _suggestions.Add("Ordering operation detected - ensure it's necessary and consider using Take() to limit results");
+                    suggestions.Add("Ordering operation detected - ensure it's necessary and consider using Take() to limit results");
                 }
                 break;
                 
             case "ToList":
-                _suggestions.Add("Consider using streaming operations instead of materializing with ToList() if the entire collection is not needed");
+                suggestions.Add("Consider using streaming operations instead of materializing with ToList() if the entire collection is not needed");
                 break;
         }
 
@@ -810,49 +810,49 @@ public class OptimizationSuggestionVisitor : ExpressionVisitor
 // Fluent query builder with optimization hints
 public class OptimizedQueryBuilder<T>
 {
-    private readonly IQueryable<T> _query;
-    private readonly List<string> _optimizationHints = new();
+    private readonly IQueryable<T> query;
+    private readonly List<string> optimizationHints = new();
 
     public OptimizedQueryBuilder(IQueryable<T> query)
     {
-        _query = query ?? throw new ArgumentNullException(nameof(query));
+        this.query = query ?? throw new ArgumentNullException(nameof(query));
     }
 
     public OptimizedQueryBuilder<T> Where(Expression<Func<T, bool>> predicate, string? hint = null)
     {
         if (hint != null)
-            _optimizationHints.Add($"Where: {hint}");
+            optimizationHints.Add($"Where: {hint}");
             
-        return new OptimizedQueryBuilder<T>(_query.Where(predicate));
+        return new OptimizedQueryBuilder<T>(query.Where(predicate));
     }
 
     public OptimizedQueryBuilder<T> OrderBy<TKey>(Expression<Func<T, TKey>> keySelector, string? hint = null)
     {
         if (hint != null)
-            _optimizationHints.Add($"OrderBy: {hint}");
+            optimizationHints.Add($"OrderBy: {hint}");
             
-        return new OptimizedQueryBuilder<T>(_query.OrderBy(keySelector));
+        return new OptimizedQueryBuilder<T>(query.OrderBy(keySelector));
     }
 
     public OptimizedQueryBuilder<TResult> Select<TResult>(Expression<Func<T, TResult>> selector, string? hint = null)
     {
         if (hint != null)
-            _optimizationHints.Add($"Select: {hint}");
+            optimizationHints.Add($"Select: {hint}");
             
-        var newQuery = _query.Select(selector);
+        var newQuery = query.Select(selector);
         var result = new OptimizedQueryBuilder<TResult>(newQuery);
-        result._optimizationHints.AddRange(_optimizationHints);
+        result.optimizationHints.AddRange(optimizationHints);
         return result;
     }
 
     public IQueryable<T> Build()
     {
-        return _query;
+        return query;
     }
 
     public List<string> GetOptimizationHints()
     {
-        return new List<string>(_optimizationHints);
+        return new List<string>(optimizationHints);
     }
 }
 ```

@@ -97,7 +97,7 @@ public class ChannelProducer<T> : IProducer<T>
     {
         this.writer = writer ?? throw new ArgumentNullException(nameof(writer));
         this.logger = logger;
-        semaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
+        semaphore = new(maxConcurrency, maxConcurrency);
     }
 
     public bool IsCompleted => isCompleted;
@@ -225,7 +225,7 @@ public class ChannelConsumer<T> : IConsumer<T>
     {
         this.reader = reader ?? throw new ArgumentNullException(nameof(reader));
         this.logger = logger;
-        semaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
+        semaphore = new(maxConcurrency, maxConcurrency);
     }
 
     public bool HasItems => reader.CanCount ? reader.Count > 0 : !reader.Completion.IsCompleted;
@@ -273,7 +273,7 @@ public class ChannelConsumer<T> : IConsumer<T>
         
         try
         {
-            var batch = new List<T>();
+            var batch = new();
             var stopwatch = Stopwatch.StartNew();
             
             using var timeoutCts = new CancellationTokenSource(timeout);
@@ -592,7 +592,7 @@ public class BatchProcessor<TInput, TOutput> : IPipeline<TInput, TOutput>, IDisp
         if (isDisposed) throw new ObjectDisposedException(nameof(BatchProcessor<TInput, TOutput>));
 
         var inputList = inputs.ToList();
-        var outputs = new List<TOutput>();
+        var outputs = new();
 
         // Write all inputs
         foreach (var input in inputList)
@@ -635,7 +635,7 @@ public class BatchProcessor<TInput, TOutput> : IPipeline<TInput, TOutput>, IDisp
     {
         try
         {
-            var batch = new List<TInput>();
+            var batch = new();
             var lastBatchTime = DateTime.UtcNow;
 
             await foreach (var input in inputChannel.Reader.ReadAllAsync(cancellationToken))
@@ -742,7 +742,7 @@ public class BackpressureProducer<T> : IProducer<T>
         channel = Channel.CreateBounded<T>(options);
         this.logger = logger;
         currentRate = initialRate;
-        rateLimitSemaphore = new SemaphoreSlim(currentRate, currentRate);
+        rateLimitSemaphore = new(currentRate, currentRate);
 
         // Timer to refill rate limit tokens
         rateLimitTimer = new Timer(RefillTokens, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
@@ -932,7 +932,7 @@ public class StreamProcessor<T> : IDisposable
     {
         try
         {
-            var window = new List<(T Item, DateTime Timestamp)>();
+            var window = new();
             var lastSlide = DateTime.UtcNow;
 
             await foreach (var item in inputChannel.Reader.ReadAllAsync(cancellationToken))
@@ -1038,7 +1038,7 @@ public class ProducerConsumerMetrics
     private volatile long totalProducingTime = 0;
     private volatile long totalConsumingTime = 0;
     private volatile long peakQueueSize = 0;
-    private readonly object lockObject = new object();
+    private readonly object lockObject = new();
     private DateTime startTime = DateTime.UtcNow;
 
     public long ItemsProduced => itemsProduced;
@@ -1226,7 +1226,7 @@ var priorityProducerTasks = priorities.Select(priority =>
 // Consumer task
 var priorityConsumerTask = Task.Run(async () =>
 {
-    var consumedByPriority = new Dictionary<int, int>();
+    var consumedByPriority = new();
     var totalConsumed = 0;
     
     await foreach (var (message, priority) in prioritySystem.ConsumeAllAsync())
@@ -1277,7 +1277,7 @@ var batchProcessor = new BatchProcessor<int, string>(
 
 // Process stream of data
 var streamData = Enumerable.Range(1, 250);
-var batchResults = new List<string>();
+var batchResults = new();
 
 var batchTask = Task.Run(async () =>
 {
@@ -1371,7 +1371,7 @@ var streamProcessor = new StreamProcessor<double>(
     logger: logger
 );
 
-var windowResults = new List<object>();
+var windowResults = new();
 
 streamProcessor.WindowProcessed += (sender, args) =>
 {

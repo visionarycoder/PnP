@@ -72,7 +72,7 @@ public class RedisDistributedCache : IAdvancedDistributedCache, IDisposable
             WriteIndented = false
         };
         
-        semaphore = new SemaphoreSlim(this.options.MaxConcurrentOperations, 
+        semaphore = new(this.options.MaxConcurrentOperations, 
             this.options.MaxConcurrentOperations);
     }
 
@@ -272,7 +272,7 @@ public class RedisDistributedCache : IAdvancedDistributedCache, IDisposable
         var server = connection.GetServer(connection.GetEndPoints().First());
         var pattern = PrepareKey("*");
         
-        var keysWithTag = new List<RedisKey>();
+        var keysWithTag = new();
         
         await foreach (var key in server.KeysAsync(database.Database, pattern))
         {
@@ -403,7 +403,7 @@ public class CacheAsideService<TKey, TValue> : ICacheAsideService<TKey, TValue>
         this.keyGenerator = keyGenerator ?? new DefaultKeyGenerator<TKey>();
         this.defaultOptions = defaultOptions?.Value ?? new CacheAsideOptions();
         this.logger = logger;
-        this.semaphore = new SemaphoreSlim(this.defaultOptions.MaxConcurrentOperations,
+        this.semaphore = new(this.defaultOptions.MaxConcurrentOperations,
             this.defaultOptions.MaxConcurrentOperations);
     }
 
@@ -522,7 +522,7 @@ public class CacheAsideService<TKey, TValue> : ICacheAsideService<TKey, TValue>
         
         logger?.LogInformation("Starting cache warmup for {Count} keys", keyList.Count);
         
-        var semaphoreSlim = new SemaphoreSlim(effectiveOptions.MaxConcurrentOperations,
+        var semaphoreSlim = new(effectiveOptions.MaxConcurrentOperations,
             effectiveOptions.MaxConcurrentOperations);
         
         var tasks = keyList.Select(async key =>
@@ -718,7 +718,7 @@ public class WriteBehindCache<TKey, TValue> : IWriteBehindCache<TKey, TValue>, I
         this.logger = logger;
         
         writeQueue = new ConcurrentQueue<WriteOperation<TKey, TValue>>();
-        flushSemaphore = new SemaphoreSlim(1, 1);
+        flushSemaphore = new(1, 1);
         
         // Start periodic flush timer
         flushTimer = new Timer(async _ => await FlushAsync().ConfigureAwait(false),
@@ -836,7 +836,7 @@ public class WriteBehindCache<TKey, TValue> : IWriteBehindCache<TKey, TValue>, I
             var removeOperations = operations.Where(op => op.Operation == WriteOperationType.Remove).ToList();
             
             // Execute batch operations
-            var tasks = new List<Task>();
+            var tasks = new();
             
             if (setOperations.Count > 0)
             {

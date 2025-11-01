@@ -40,7 +40,7 @@ public abstract class DomainException : Exception
     {
         ErrorCode = errorCode ?? throw new ArgumentNullException(nameof(errorCode));
         ErrorCategory = errorCategory ?? throw new ArgumentNullException(nameof(errorCategory));
-        ErrorData = new Dictionary<string, object>();
+        ErrorData = new();
         Timestamp = DateTime.UtcNow;
         CorrelationId = correlationId ?? Guid.NewGuid().ToString();
     }
@@ -215,13 +215,13 @@ public class ExceptionContext
 {
     public string OperationName { get; set; }
     public string CorrelationId { get; set; }
-    public Dictionary<string, object> Properties { get; set; } = new Dictionary<string, object>();
+    public Dictionary<string, object> Properties { get; set; } = new();
     public CancellationToken CancellationToken { get; set; }
 }
 
 public class ExceptionTransformationEngine
 {
-    private readonly List<IExceptionTransformer> transformers = new List<IExceptionTransformer>();
+    private readonly List<IExceptionTransformer> transformers = new();
     private readonly ILogger<ExceptionTransformationEngine> logger;
 
     public ExceptionTransformationEngine(ILogger<ExceptionTransformationEngine> logger = null)
@@ -491,7 +491,7 @@ public class DefaultExceptionHandler : IExceptionHandler
 
 public class CompositeExceptionHandler : IExceptionHandler
 {
-    private readonly List<IExceptionHandler> handlers = new List<IExceptionHandler>();
+    private readonly List<IExceptionHandler> handlers = new();
 
     public void AddHandler(IExceptionHandler handler)
     {
@@ -714,8 +714,8 @@ public static class Result
 // Exception aggregation for batch operations
 public class ExceptionAggregator
 {
-    private readonly List<Exception> exceptions = new List<Exception>();
-    private readonly object lockObj = new object();
+    private readonly List<Exception> exceptions = new();
+    private readonly object lockObj = new();
 
     public void Add(Exception exception)
     {
@@ -941,7 +941,7 @@ public static class GlobalExceptionHandler
 
     public static IEnumerable<Exception> GetUnhandledExceptions()
     {
-        var exceptions = new List<Exception>();
+        var exceptions = new();
         while (unhandledExceptions.TryDequeue(out var exception))
         {
             exceptions.Add(exception);
@@ -1251,7 +1251,7 @@ var batchOperations = Enumerable.Range(1, 10).Select(i => new Func<string>(() =>
     return $"Batch operation {i} succeeded";
 }));
 
-var results = new List<string>();
+var results = new();
 
 foreach (var (operation, index) in batchOperations.Select((op, i) => (op, i + 1)))
 {

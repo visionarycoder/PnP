@@ -110,30 +110,30 @@ public class CancellationExamples
 // Advanced cancellation coordinator
 public class CancellationCoordinator : IDisposable
 {
-    private readonly CancellationTokenSource _masterCts;
-    private readonly List<CancellationTokenSource> _childSources;
-    private readonly object _lock = new object();
-    private bool _disposed;
+    private readonly CancellationTokenSource masterCts;
+    private readonly List<CancellationTokenSource> childSources;
+    private readonly object lockObj = new();
+    private bool disposed;
 
     public CancellationCoordinator()
     {
-        _masterCts = new CancellationTokenSource();
-        _childSources = new List<CancellationTokenSource>();
+        masterCts = new CancellationTokenSource();
+        childSources = new();
     }
 
-    public CancellationToken MasterToken => _masterCts.Token;
+    public CancellationToken MasterToken => masterCts.Token;
 
     // Create a linked token that cancels when master cancels OR when timeout occurs
     public CancellationToken CreateLinkedToken(TimeSpan timeout)
     {
-        lock (_lock)
+        lock (lockObj)
         {
-            if (_disposed) throw new ObjectDisposedException(nameof(CancellationCoordinator));
+            if (disposed) throw new ObjectDisposedException(nameof(CancellationCoordinator));
             
-            var childCts = CancellationTokenSource.CreateLinkedTokenSource(_masterCts.Token);
+            var childCts = CancellationTokenSource.CreateLinkedTokenSource(masterCts.Token);
             childCts.CancelAfter(timeout);
             
-            _childSources.Add(childCts);
+            childSources.Add(childCts);
             return childCts.Token;
         }
     }
@@ -141,12 +141,12 @@ public class CancellationCoordinator : IDisposable
     // Create a linked token that cancels when master cancels OR when external token cancels
     public CancellationToken CreateLinkedToken(CancellationToken externalToken)
     {
-        lock (_lock)
+        lock (lockObj)
         {
-            if (_disposed) throw new ObjectDisposedException(nameof(CancellationCoordinator));
+            if (disposed) throw new ObjectDisposedException(nameof(CancellationCoordinator));
             
-            var childCts = CancellationTokenSource.CreateLinkedTokenSource(_masterCts.Token, externalToken);
-            _childSources.Add(childCts);
+            var childCts = CancellationTokenSource.CreateLinkedTokenSource(masterCts.Token, externalToken);
+            childSources.Add(childCts);
             
             return childCts.Token;
         }
@@ -155,31 +155,31 @@ public class CancellationCoordinator : IDisposable
     // Cancel all operations
     public void CancelAll()
     {
-        lock (_lock)
+        lock (lockObj)
         {
-            if (!_disposed)
+            if (!disposed)
             {
-                _masterCts.Cancel();
+                masterCts.Cancel();
             }
         }
     }
 
     public void Dispose()
     {
-        lock (_lock)
+        lock (lockObj)
         {
-            if (!_disposed)
+            if (!disposed)
             {
-                _masterCts.Cancel();
-                _masterCts.Dispose();
+                masterCts.Cancel();
+                masterCts.Dispose();
                 
-                foreach (var childCts in _childSources)
+                foreach (var childCts in childSources)
                 {
                     childCts.Dispose();
                 }
                 
-                _childSources.Clear();
-                _disposed = true;
+                childSources.Clear();
+                disposed = true;
             }
         }
     }
@@ -188,24 +188,24 @@ public class CancellationCoordinator : IDisposable
 // Graceful shutdown service
 public class GracefulShutdownService
 {
-    private readonly CancellationTokenSource _shutdownCts;
-    private readonly List<Func<CancellationToken, Task>> _shutdownTasks;
-    private readonly object _lock = new object();
+    private readonly CancellationTokenSource shutdownCts;
+    private readonly List<Func<CancellationToken, Task>> shutdownTasks;
+    private readonly object lockObj = new();
 
     public GracefulShutdownService()
     {
-        _shutdownCts = new CancellationTokenSource();
-        _shutdownTasks = new List<Func<CancellationToken, Task>>();
+        shutdownCts = new CancellationTokenSource();
+        shutdownTasks = new List<Func<CancellationToken, Task>>();
     }
 
-    public CancellationToken ShutdownToken => _shutdownCts.Token;
+    public CancellationToken ShutdownToken => shutdownCts.Token;
 
     // Register a task to run during shutdown
     public void RegisterShutdownTask(Func<CancellationToken, Task> shutdownTask)
     {
-        lock (_lock)
+        lock (lockObj)
         {
-            _shutdownTasks.Add(shutdownTask);
+            shutdownTasks.Add(shutdownTask);
         }
     }
 
@@ -215,14 +215,14 @@ public class GracefulShutdownService
         if (timeout == default)
             timeout = TimeSpan.FromSeconds(30);
 
-        _shutdownCts.Cancel();
+        shutdownCts.Cancel();
 
-        var tasks = new List<Task>();
-        lock (_lock)
+        var tasks = new();
+        lock (lockObj)
         {
-            foreach (var shutdownTask in _shutdownTasks)
+            foreach (var shutdownTask in shutdownTasks)
             {
-                tasks.Add(shutdownTask(_shutdownCts.Token));
+                tasks.Add(shutdownTask(shutdownCts.Token));
             }
         }
 
@@ -242,18 +242,18 @@ public class GracefulShutdownService
 // Cancellation-aware background service
 public abstract class CancellableBackgroundService : IDisposable
 {
-    private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
-    private Task? _executingTask;
+    private readonly CancellationTokenSource stoppingCts = new CancellationTokenSource();
+    private Task? executingTask;
 
-    protected CancellationToken StoppingToken => _stoppingCts.Token;
+    protected CancellationToken StoppingToken => stoppingCts.Token;
 
     public Task StartAsync(CancellationToken cancellationToken = default)
     {
-        _executingTask = ExecuteAsync(_stoppingCts.Token);
+        executingTask = ExecuteAsync(stoppingCts.Token);
         
-        if (_executingTask.IsCompleted)
+        if (executingTask.IsCompleted)
         {
-            return _executingTask;
+            return executingTask;
         }
 
         return Task.CompletedTask;
@@ -261,16 +261,16 @@ public abstract class CancellableBackgroundService : IDisposable
 
     public async Task StopAsync(CancellationToken cancellationToken = default)
     {
-        if (_executingTask == null)
+        if (executingTask == null)
             return;
 
         try
         {
-            _stoppingCts.Cancel();
+            stoppingCts.Cancel();
         }
         finally
         {
-            await Task.WhenAny(_executingTask, Task.Delay(Timeout.Infinite, cancellationToken));
+            await Task.WhenAny(executingTask, Task.Delay(Timeout.Infinite, cancellationToken));
         }
     }
 
@@ -278,8 +278,8 @@ public abstract class CancellableBackgroundService : IDisposable
 
     public virtual void Dispose()
     {
-        _stoppingCts.Cancel();
-        _stoppingCts.Dispose();
+        stoppingCts.Cancel();
+        stoppingCts.Dispose();
     }
 }
 
@@ -431,7 +431,7 @@ public class ParallelProcessor<T>
         int maxConcurrency = Environment.ProcessorCount,
         CancellationToken cancellationToken = default)
     {
-        using var semaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
+        using var semaphore = new(maxConcurrency, maxConcurrency);
         var tasks = items.Select(async item =>
         {
             await semaphore.WaitAsync(cancellationToken);
@@ -476,34 +476,34 @@ public class ParallelProcessor<T>
 // Periodic task with cancellation
 public class PeriodicTask : IDisposable
 {
-    private readonly Timer _timer;
-    private readonly Func<CancellationToken, Task> _action;
-    private readonly CancellationTokenSource _cancellationTokenSource;
-    private volatile bool _isExecuting;
+    private readonly Timer timer;
+    private readonly Func<CancellationToken, Task> action;
+    private readonly CancellationTokenSource cancellationTokenSource;
+    private volatile bool isExecuting;
 
     public PeriodicTask(
         Func<CancellationToken, Task> action,
         TimeSpan interval,
         TimeSpan? initialDelay = null)
     {
-        _action = action ?? throw new ArgumentNullException(nameof(action));
-        _cancellationTokenSource = new CancellationTokenSource();
+        this.action = action ?? throw new ArgumentNullException(nameof(action));
+        cancellationTokenSource = new CancellationTokenSource();
         
         var delay = initialDelay ?? interval;
-        _timer = new Timer(async _ => await ExecuteAsync(), null, delay, interval);
+        timer = new Timer(async _ => await ExecuteAsync(), null, delay, interval);
     }
 
     private async Task ExecuteAsync()
     {
-        if (_isExecuting || _cancellationTokenSource.Token.IsCancellationRequested)
+        if (isExecuting || cancellationTokenSource.Token.IsCancellationRequested)
             return;
 
-        _isExecuting = true;
+        isExecuting = true;
         try
         {
-            await _action(_cancellationTokenSource.Token);
+            await action(cancellationTokenSource.Token);
         }
-        catch (OperationCanceledException) when (_cancellationTokenSource.Token.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationTokenSource.Token.IsCancellationRequested)
         {
             // Expected cancellation
         }
@@ -514,50 +514,50 @@ public class PeriodicTask : IDisposable
         }
         finally
         {
-            _isExecuting = false;
+            isExecuting = false;
         }
     }
 
     public void Stop()
     {
-        _cancellationTokenSource.Cancel();
-        _timer?.Change(Timeout.Infinite, Timeout.Infinite);
+        cancellationTokenSource.Cancel();
+        timer?.Change(Timeout.Infinite, Timeout.Infinite);
     }
 
     public void Dispose()
     {
         Stop();
-        _timer?.Dispose();
-        _cancellationTokenSource?.Dispose();
+        timer?.Dispose();
+        cancellationTokenSource?.Dispose();
     }
 }
 
 // Progress reporting with cancellation
 public class ProgressReporter<T> : IProgress<T>
 {
-    private readonly Action<T> _handler;
-    private readonly CancellationToken _cancellationToken;
-    private readonly SynchronizationContext? _context;
+    private readonly Action<T> handler;
+    private readonly CancellationToken cancellationToken;
+    private readonly SynchronizationContext? context;
 
     public ProgressReporter(Action<T> handler, CancellationToken cancellationToken = default)
     {
-        _handler = handler ?? throw new ArgumentNullException(nameof(handler));
-        _cancellationToken = cancellationToken;
-        _context = SynchronizationContext.Current;
+        this.handler = handler ?? throw new ArgumentNullException(nameof(handler));
+        this.cancellationToken = cancellationToken;
+        context = SynchronizationContext.Current;
     }
 
     public void Report(T value)
     {
-        if (_cancellationToken.IsCancellationRequested)
+        if (cancellationToken.IsCancellationRequested)
             return;
 
-        if (_context != null)
+        if (context != null)
         {
-            _context.Post(_ => _handler(value), null);
+            context.Post(_ => handler(value), null);
         }
         else
         {
-            _handler(value);
+            handler(value);
         }
     }
 }
@@ -565,13 +565,13 @@ public class ProgressReporter<T> : IProgress<T>
 // Real-world examples
 public class FileProcessingService : CancellableBackgroundService
 {
-    private readonly string _watchDirectory;
-    private readonly int _processingDelayMs;
+    private readonly string watchDirectory;
+    private readonly int processingDelayMs;
 
     public FileProcessingService(string watchDirectory, int processingDelayMs = 1000)
     {
-        _watchDirectory = watchDirectory;
-        _processingDelayMs = processingDelayMs;
+        this.watchDirectory = watchDirectory;
+        this.processingDelayMs = processingDelayMs;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -580,7 +580,7 @@ public class FileProcessingService : CancellableBackgroundService
         {
             try
             {
-                var files = Directory.GetFiles(_watchDirectory, "*.txt");
+                var files = Directory.GetFiles(watchDirectory, "*.txt");
                 
                 foreach (var file in files)
                 {
@@ -590,7 +590,7 @@ public class FileProcessingService : CancellableBackgroundService
                     await ProcessFileAsync(file, stoppingToken);
                 }
 
-                await Task.Delay(_processingDelayMs, stoppingToken);
+                await Task.Delay(processingDelayMs, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -625,13 +625,13 @@ public class FileProcessingService : CancellableBackgroundService
 
 public class ApiService
 {
-    private readonly HttpClient _httpClient;
-    private readonly CancellationCoordinator _cancellationCoordinator;
+    private readonly HttpClient httpClient;
+    private readonly CancellationCoordinator cancellationCoordinator;
 
     public ApiService()
     {
-        _httpClient = new HttpClient { Timeout = Timeout.InfiniteTimeSpan }; // We'll handle timeouts manually
-        _cancellationCoordinator = new CancellationCoordinator();
+        httpClient = new HttpClient { Timeout = Timeout.InfiniteTimeSpan }; // We'll handle timeouts manually
+        cancellationCoordinator = new CancellationCoordinator();
     }
 
     public async Task<string> GetDataAsync(
@@ -642,7 +642,7 @@ public class ApiService
         if (timeout == default)
             timeout = TimeSpan.FromSeconds(30);
 
-        var linkedToken = _cancellationCoordinator.CreateLinkedToken(cancellationToken);
+        var linkedToken = cancellationCoordinator.CreateLinkedToken(cancellationToken);
         
         return await RetryWithCancellation.ExecuteWithExponentialBackoffAsync(
             async token =>
@@ -652,7 +652,7 @@ public class ApiService
                 
                 try
                 {
-                    return await _httpClient.GetStringAsync(endpoint, combinedCts.Token);
+                    return await httpClient.GetStringAsync(endpoint, combinedCts.Token);
                 }
                 catch (OperationCanceledException) when (timeoutCts.Token.IsCancellationRequested)
                 {
@@ -667,13 +667,13 @@ public class ApiService
 
     public void CancelAllRequests()
     {
-        _cancellationCoordinator.CancelAll();
+        cancellationCoordinator.CancelAll();
     }
 
     public void Dispose()
     {
-        _cancellationCoordinator?.Dispose();
-        _httpClient?.Dispose();
+        cancellationCoordinator?.Dispose();
+        httpClient?.Dispose();
     }
 }
 
@@ -688,7 +688,7 @@ public class BatchJobProcessor
         var progress = new Progress<BatchProgress>(p => 
             options.ProgressCallback?.Invoke(p));
 
-        var semaphore = new SemaphoreSlim(options.MaxConcurrency, options.MaxConcurrency);
+        var semaphore = new(options.MaxConcurrency, options.MaxConcurrency);
         var itemList = items.ToList();
         var results = new ProcessingResult[itemList.Count];
         var completedCount = 0;

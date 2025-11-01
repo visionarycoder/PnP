@@ -157,26 +157,26 @@ public static class SpanStringExtensions
 // Enumerator for splitting spans without allocation
 public ref struct SpanSplitEnumerator
 {
-    private ReadOnlySpan<char> _span;
-    private readonly ReadOnlySpan<char> _separators;
-    private readonly char _separator;
-    private readonly bool _useMultipleSeparators;
+    private ReadOnlySpan<char> span;
+    private readonly ReadOnlySpan<char> separators;
+    private readonly char separator;
+    private readonly bool useMultipleSeparators;
 
     public SpanSplitEnumerator(ReadOnlySpan<char> span, char separator)
     {
-        _span = span;
-        _separator = separator;
-        _separators = default;
-        _useMultipleSeparators = false;
+        this.span = span;
+        this.separator = separator;
+        separators = default;
+        useMultipleSeparators = false;
         Current = default;
     }
 
     public SpanSplitEnumerator(ReadOnlySpan<char> span, ReadOnlySpan<char> separators)
     {
-        _span = span;
-        _separator = default;
-        _separators = separators;
-        _useMultipleSeparators = true;
+        this.span = span;
+        separator = default;
+        this.separators = separators;
+        useMultipleSeparators = true;
         Current = default;
     }
 
@@ -186,25 +186,25 @@ public ref struct SpanSplitEnumerator
 
     public bool MoveNext()
     {
-        if (_span.IsEmpty)
+        if (span.IsEmpty)
         {
             Current = default;
             return false;
         }
 
-        int index = _useMultipleSeparators ? 
-            _span.IndexOfAny(_separators) : 
-            _span.IndexOf(_separator);
+        int index = useMultipleSeparators ? 
+            span.IndexOfAny(separators) : 
+            span.IndexOf(separator);
 
         if (index == -1)
         {
-            Current = _span;
-            _span = ReadOnlySpan<char>.Empty;
+            Current = span;
+            span = ReadOnlySpan<char>.Empty;
             return true;
         }
 
-        Current = _span.Slice(0, index);
-        _span = _span.Slice(index + 1);
+        Current = span.Slice(0, index);
+        span = span.Slice(index + 1);
         return true;
     }
 }
@@ -823,42 +823,42 @@ public static class SpanFormatters
 // High-performance string builder using span
 public ref struct SpanStringBuilder
 {
-    private readonly Span<char> _buffer;
-    private int _length;
+    private readonly Span<char> buffer;
+    private int length;
 
     public SpanStringBuilder(Span<char> buffer)
     {
-        _buffer = buffer;
-        _length = 0;
+        this.buffer = buffer;
+        length = 0;
     }
 
-    public int Length => _length;
-    public int Capacity => _buffer.Length;
-    public ReadOnlySpan<char> AsSpan() => _buffer.Slice(0, _length);
+    public int Length => length;
+    public int Capacity => buffer.Length;
+    public ReadOnlySpan<char> AsSpan() => buffer.Slice(0, length);
 
     public bool TryAppend(ReadOnlySpan<char> value)
     {
-        if (_length + value.Length > _buffer.Length)
+        if (length + value.Length > buffer.Length)
             return false;
             
-        value.CopyTo(_buffer.Slice(_length));
-        _length += value.Length;
+        value.CopyTo(buffer.Slice(length));
+        length += value.Length;
         return true;
     }
 
     public bool TryAppend(char value)
     {
-        if (_length >= _buffer.Length)
+        if (length >= buffer.Length)
             return false;
             
-        _buffer[_length++] = value;
+        buffer[length++] = value;
         return true;
     }
 
     public bool TryAppend<T>(T value) where T : ISpanFormattable
     {
-        return value.TryFormat(_buffer.Slice(_length), out int charsWritten, ReadOnlySpan<char>.Empty, null) &&
-               (_length += charsWritten) <= _buffer.Length;
+        return value.TryFormat(buffer.Slice(length), out int charsWritten, ReadOnlySpan<char>.Empty, null) &&
+               (length += charsWritten) <= buffer.Length;
     }
 
     public bool TryAppendLine(ReadOnlySpan<char> value)
@@ -868,12 +868,12 @@ public ref struct SpanStringBuilder
 
     public void Clear()
     {
-        _length = 0;
+        length = 0;
     }
 
     public override string ToString()
     {
-        return new string(_buffer.Slice(0, _length));
+        return new string(buffer.Slice(0, length));
     }
 }
 

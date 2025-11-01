@@ -38,9 +38,9 @@ public class CircuitBreakerOptions
 // Circuit breaker metrics
 public class CircuitBreakerMetrics
 {
-    private readonly object lockObj = new object();
-    private readonly Queue<DateTime> recentCalls = new Queue<DateTime>();
-    private readonly Queue<DateTime> recentFailures = new Queue<DateTime>();
+    private readonly object lockObj = new();
+    private readonly Queue<DateTime> recentCalls = new();
+    private readonly Queue<DateTime> recentFailures = new();
     
     public int TotalCalls { get; private set; }
     public int FailedCalls { get; private set; }
@@ -132,7 +132,7 @@ public class CircuitBreaker
     private readonly CircuitBreakerOptions options;
     private readonly ILogger<CircuitBreaker> logger;
     private readonly CircuitBreakerMetrics metrics;
-    private readonly object stateLock = new object();
+    private readonly object stateLock = new();
 
     private CircuitBreakerState state = CircuitBreakerState.Closed;
     private DateTime stateChangeTime = DateTime.UtcNow;
@@ -463,7 +463,7 @@ public class BulkheadIsolation
     public BulkheadIsolation(string name, int maxConcurrency, ILogger logger = null)
     {
         this.name = name ?? throw new ArgumentNullException(nameof(name));
-        this.semaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
+        this.semaphore = new(maxConcurrency, maxConcurrency);
         this.logger = logger;
         
         MaxConcurrency = maxConcurrency;
@@ -682,7 +682,7 @@ public class TimeoutPolicy
 // Composite resilience policy combining multiple patterns
 public class ResiliencePolicy
 {
-    private readonly List<IResiliencePolicy> policies = new List<IResiliencePolicy>();
+    private readonly List<IResiliencePolicy> policies = new();
     private readonly ILogger logger;
 
     public ResiliencePolicy(ILogger logger = null)

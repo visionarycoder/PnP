@@ -1122,7 +1122,7 @@ Console.WriteLine($"Simple loop benchmark: {simpleTime.TotalMicroseconds:F2} μs
 // Benchmark with allocation tracking
 var (time, allocations) = PerformanceMeasurement.BenchmarkWithAllocations(() =>
 {
-    var list = new List<int>();
+    var list = new();
     for (int i = 0; i < 100; i++)
     {
         list.Add(i);
@@ -1205,7 +1205,7 @@ Console.WriteLine("\nReal-world Optimization Scenarios:");
 
 // String processing optimization
 var csvLine = "John,Doe,30,Engineer,New York";
-var fields = new List<string>();
+var fields = new();
 
 // Traditional approach (allocates many strings)
 var traditionalTime = PerformanceMeasurement.BenchmarkAction(() =>

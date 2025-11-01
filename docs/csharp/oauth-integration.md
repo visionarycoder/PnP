@@ -88,10 +88,10 @@ public class UserProfile
 // OAuth service implementation
 public class OAuthService : IOAuthService
 {
-    private readonly IHttpClientFactory _httpClientFactory;
-    private readonly OAuthOptions _options;
-    private readonly ILogger<OAuthService> _logger;
-    private readonly IOAuthStateService _stateService;
+    private readonly IHttpClientFactory httpClientFactory;
+    private readonly OAuthOptions options;
+    private readonly ILogger<OAuthService> logger;
+    private readonly IOAuthStateService stateService;
 
     public OAuthService(
         IHttpClientFactory httpClientFactory,
@@ -99,10 +99,10 @@ public class OAuthService : IOAuthService
         ILogger<OAuthService> logger,
         IOAuthStateService stateService)
     {
-        _httpClientFactory = httpClientFactory;
-        _options = options.Value;
-        _logger = logger;
-        _stateService = stateService;
+        this.httpClientFactory = httpClientFactory;
+        options = options.Value;
+        this.logger = logger;
+        this.stateService = stateService;
     }
 
     public async Task<AuthenticationResult> AuthenticateAsync(string provider, string? returnUrl = null)
@@ -120,7 +120,7 @@ public class OAuthService : IOAuthService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error initiating OAuth authentication for provider {Provider}", provider);
+            logger.LogError(ex, "Error initiating OAuth authentication for provider {Provider}", provider);
             return new AuthenticationResult
             {
                 Success = false,
@@ -135,7 +135,7 @@ public class OAuthService : IOAuthService
         try
         {
             // Validate state parameter
-            if (!await _stateService.ValidateStateAsync(state))
+            if (!await stateService.ValidateStateAsync(state))
             {
                 return new AuthenticationResult
                 {
@@ -169,7 +169,7 @@ public class OAuthService : IOAuthService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error handling OAuth callback for provider {Provider}", provider);
+            logger.LogError(ex, "Error handling OAuth callback for provider {Provider}", provider);
             return new AuthenticationResult
             {
                 Success = false,
@@ -182,7 +182,7 @@ public class OAuthService : IOAuthService
     public string GenerateAuthorizationUrl(string provider, string? returnUrl = null)
     {
         var config = GetProviderConfig(provider);
-        var state = _stateService.GenerateState(provider, returnUrl);
+        var state = stateService.GenerateState(provider, returnUrl);
         
         var parameters = new Dictionary<string, string>
         {
@@ -197,7 +197,7 @@ public class OAuthService : IOAuthService
         if (config.UsePkce)
         {
             var (codeVerifier, codeChallenge) = GeneratePkceParameters();
-            _stateService.StorePkceVerifier(state, codeVerifier);
+            stateService.StorePkceVerifier(state, codeVerifier);
             
             parameters["code_challenge"] = codeChallenge;
             parameters["code_challenge_method"] = "S256";
@@ -223,7 +223,7 @@ public class OAuthService : IOAuthService
         try
         {
             var config = GetProviderConfig(provider);
-            using var httpClient = _httpClientFactory.CreateClient();
+            using var httpClient = httpClientFactory.CreateClient();
 
             var parameters = new Dictionary<string, string>
             {
@@ -241,7 +241,7 @@ public class OAuthService : IOAuthService
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("Token refresh failed for provider {Provider}: {Error}", provider, responseContent);
+                logger.LogError("Token refresh failed for provider {Provider}: {Error}", provider, responseContent);
                 return null;
             }
 
@@ -250,7 +250,7 @@ public class OAuthService : IOAuthService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error refreshing token for provider {Provider}", provider);
+            logger.LogError(ex, "Error refreshing token for provider {Provider}", provider);
             return null;
         }
     }
@@ -259,7 +259,7 @@ public class OAuthService : IOAuthService
     {
         try
         {
-            using var httpClient = _httpClientFactory.CreateClient();
+            using var httpClient = httpClientFactory.CreateClient();
             httpClient.DefaultRequestHeaders.Authorization = new("Bearer", accessToken);
 
             var userInfoEndpoint = GetUserInfoEndpoint(provider);
@@ -267,7 +267,7 @@ public class OAuthService : IOAuthService
             
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Failed to get user profile for provider {Provider}", provider);
+                logger.LogWarning("Failed to get user profile for provider {Provider}", provider);
                 return null;
             }
 
@@ -278,7 +278,7 @@ public class OAuthService : IOAuthService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting user profile for provider {Provider}", provider);
+            logger.LogError(ex, "Error getting user profile for provider {Provider}", provider);
             return null;
         }
     }
@@ -292,7 +292,7 @@ public class OAuthService : IOAuthService
     private async Task<TokenResponse?> ExchangeCodeForTokensAsync(string provider, string code, string state)
     {
         var config = GetProviderConfig(provider);
-        using var httpClient = _httpClientFactory.CreateClient();
+        using var httpClient = httpClientFactory.CreateClient();
 
         var parameters = new Dictionary<string, string>
         {
@@ -306,7 +306,7 @@ public class OAuthService : IOAuthService
         // Add PKCE verifier if used
         if (config.UsePkce)
         {
-            var codeVerifier = await _stateService.GetPkceVerifierAsync(state);
+            var codeVerifier = await stateService.GetPkceVerifierAsync(state);
             if (!string.IsNullOrEmpty(codeVerifier))
             {
                 parameters["code_verifier"] = codeVerifier;
@@ -321,7 +321,7 @@ public class OAuthService : IOAuthService
 
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogError("Token exchange failed for provider {Provider}: {Error}", provider, responseContent);
+            logger.LogError("Token exchange failed for provider {Provider}: {Error}", provider, responseContent);
             return null;
         }
 
@@ -331,7 +331,7 @@ public class OAuthService : IOAuthService
 
     private OAuthProviderConfig GetProviderConfig(string provider)
     {
-        if (!_options.Providers.TryGetValue(provider, out var config))
+        if (!options.Providers.TryGetValue(provider, out var config))
         {
             throw new InvalidOperationException($"OAuth provider '{provider}' is not configured");
         }
@@ -344,7 +344,7 @@ public class OAuthService : IOAuthService
         "microsoft" => "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
         "github" => "https://github.com/login/oauth/authorize",
         "azure" => "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
-        _ => _options.Providers[provider].Authority + "/oauth2/authorize"
+        _ => options.Providers[provider].Authority + "/oauth2/authorize"
     };
 
     private string GetTokenEndpoint(string provider) => provider.ToLowerInvariant() switch
@@ -353,7 +353,7 @@ public class OAuthService : IOAuthService
         "microsoft" => "https://login.microsoftonline.com/common/oauth2/v2.0/token",
         "github" => "https://github.com/login/oauth/access_token",
         "azure" => "https://login.microsoftonline.com/common/oauth2/v2.0/token",
-        _ => _options.Providers[provider].Authority + "/oauth2/token"
+        _ => options.Providers[provider].Authority + "/oauth2/token"
     };
 
     private string GetUserInfoEndpoint(string provider) => provider.ToLowerInvariant() switch
@@ -362,7 +362,7 @@ public class OAuthService : IOAuthService
         "microsoft" => "https://graph.microsoft.com/v1.0/me",
         "github" => "https://api.github.com/user",
         "azure" => "https://graph.microsoft.com/v1.0/me",
-        _ => _options.Providers[provider].Authority + "/userinfo"
+        _ => options.Providers[provider].Authority + "/userinfo"
     };
 
     private string[] GetDefaultScopes(string provider) => provider.ToLowerInvariant() switch
@@ -377,7 +377,7 @@ public class OAuthService : IOAuthService
     private string GetRedirectUri(string provider)
     {
         var config = GetProviderConfig(provider);
-        return config.CallbackPath ?? $"{_options.DefaultCallbackPath}/{provider}";
+        return config.CallbackPath ?? $"{options.DefaultCallbackPath}/{provider}";
     }
 
     private (string codeVerifier, string codeChallenge) GeneratePkceParameters()
@@ -483,13 +483,13 @@ public interface IOAuthStateService
 
 public class OAuthStateService : IOAuthStateService
 {
-    private readonly IMemoryCache _cache;
-    private readonly ILogger<OAuthStateService> _logger;
+    private readonly IMemoryCache cache;
+    private readonly ILogger<OAuthStateService> logger;
     
     public OAuthStateService(IMemoryCache cache, ILogger<OAuthStateService> logger)
     {
-        _cache = cache;
-        _logger = logger;
+        this.cache = cache;
+        this.logger = logger;
     }
 
     public string GenerateState(string provider, string? returnUrl = null)
@@ -505,7 +505,7 @@ public class OAuthStateService : IOAuthStateService
         var state = Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(stateData));
         
         // Store in cache with expiration
-        _cache.Set($"oauth_state_{state}", stateData, TimeSpan.FromMinutes(10));
+        cache.Set($"oauth_state_{state}", stateData, TimeSpan.FromMinutes(10));
         
         return state;
     }
@@ -515,10 +515,10 @@ public class OAuthStateService : IOAuthStateService
         try
         {
             var cacheKey = $"oauth_state_{state}";
-            if (_cache.TryGetValue(cacheKey, out OAuthState? stateData))
+            if (cache.TryGetValue(cacheKey, out OAuthState? stateData))
             {
                 // Remove from cache to prevent replay
-                _cache.Remove(cacheKey);
+                cache.Remove(cacheKey);
                 
                 // Check expiration (additional safety)
                 return stateData.CreatedAt.AddMinutes(10) > DateTime.UtcNow;
@@ -528,23 +528,23 @@ public class OAuthStateService : IOAuthStateService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error validating OAuth state");
+            logger.LogError(ex, "Error validating OAuth state");
             return false;
         }
     }
 
     public async Task StorePkceVerifierAsync(string state, string codeVerifier)
     {
-        _cache.Set($"pkce_{state}", codeVerifier, TimeSpan.FromMinutes(10));
+        cache.Set($"pkce_{state}", codeVerifier, TimeSpan.FromMinutes(10));
         await Task.CompletedTask;
     }
 
     public async Task<string?> GetPkceVerifierAsync(string state)
     {
         var cacheKey = $"pkce_{state}";
-        if (_cache.TryGetValue(cacheKey, out string? verifier))
+        if (cache.TryGetValue(cacheKey, out string? verifier))
         {
-            _cache.Remove(cacheKey);
+            cache.Remove(cacheKey);
             return verifier;
         }
         return await Task.FromResult<string?>(null);
@@ -552,7 +552,7 @@ public class OAuthStateService : IOAuthStateService
 
     public void StorePkceVerifier(string state, string codeVerifier)
     {
-        _cache.Set($"pkce_{state}", codeVerifier, TimeSpan.FromMinutes(10));
+        cache.Set($"pkce_{state}", codeVerifier, TimeSpan.FromMinutes(10));
     }
 }
 
@@ -570,10 +570,10 @@ public class OAuthState
 [Route("api/[controller]")]
 public class OAuthController : ControllerBase
 {
-    private readonly IOAuthService _oauthService;
-    private readonly IUserService _userService;
-    private readonly IJwtService _jwtService;
-    private readonly ILogger<OAuthController> _logger;
+    private readonly IOAuthService oauthService;
+    private readonly IUserService userService;
+    private readonly IJwtService jwtService;
+    private readonly ILogger<OAuthController> logger;
 
     public OAuthController(
         IOAuthService oauthService,
@@ -581,45 +581,45 @@ public class OAuthController : ControllerBase
         IJwtService jwtService,
         ILogger<OAuthController> logger)
     {
-        _oauthService = oauthService;
-        _userService = userService;
-        _jwtService = jwtService;
-        _logger = logger;
+        this.oauthService = oauthService;
+        this.userService = userService;
+        this.jwtService = jwtService;
+        this.logger = logger;
     }
 
     [HttpGet("login/{provider}")]
     public IActionResult Login(string provider, [FromQuery] string? returnUrl = null)
     {
-        var authUrl = _oauthService.GenerateAuthorizationUrl(provider, returnUrl);
+        var authUrl = oauthService.GenerateAuthorizationUrl(provider, returnUrl);
         return Redirect(authUrl);
     }
 
     [HttpGet("callback/{provider}")]
     public async Task<IActionResult> Callback(string provider, [FromQuery] string code, [FromQuery] string state)
     {
-        var result = await _oauthService.HandleCallbackAsync(provider, code, state);
+        var result = await oauthService.HandleCallbackAsync(provider, code, state);
         
         if (!result.Success)
         {
-            _logger.LogWarning("OAuth callback failed for provider {Provider}: {Error}", provider, result.Error);
+            logger.LogWarning("OAuth callback failed for provider {Provider}: {Error}", provider, result.Error);
             return BadRequest(new { Error = result.Error, Description = result.ErrorDescription });
         }
 
         // Find or create user
-        var user = await _userService.FindByEmailAsync(result.UserProfile!.Email);
+        var user = await userService.FindByEmailAsync(result.UserProfile!.Email);
         if (user == null)
         {
-            user = await _userService.CreateFromOAuthAsync(result.UserProfile);
+            user = await userService.CreateFromOAuthAsync(result.UserProfile);
         }
         else
         {
             // Update user profile with latest OAuth data
-            await _userService.UpdateFromOAuthAsync(user.Id, result.UserProfile);
+            await userService.UpdateFromOAuthAsync(user.Id, result.UserProfile);
         }
 
         // Generate JWT tokens for the user
-        var roles = await _userService.GetUserRolesAsync(user.Id);
-        var tokenResponse = await _jwtService.GenerateTokenAsync(user.Id, user.Email, roles);
+        var roles = await userService.GetUserRolesAsync(user.Id);
+        var tokenResponse = await jwtService.GenerateTokenAsync(user.Id, user.Email, roles);
 
         return Ok(tokenResponse);
     }
@@ -627,7 +627,7 @@ public class OAuthController : ControllerBase
     [HttpPost("refresh")]
     public async Task<IActionResult> RefreshToken([FromBody] RefreshOAuthTokenRequest request)
     {
-        var tokenResponse = await _oauthService.RefreshTokenAsync(request.Provider, request.RefreshToken);
+        var tokenResponse = await oauthService.RefreshTokenAsync(request.Provider, request.RefreshToken);
         
         if (tokenResponse == null)
         {
@@ -641,7 +641,7 @@ public class OAuthController : ControllerBase
     [Authorize]
     public async Task<IActionResult> GetProfile(string provider, [FromQuery] string accessToken)
     {
-        var profile = await _oauthService.GetUserProfileAsync(provider, accessToken);
+        var profile = await oauthService.GetUserProfileAsync(provider, accessToken);
         
         if (profile == null)
         {
@@ -842,13 +842,13 @@ class OAuthClient {
 // Security middleware for OAuth
 public class OAuthSecurityMiddleware
 {
-    private readonly RequestDelegate _next;
-    private readonly ILogger<OAuthSecurityMiddleware> _logger;
+    private readonly RequestDelegate next;
+    private readonly ILogger<OAuthSecurityMiddleware> logger;
 
     public OAuthSecurityMiddleware(RequestDelegate next, ILogger<OAuthSecurityMiddleware> logger)
     {
-        _next = next;
-        _logger = logger;
+        this.next = next;
+        this.logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -861,10 +861,10 @@ public class OAuthSecurityMiddleware
         // Log OAuth requests
         if (context.Request.Path.StartsWithSegments("/api/oauth"))
         {
-            _logger.LogInformation("OAuth request: {Method} {Path}", context.Request.Method, context.Request.Path);
+            logger.LogInformation("OAuth request: {Method} {Path}", context.Request.Method, context.Request.Path);
         }
 
-        await _next(context);
+        await next(context);
     }
 }
 

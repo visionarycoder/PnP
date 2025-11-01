@@ -124,7 +124,7 @@ public class SagaStepResult
     public bool IsSuccess { get; set; }
     public string ErrorMessage { get; set; }
     public Exception Exception { get; set; }
-    public IDictionary<string, object> OutputData { get; set; } = new Dictionary<string, object>();
+    public IDictionary<string, object> OutputData { get; set; } = new();
     public TimeSpan? RetryAfter { get; set; }
     public bool ShouldCompensate { get; set; } = true;
 
@@ -170,8 +170,8 @@ public class Saga : ISaga
         SagaType = sagaType ?? throw new ArgumentNullException(nameof(sagaType));
         Status = SagaStatus.NotStarted;
         CreatedAt = DateTime.UtcNow;
-        Data = new Dictionary<string, object>();
-        steps = new List<SagaStep>();
+        Data = new();
+        steps = new();
         
         if (sagaData != null)
         {
@@ -291,7 +291,7 @@ public class SagaStep : ISagaStep
         StepName = stepName ?? throw new ArgumentNullException(nameof(stepName));
         StepOrder = stepOrder;
         Status = SagaStepStatus.NotStarted;
-        StepData = new Dictionary<string, object>();
+        StepData = new();
     }
 
     public string StepName { get; }
@@ -356,7 +356,7 @@ public class SagaContext : ISagaContext
         SagaId = saga.SagaId;
         SagaType = saga.SagaType;
         SagaData = saga.Data;
-        StepData = new Dictionary<string, object>();
+        StepData = new();
         ServiceProvider = serviceProvider;
         CancellationToken = cancellationToken;
     }
@@ -419,7 +419,7 @@ public class InMemorySagaRepository : ISagaRepository
 
     public InMemorySagaRepository(ILogger<InMemorySagaRepository> logger = null)
     {
-        sagas = new ConcurrentDictionary<Guid, ISaga>();
+        sagas = new();
         this.logger = logger;
     }
 
@@ -482,7 +482,7 @@ public class SagaOrchestrator : ISagaOrchestrator, IDisposable
         this.repository = repository ?? throw new ArgumentNullException(nameof(repository));
         this.serviceProvider = serviceProvider;
         this.logger = logger;
-        sagaDefinitions = new ConcurrentDictionary<string, SagaDefinition>();
+        sagaDefinitions = new();
         
         // Start timeout monitoring timer
         timeoutTimer = new Timer(CheckTimeouts, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
@@ -924,7 +924,7 @@ public class SagaDefinitionBuilder
 public class SagaDefinition
 {
     public string SagaType { get; set; }
-    public List<SagaStepDefinition> Steps { get; set; } = new List<SagaStepDefinition>();
+    public List<SagaStepDefinition> Steps { get; set; } = new();
     public TimeSpan Timeout { get; set; } = TimeSpan.FromHours(1);
 }
 
@@ -942,7 +942,7 @@ public class CreateOrderData
 {
     public string CustomerEmail { get; set; }
     public decimal TotalAmount { get; set; }
-    public List<OrderItem> Items { get; set; } = new List<OrderItem>();
+    public List<OrderItem> Items { get; set; } = new();
 }
 
 public class OrderItem
@@ -1016,7 +1016,7 @@ public class CreateOrderStepHandler : ISagaStepHandler<CreateOrderData>
 
 public class ReserveInventoryData
 {
-    public List<OrderItem> Items { get; set; } = new List<OrderItem>();
+    public List<OrderItem> Items { get; set; } = new();
 }
 
 public class ReserveInventoryStepHandler : ISagaStepHandler<ReserveInventoryData>
@@ -1034,7 +1034,7 @@ public class ReserveInventoryStepHandler : ISagaStepHandler<ReserveInventoryData
         {
             logger?.LogInformation("Reserving inventory for {ItemCount} items", data.Items.Count);
 
-            var reservations = new List<string>();
+            var reservations = new();
 
             foreach (var item in data.Items)
             {

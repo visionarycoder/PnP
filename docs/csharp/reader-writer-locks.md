@@ -322,15 +322,15 @@ public class AsyncReaderWriterLock : IAsyncReaderWriterLock
     private volatile int readerCount = 0;
     private volatile bool hasWriter = false;
     private volatile bool hasUpgradeableReader = false;
-    private readonly object syncLock = new object();
+    private readonly object syncLock = new();
     private readonly ILogger logger;
     private volatile bool isDisposed = false;
 
     public AsyncReaderWriterLock(int maxConcurrentReaders = int.MaxValue, ILogger logger = null)
     {
-        readerSemaphore = new SemaphoreSlim(maxConcurrentReaders, maxConcurrentReaders);
-        writerSemaphore = new SemaphoreSlim(1, 1);
-        upgradeableSemaphore = new SemaphoreSlim(1, 1);
+        readerSemaphore = new(maxConcurrentReaders, maxConcurrentReaders);
+        writerSemaphore = new(1, 1);
+        upgradeableSemaphore = new(1, 1);
         this.logger = logger;
     }
 
@@ -689,7 +689,7 @@ public class HierarchicalLockManager : IDisposable
 
     public HierarchicalLockManager(ILogger logger = null)
     {
-        locks = new ConcurrentDictionary<int, ReaderWriterLockSlim>();
+        locks = new();
         heldLocks = new ThreadLocal<SortedSet<int>>(() => new SortedSet<int>());
         this.logger = logger;
     }
@@ -958,7 +958,7 @@ public class ReaderWriterLockMetrics
     private volatile long totalWriteWaitTime = 0;
     private volatile long totalUpgradeableWaitTime = 0;
     
-    private readonly object lockObject = new object();
+    private readonly object lockObject = new();
     private DateTime startTime = DateTime.UtcNow;
 
     public long ReadLocksAcquired => readLocksAcquired;
@@ -1104,7 +1104,7 @@ public class ReaderWriterCache<TKey, TValue> : IDisposable where TKey : notnull
 
     public ReaderWriterCache(Func<TKey, TValue> valueFactory, ILogger logger = null)
     {
-        cache = new Dictionary<TKey, TValue>();
+        cache = new();
         rwLock = new EnhancedReaderWriterLock(LockRecursionPolicy.NoRecursion, logger);
         this.valueFactory = valueFactory ?? throw new ArgumentNullException(nameof(valueFactory));
         this.logger = logger;
@@ -1281,7 +1281,7 @@ Console.WriteLine("Enhanced ReaderWriter Lock Examples:");
 var logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger("LockExample");
 var enhancedLock = new EnhancedReaderWriterLock(LockRecursionPolicy.NoRecursion, logger);
 
-var sharedData = new List<string>();
+var sharedData = new();
 
 // Multiple reader tasks
 var readerTasks = Enumerable.Range(1, 5).Select(readerId =>
@@ -1345,7 +1345,7 @@ Console.WriteLine($"  Read success rate: {stats.ReadLockSuccessRate:P2}");
 Console.WriteLine("\nAsync ReaderWriter Lock Examples:");
 
 var asyncLock = new AsyncReaderWriterLock(maxConcurrentReaders: 10, logger);
-var asyncData = new Dictionary<string, int>();
+var asyncData = new();
 
 // Async reader tasks
 var asyncReaderTasks = Enumerable.Range(1, 8).Select(readerId =>
@@ -1499,7 +1499,7 @@ await Task.WhenAll(correctOrderTask, upgradeTask);
 // Example 5: Adaptive Spin Lock
 Console.WriteLine("\nAdaptive Spin Lock Examples:");
 
-var spinLockData = new List<int>();
+var spinLockData = new();
 var adaptiveSpinLock = new AdaptiveSpinLock(maxSpinCount: 500, useProcessorYield: true);
 
 var spinLockTasks = Enumerable.Range(1, 8).Select(taskId =>
@@ -1591,7 +1591,7 @@ Console.WriteLine($"  Average read wait: {cacheStats.AverageReadWaitTime.TotalMi
 Console.WriteLine("\nPerformance Comparison Examples:");
 
 const int iterationCount = 10000;
-var testData = new List<int>();
+var testData = new();
 
 // Test 1: ReaderWriterLockSlim
 var rwLockSlim = new ReaderWriterLockSlim();
@@ -1637,7 +1637,7 @@ Console.WriteLine($"ReaderWriterLockSlim: {rwStopwatch.ElapsedMilliseconds}ms fo
 
 // Test 2: Simple lock
 testData.Clear();
-var lockObject = new object();
+var lockObject = new();
 var lockStopwatch = Stopwatch.StartNew();
 
 var lockTasks = Enumerable.Range(0, 4).Select(taskId =>

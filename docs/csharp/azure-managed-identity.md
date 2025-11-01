@@ -54,19 +54,19 @@ public interface IManagedIdentityService
 // Managed Identity service implementation
 public class ManagedIdentityService : IManagedIdentityService
 {
-    private readonly ManagedIdentityOptions _options;
-    private readonly ILogger<ManagedIdentityService> _logger;
-    private readonly Dictionary<string, TokenCredential> _credentialCache;
-    private readonly SemaphoreSlim _credentialCacheLock;
+    private readonly ManagedIdentityOptions options;
+    private readonly ILogger<ManagedIdentityService> logger;
+    private readonly Dictionary<string, TokenCredential> credentialCache;
+    private readonly SemaphoreSlim credentialCacheLock;
 
     public ManagedIdentityService(
         IOptions<ManagedIdentityOptions> options,
         ILogger<ManagedIdentityService> logger)
     {
-        _options = options.Value;
-        _logger = logger;
-        _credentialCache = new Dictionary<string, TokenCredential>();
-        _credentialCacheLock = new SemaphoreSlim(1, 1);
+        options = options.Value;
+        this.logger = logger;
+        credentialCache = new();
+        credentialCacheLock = new(1, 1);
     }
 
     public async Task<AccessToken> GetAccessTokenAsync(string resource, CancellationToken cancellationToken = default)
@@ -77,12 +77,12 @@ public class ManagedIdentityService : IManagedIdentityService
         try
         {
             var token = await credential.GetTokenAsync(tokenRequestContext, cancellationToken);
-            _logger.LogDebug("Successfully obtained access token for resource: {Resource}", resource);
+            logger.LogDebug("Successfully obtained access token for resource: {Resource}", resource);
             return token;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to obtain access token for resource: {Resource}", resource);
+            logger.LogError(ex, "Failed to obtain access token for resource: {Resource}", resource);
             throw;
         }
     }
@@ -95,12 +95,12 @@ public class ManagedIdentityService : IManagedIdentityService
         try
         {
             var token = await credential.GetTokenAsync(tokenRequestContext, cancellationToken);
-            _logger.LogDebug("Successfully obtained access token for scopes: {Scopes}", string.Join(", ", scopes));
+            logger.LogDebug("Successfully obtained access token for scopes: {Scopes}", string.Join(", ", scopes));
             return token;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to obtain access token for scopes: {Scopes}", string.Join(", ", scopes));
+            logger.LogError(ex, "Failed to obtain access token for scopes: {Scopes}", string.Join(", ", scopes));
             throw;
         }
     }
@@ -113,12 +113,12 @@ public class ManagedIdentityService : IManagedIdentityService
         try
         {
             var response = await client.GetSecretAsync(secretName, cancellationToken: cancellationToken);
-            _logger.LogDebug("Successfully retrieved secret: {SecretName} from Key Vault: {KeyVaultUrl}", secretName, keyVaultUrl);
+            logger.LogDebug("Successfully retrieved secret: {SecretName} from Key Vault: {KeyVaultUrl}", secretName, keyVaultUrl);
             return response.Value.Value;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to retrieve secret: {SecretName} from Key Vault: {KeyVaultUrl}", secretName, keyVaultUrl);
+            logger.LogError(ex, "Failed to retrieve secret: {SecretName} from Key Vault: {KeyVaultUrl}", secretName, keyVaultUrl);
             throw;
         }
     }
@@ -135,12 +135,12 @@ public class ManagedIdentityService : IManagedIdentityService
             connection.AccessToken = token.Token;
 
             await connection.OpenAsync(cancellationToken);
-            _logger.LogDebug("Successfully established SQL connection using managed identity");
+            logger.LogDebug("Successfully established SQL connection using managed identity");
             return connection;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to establish SQL connection using managed identity");
+            logger.LogError(ex, "Failed to establish SQL connection using managed identity");
             connection.Dispose();
             throw;
         }
@@ -157,12 +157,12 @@ public class ManagedIdentityService : IManagedIdentityService
             // Test the connection by getting account info
             await client.GetAccountInfoAsync(cancellationToken);
             
-            _logger.LogDebug("Successfully created Blob Service client for: {StorageAccountUrl}", storageAccountUrl);
+            logger.LogDebug("Successfully created Blob Service client for: {StorageAccountUrl}", storageAccountUrl);
             return client;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create Blob Service client for: {StorageAccountUrl}", storageAccountUrl);
+            logger.LogError(ex, "Failed to create Blob Service client for: {StorageAccountUrl}", storageAccountUrl);
             throw;
         }
     }
@@ -171,21 +171,21 @@ public class ManagedIdentityService : IManagedIdentityService
     {
         var cacheKey = clientId ?? "system";
         
-        _credentialCacheLock.Wait();
+        credentialCacheLock.Wait();
         try
         {
-            if (_credentialCache.TryGetValue(cacheKey, out var cachedCredential))
+            if (credentialCache.TryGetValue(cacheKey, out var cachedCredential))
             {
                 return cachedCredential;
             }
 
             TokenCredential credential = CreateCredential(clientId);
-            _credentialCache[cacheKey] = credential;
+            credentialCache[cacheKey] = credential;
             return credential;
         }
         finally
         {
-            _credentialCacheLock.Release();
+            credentialCacheLock.Release();
         }
     }
 
@@ -196,29 +196,29 @@ public class ManagedIdentityService : IManagedIdentityService
             ExcludeEnvironmentCredential = false,
             ExcludeWorkloadIdentityCredential = false,
             ExcludeManagedIdentityCredential = false,
-            ExcludeSharedTokenCacheCredential = !_options.EnableLocalDevelopment,
-            ExcludeVisualStudioCredential = !_options.EnableLocalDevelopment,
-            ExcludeVisualStudioCodeCredential = !_options.EnableLocalDevelopment,
-            ExcludeAzureCliCredential = !_options.EnableLocalDevelopment,
-            ExcludeAzurePowerShellCredential = !_options.EnableLocalDevelopment,
+            ExcludeSharedTokenCacheCredential = !options.EnableLocalDevelopment,
+            ExcludeVisualStudioCredential = !options.EnableLocalDevelopment,
+            ExcludeVisualStudioCodeCredential = !options.EnableLocalDevelopment,
+            ExcludeAzureCliCredential = !options.EnableLocalDevelopment,
+            ExcludeAzurePowerShellCredential = !options.EnableLocalDevelopment,
             ExcludeInteractiveBrowserCredential = false
         };
 
-        if (!string.IsNullOrEmpty(_options.TenantId))
+        if (!string.IsNullOrEmpty(options.TenantId))
         {
-            options.TenantId = _options.TenantId;
+            options.TenantId = options.TenantId;
         }
 
         // Use specific managed identity if clientId is provided or configured
-        var effectiveClientId = clientId ?? _options.UserAssignedClientId;
+        var effectiveClientId = clientId ?? options.UserAssignedClientId;
         if (!string.IsNullOrEmpty(effectiveClientId))
         {
             options.ManagedIdentityClientId = effectiveClientId;
-            _logger.LogDebug("Using user-assigned managed identity: {ClientId}", effectiveClientId);
+            logger.LogDebug("Using user-assigned managed identity: {ClientId}", effectiveClientId);
         }
         else
         {
-            _logger.LogDebug("Using system-assigned managed identity");
+            logger.LogDebug("Using system-assigned managed identity");
         }
 
         return new DefaultAzureCredential(options);
@@ -236,20 +236,20 @@ public interface IAzureServiceClientFactory
 
 public class AzureServiceClientFactory : IAzureServiceClientFactory
 {
-    private readonly IManagedIdentityService _managedIdentityService;
-    private readonly ILogger<AzureServiceClientFactory> _logger;
+    private readonly IManagedIdentityService managedIdentityService;
+    private readonly ILogger<AzureServiceClientFactory> logger;
 
     public AzureServiceClientFactory(
         IManagedIdentityService managedIdentityService,
         ILogger<AzureServiceClientFactory> logger)
     {
-        _managedIdentityService = managedIdentityService;
-        _logger = logger;
+        this.managedIdentityService = managedIdentityService;
+        this.logger = logger;
     }
 
     public async Task<T> CreateClientAsync<T>(string serviceUrl, string? clientId = null) where T : class
     {
-        var credential = _managedIdentityService.GetCredential(clientId);
+        var credential = managedIdentityService.GetCredential(clientId);
         
         try
         {
@@ -259,34 +259,34 @@ public class AzureServiceClientFactory : IAzureServiceClientFactory
                 throw new InvalidOperationException($"Failed to create instance of {typeof(T).Name}");
             }
 
-            _logger.LogDebug("Successfully created {ClientType} for: {ServiceUrl}", typeof(T).Name, serviceUrl);
+            logger.LogDebug("Successfully created {ClientType} for: {ServiceUrl}", typeof(T).Name, serviceUrl);
             return client;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create {ClientType} for: {ServiceUrl}", typeof(T).Name, serviceUrl);
+            logger.LogError(ex, "Failed to create {ClientType} for: {ServiceUrl}", typeof(T).Name, serviceUrl);
             throw;
         }
     }
 
     public async Task<SecretClient> CreateKeyVaultClientAsync(string keyVaultUrl, string? clientId = null)
     {
-        var credential = _managedIdentityService.GetCredential(clientId);
+        var credential = managedIdentityService.GetCredential(clientId);
         var client = new SecretClient(new Uri(keyVaultUrl), credential);
         
-        _logger.LogDebug("Created Key Vault client for: {KeyVaultUrl}", keyVaultUrl);
+        logger.LogDebug("Created Key Vault client for: {KeyVaultUrl}", keyVaultUrl);
         return await Task.FromResult(client);
     }
 
     public async Task<BlobServiceClient> CreateBlobServiceClientAsync(string storageAccountUrl, string? clientId = null)
     {
-        return await _managedIdentityService.GetBlobServiceClientAsync(storageAccountUrl);
+        return await managedIdentityService.GetBlobServiceClientAsync(storageAccountUrl);
     }
 
     public async Task<SqlConnection> CreateSqlConnectionAsync(string serverName, string databaseName, string? clientId = null)
     {
         var connectionString = $"Server={serverName}; Database={databaseName}; Authentication=Active Directory Default;";
-        return await _managedIdentityService.GetSqlConnectionAsync(connectionString);
+        return await managedIdentityService.GetSqlConnectionAsync(connectionString);
     }
 }
 
@@ -300,62 +300,62 @@ public interface IManagedIdentityConfigurationService
 
 public class ManagedIdentityConfigurationService : IManagedIdentityConfigurationService
 {
-    private readonly IManagedIdentityService _managedIdentityService;
-    private readonly IConfiguration _configuration;
-    private readonly ILogger<ManagedIdentityConfigurationService> _logger;
-    private readonly Dictionary<string, object> _configCache;
-    private readonly SemaphoreSlim _cacheLock;
+    private readonly IManagedIdentityService managedIdentityService;
+    private readonly IConfiguration configuration;
+    private readonly ILogger<ManagedIdentityConfigurationService> logger;
+    private readonly Dictionary<string, object> configCache;
+    private readonly SemaphoreSlim cacheLock;
 
     public ManagedIdentityConfigurationService(
         IManagedIdentityService managedIdentityService,
         IConfiguration configuration,
         ILogger<ManagedIdentityConfigurationService> logger)
     {
-        _managedIdentityService = managedIdentityService;
-        _configuration = configuration;
-        _logger = logger;
-        _configCache = new Dictionary<string, object>();
-        _cacheLock = new SemaphoreSlim(1, 1);
+        this.managedIdentityService = managedIdentityService;
+        this.configuration = configuration;
+        this.logger = logger;
+        configCache = new();
+        cacheLock = new(1, 1);
     }
 
     public async Task<string> GetConfigurationValueAsync(string key, CancellationToken cancellationToken = default)
     {
         // Check local configuration first
-        var localValue = _configuration[key];
+        var localValue = configuration[key];
         if (!string.IsNullOrEmpty(localValue) && !IsKeyVaultReference(localValue))
         {
             return localValue;
         }
 
         // Check cache
-        await _cacheLock.WaitAsync(cancellationToken);
+        await cacheLock.WaitAsync(cancellationToken);
         try
         {
-            if (_configCache.TryGetValue(key, out var cachedValue) && cachedValue is string stringValue)
+            if (configCache.TryGetValue(key, out var cachedValue) && cachedValue is string stringValue)
             {
                 return stringValue;
             }
         }
         finally
         {
-            _cacheLock.Release();
+            cacheLock.Release();
         }
 
         // Resolve Key Vault reference
         if (IsKeyVaultReference(localValue))
         {
             var (keyVaultUrl, secretName) = ParseKeyVaultReference(localValue!);
-            var secretValue = await _managedIdentityService.GetSecretAsync(keyVaultUrl, secretName, cancellationToken);
+            var secretValue = await managedIdentityService.GetSecretAsync(keyVaultUrl, secretName, cancellationToken);
             
             // Cache the result
-            await _cacheLock.WaitAsync(cancellationToken);
+            await cacheLock.WaitAsync(cancellationToken);
             try
             {
-                _configCache[key] = secretValue;
+                configCache[key] = secretValue;
             }
             finally
             {
-                _cacheLock.Release();
+                cacheLock.Release();
             }
 
             return secretValue;
@@ -380,22 +380,22 @@ public class ManagedIdentityConfigurationService : IManagedIdentityConfiguration
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to deserialize configuration value for key: {Key}", key);
+            logger.LogError(ex, "Failed to deserialize configuration value for key: {Key}", key);
             throw;
         }
     }
 
     public async Task RefreshConfigurationAsync(CancellationToken cancellationToken = default)
     {
-        await _cacheLock.WaitAsync(cancellationToken);
+        await cacheLock.WaitAsync(cancellationToken);
         try
         {
-            _configCache.Clear();
-            _logger.LogInformation("Configuration cache cleared");
+            configCache.Clear();
+            logger.LogInformation("Configuration cache cleared");
         }
         finally
         {
-            _cacheLock.Release();
+            cacheLock.Release();
         }
     }
 
@@ -424,18 +424,18 @@ public class ManagedIdentityConfigurationService : IManagedIdentityConfiguration
 // Managed Identity middleware for health checks
 public class ManagedIdentityHealthCheckMiddleware
 {
-    private readonly RequestDelegate _next;
-    private readonly IManagedIdentityService _managedIdentityService;
-    private readonly ILogger<ManagedIdentityHealthCheckMiddleware> _logger;
+    private readonly RequestDelegate next;
+    private readonly IManagedIdentityService managedIdentityService;
+    private readonly ILogger<ManagedIdentityHealthCheckMiddleware> logger;
 
     public ManagedIdentityHealthCheckMiddleware(
         RequestDelegate next,
         IManagedIdentityService managedIdentityService,
         ILogger<ManagedIdentityHealthCheckMiddleware> logger)
     {
-        _next = next;
-        _managedIdentityService = managedIdentityService;
-        _logger = logger;
+        this.next = next;
+        this.managedIdentityService = managedIdentityService;
+        this.logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -446,7 +446,7 @@ public class ManagedIdentityHealthCheckMiddleware
             return;
         }
 
-        await _next(context);
+        await next(context);
     }
 
     private async Task HandleHealthCheckAsync(HttpContext context)
@@ -454,7 +454,7 @@ public class ManagedIdentityHealthCheckMiddleware
         try
         {
             // Test managed identity by getting a token for Azure Resource Manager
-            var token = await _managedIdentityService.GetAccessTokenAsync("https://management.azure.com/");
+            var token = await managedIdentityService.GetAccessTokenAsync("https://management.azure.com/");
             
             var response = new
             {
@@ -468,7 +468,7 @@ public class ManagedIdentityHealthCheckMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Managed Identity health check failed");
+            logger.LogError(ex, "Managed Identity health check failed");
             
             context.Response.StatusCode = 503;
             context.Response.ContentType = "application/json";
@@ -539,29 +539,29 @@ public static class ManagedIdentityExtensions
 // HTTP message handler for automatic token injection
 public class ManagedIdentityTokenHandler : DelegatingHandler
 {
-    private readonly IManagedIdentityService _managedIdentityService;
-    private readonly IOptionsMonitor<ManagedIdentityTokenOptions> _options;
-    private readonly string _clientName;
+    private readonly IManagedIdentityService managedIdentityService;
+    private readonly IOptionsMonitor<ManagedIdentityTokenOptions> options;
+    private readonly string clientName;
 
     public ManagedIdentityTokenHandler(
         IManagedIdentityService managedIdentityService,
         IOptionsMonitor<ManagedIdentityTokenOptions> options,
         IHttpClientFactory httpClientFactory)
     {
-        _managedIdentityService = managedIdentityService;
-        _options = options;
-        _clientName = string.Empty; // Will be set by the factory
+        this.managedIdentityService = managedIdentityService;
+        this.options = options;
+        clientName = string.Empty; // Will be set by the factory
     }
 
     protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
-        var options = _options.Get(_clientName);
+        var options = options.Get(clientName);
         
         if (!string.IsNullOrEmpty(options.Resource))
         {
-            var token = await _managedIdentityService.GetAccessTokenAsync(options.Resource, cancellationToken);
+            var token = await managedIdentityService.GetAccessTokenAsync(options.Resource, cancellationToken);
             request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token.Token);
         }
 
@@ -642,25 +642,25 @@ app.UseManagedIdentityHealthCheck();
 [Route("api/[controller]")]
 public class SecureController : ControllerBase
 {
-    private readonly IManagedIdentityService _managedIdentityService;
-    private readonly IManagedIdentityConfigurationService _configurationService;
-    private readonly IAzureServiceClientFactory _clientFactory;
+    private readonly IManagedIdentityService managedIdentityService;
+    private readonly IManagedIdentityConfigurationService configurationService;
+    private readonly IAzureServiceClientFactory clientFactory;
 
     public SecureController(
         IManagedIdentityService managedIdentityService,
         IManagedIdentityConfigurationService configurationService,
         IAzureServiceClientFactory clientFactory)
     {
-        _managedIdentityService = managedIdentityService;
-        _configurationService = configurationService;
-        _clientFactory = clientFactory;
+        this.managedIdentityService = managedIdentityService;
+        this.configurationService = configurationService;
+        this.clientFactory = clientFactory;
     }
 
     [HttpGet("secret/{secretName}")]
     public async Task<IActionResult> GetSecret(string secretName)
     {
-        var keyVaultUrl = await _configurationService.GetConfigurationValueAsync("KeyVault:Url");
-        var secret = await _managedIdentityService.GetSecretAsync(keyVaultUrl, secretName);
+        var keyVaultUrl = await configurationService.GetConfigurationValueAsync("KeyVault:Url");
+        var secret = await managedIdentityService.GetSecretAsync(keyVaultUrl, secretName);
         
         return Ok(new { SecretName = secretName, HasValue = !string.IsNullOrEmpty(secret) });
     }
@@ -668,10 +668,10 @@ public class SecureController : ControllerBase
     [HttpGet("storage/containers")]
     public async Task<IActionResult> ListContainers()
     {
-        var storageUrl = await _configurationService.GetConfigurationValueAsync("ConnectionStrings:StorageAccount");
-        var blobClient = await _clientFactory.CreateBlobServiceClientAsync(storageUrl);
+        var storageUrl = await configurationService.GetConfigurationValueAsync("ConnectionStrings:StorageAccount");
+        var blobClient = await clientFactory.CreateBlobServiceClientAsync(storageUrl);
         
-        var containers = new List<string>();
+        var containers = new();
         await foreach (var container in blobClient.GetBlobContainersAsync())
         {
             containers.Add(container.Name);
@@ -683,7 +683,7 @@ public class SecureController : ControllerBase
     [HttpGet("sql/test")]
     public async Task<IActionResult> TestSqlConnection()
     {
-        using var connection = await _clientFactory.CreateSqlConnectionAsync(
+        using var connection = await clientFactory.CreateSqlConnectionAsync(
             "myserver.database.windows.net",
             "mydatabase"
         );
@@ -698,15 +698,15 @@ public class SecureController : ControllerBase
 // Background service using Managed Identity
 public class ManagedIdentityBackgroundService : BackgroundService
 {
-    private readonly IManagedIdentityService _managedIdentityService;
-    private readonly ILogger<ManagedIdentityBackgroundService> _logger;
+    private readonly IManagedIdentityService managedIdentityService;
+    private readonly ILogger<ManagedIdentityBackgroundService> logger;
 
     public ManagedIdentityBackgroundService(
         IManagedIdentityService managedIdentityService,
         ILogger<ManagedIdentityBackgroundService> logger)
     {
-        _managedIdentityService = managedIdentityService;
-        _logger = logger;
+        this.managedIdentityService = managedIdentityService;
+        this.logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -716,19 +716,19 @@ public class ManagedIdentityBackgroundService : BackgroundService
             try
             {
                 // Perform periodic task using managed identity
-                var token = await _managedIdentityService.GetAccessTokenAsync(
+                var token = await managedIdentityService.GetAccessTokenAsync(
                     "https://management.azure.com/", 
                     stoppingToken
                 );
 
-                _logger.LogInformation("Token obtained successfully. Expires: {Expiry}", token.ExpiresOn);
+                logger.LogInformation("Token obtained successfully. Expires: {Expiry}", token.ExpiresOn);
 
                 // Wait for next iteration
                 await Task.Delay(TimeSpan.FromMinutes(30), stoppingToken);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in managed identity background service");
+                logger.LogError(ex, "Error in managed identity background service");
                 await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
             }
         }

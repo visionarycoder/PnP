@@ -237,7 +237,7 @@ public class TaskCombinator : ITaskCombinator
         logger?.LogTrace("Starting Any with {TaskCount} tasks", taskList.Count);
 
         var stopwatch = Stopwatch.StartNew();
-        var exceptions = new List<Exception>();
+        var exceptions = new();
         var completedTasks = 0;
         var tcs = new TaskCompletionSource<T>();
 
@@ -464,7 +464,7 @@ public class ParallelExecutor
     {
         this.options = options ?? ParallelExecutorOptions.Default;
         this.logger = logger;
-        concurrencyLimiter = new SemaphoreSlim(this.options.MaxConcurrency, this.options.MaxConcurrency);
+        concurrencyLimiter = new(this.options.MaxConcurrency, this.options.MaxConcurrency);
     }
 
     public async Task<IReadOnlyList<TResult>> ExecuteAsync<TInput, TResult>(
@@ -480,8 +480,8 @@ public class ParallelExecutor
             inputList.Count, options.MaxConcurrency);
 
         var stopwatch = Stopwatch.StartNew();
-        var results = new ConcurrentBag<(int Index, TResult Result)>();
-        var exceptions = new ConcurrentBag<Exception>();
+        var results = new();
+        var exceptions = new();
 
         var tasks = inputList.Select(async (input, index) =>
         {
@@ -614,7 +614,7 @@ public class TimeoutManager : IDisposable
 
     public TimeoutManager(ILogger logger = null)
     {
-        activeCancellations = new ConcurrentDictionary<string, CancellationTokenSource>();
+        activeCancellations = new();
         this.logger = logger;
     }
 
@@ -729,13 +729,13 @@ public class PriorityTaskScheduler : IDisposable
     private readonly SemaphoreSlim concurrencyLimiter;
     private readonly Timer processingTimer;
     private readonly ILogger logger;
-    private readonly object lockObject = new object();
+    private readonly object lockObject = new();
     private volatile bool isDisposed = false;
 
     public PriorityTaskScheduler(int maxConcurrency = 10, TimeSpan? processingInterval = null, ILogger logger = null)
     {
         priorityQueues = new SortedDictionary<int, Queue<TaskItem>>(Comparer<int>.Create((x, y) => y.CompareTo(x))); // Higher priority first
-        concurrencyLimiter = new SemaphoreSlim(maxConcurrency, maxConcurrency);
+        concurrencyLimiter = new(maxConcurrency, maxConcurrency);
         this.logger = logger;
 
         var interval = processingInterval ?? TimeSpan.FromMilliseconds(10);
@@ -770,7 +770,7 @@ public class PriorityTaskScheduler : IDisposable
         {
             if (!priorityQueues.ContainsKey(priority))
             {
-                priorityQueues[priority] = new Queue<TaskItem>();
+                priorityQueues[priority] = new();
             }
             
             priorityQueues[priority].Enqueue(taskItem);
@@ -901,7 +901,7 @@ public class TaskCoordinationMetrics
     private volatile long peakConcurrency = 0;
     private volatile long currentConcurrency = 0;
     private readonly ConcurrentDictionary<string, long> operationCounts = new();
-    private readonly object lockObject = new object();
+    private readonly object lockObject = new();
     private DateTime startTime = DateTime.UtcNow;
 
     public long TotalTasksExecuted => totalTasksExecuted;

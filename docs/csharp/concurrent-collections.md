@@ -252,7 +252,7 @@ public class BoundedBuffer<T> : IDisposable
     private volatile int head = 0;
     private volatile int tail = 0;
     private volatile int count = 0;
-    private readonly object lockObject = new object();
+    private readonly object lockObject = new();
     private readonly SemaphoreSlim semaphore;
     private volatile bool isDisposed = false;
 
@@ -262,7 +262,7 @@ public class BoundedBuffer<T> : IDisposable
         
         this.capacity = capacity;
         buffer = new T[capacity];
-        semaphore = new SemaphoreSlim(capacity, capacity);
+        semaphore = new(capacity, capacity);
     }
 
     public async Task<bool> TryAddAsync(T item, TimeSpan timeout, CancellationToken token = default)
@@ -341,7 +341,7 @@ public class BoundedBuffer<T> : IDisposable
 
     public IEnumerable<T> TakeAll()
     {
-        var items = new List<T>();
+        var items = new();
 
         lock (lockObject)
         {
@@ -432,7 +432,7 @@ public class AtomicCounter
 // Thread-safe object pool
 public class ConcurrentObjectPool<T> : IDisposable where T : class
 {
-    private readonly ConcurrentQueue<T> objects = new ConcurrentQueue<T>();
+    private readonly ConcurrentQueue<T> objects = new();
     private readonly Func<T> objectFactory;
     private readonly Action<T> resetAction;
     private readonly int maxSize;
@@ -897,8 +897,8 @@ public class ConcurrentCollectionMetrics
     private readonly AtomicCounter totalOperations = new AtomicCounter();
     private readonly AtomicCounter successfulOperations = new AtomicCounter();
     private readonly AtomicCounter contentions = new AtomicCounter();
-    private readonly object lockObject = new object();
-    private readonly List<TimeSpan> operationTimes = new List<TimeSpan>();
+    private readonly object lockObject = new();
+    private readonly List<TimeSpan> operationTimes = new();
 
     public void RecordOperation(bool successful, TimeSpan duration, bool contended = false)
     {
@@ -1003,7 +1003,7 @@ public class ConcurrentPriorityQueue<T> : IDisposable
                 {
                     if (!queues.TryGetValue(priority, out queue))
                     {
-                        queue = new ConcurrentQueue<T>();
+                        queue = new();
                         queues[priority] = queue;
                     }
                 }
@@ -1127,7 +1127,7 @@ await Task.WhenAll(pushTasks);
 Console.WriteLine($"Stack count after concurrent pushes: {lockFreeStack.Count}");
 
 // Multi-threaded pop operations
-var popResults = new ConcurrentBag<string>();
+var popResults = new();
 var popTasks = Enumerable.Range(1, 50).Select(_ =>
     Task.Run(() =>
     {
@@ -1162,7 +1162,7 @@ var producerTasks = Enumerable.Range(1, 5).Select(producerId =>
 ).ToArray();
 
 // Consumer tasks
-var consumedItems = new ConcurrentBag<int>();
+var consumedItems = new();
 var consumerTasks = Enumerable.Range(1, 3).Select(_ =>
     Task.Run(async () =>
     {
@@ -1241,7 +1241,7 @@ Console.WriteLine($"Buffer final state - Count: {boundedBuffer.Count}, Is Empty:
 Console.WriteLine("\nAtomic Counter Examples:");
 
 var atomicCounter = new AtomicCounter();
-var counterTasks = new List<Task>();
+var counterTasks = new();
 
 // Concurrent increment operations
 for (int i = 0; i < 10; i++)
@@ -1490,7 +1490,7 @@ Console.WriteLine("\nPerformance Comparison Examples:");
 const int iterations = 100000;
 
 // Test ConcurrentQueue vs LockFreeQueue
-var concurrentQueue = new ConcurrentQueue<int>();
+var concurrentQueue = new();
 var lockFreeQueueTest = new LockFreeQueue<int>();
 
 // ConcurrentQueue performance

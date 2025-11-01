@@ -74,11 +74,11 @@ public interface IPasswordService
 // Password service implementation
 public class PasswordService : IPasswordService
 {
-    private readonly PasswordOptions _passwordOptions;
-    private readonly Argon2Options _argon2Options;
-    private readonly IPasswordHistoryRepository _passwordHistoryRepository;
-    private readonly IHaveIBeenPwnedService _breachService;
-    private readonly ILogger<PasswordService> _logger;
+    private readonly PasswordOptions passwordOptions;
+    private readonly Argon2Options argon2Options;
+    private readonly IPasswordHistoryRepository passwordHistoryRepository;
+    private readonly IHaveIBeenPwnedService breachService;
+    private readonly ILogger<PasswordService> logger;
 
     public PasswordService(
         IOptions<PasswordOptions> passwordOptions,
@@ -87,11 +87,11 @@ public class PasswordService : IPasswordService
         IHaveIBeenPwnedService breachService,
         ILogger<PasswordService> logger)
     {
-        _passwordOptions = passwordOptions.Value;
-        _argon2Options = argon2Options.Value;
-        _passwordHistoryRepository = passwordHistoryRepository;
-        _breachService = breachService;
-        _logger = logger;
+        passwordOptions = passwordOptions.Value;
+        argon2Options = argon2Options.Value;
+        this.passwordHistoryRepository = passwordHistoryRepository;
+        this.breachService = breachService;
+        this.logger = logger;
     }
 
     public async Task<string> HashPasswordAsync(string password)
@@ -106,13 +106,13 @@ public class PasswordService : IPasswordService
         using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(password))
         {
             Salt = salt,
-            MemorySize = _argon2Options.MemorySize,
-            Iterations = _argon2Options.Iterations,
-            DegreeOfParallelism = _argon2Options.DegreeOfParallelism
+            MemorySize = argon2Options.MemorySize,
+            Iterations = argon2Options.Iterations,
+            DegreeOfParallelism = argon2Options.DegreeOfParallelism
         };
 
         // Generate hash
-        var hash = await argon2.GetBytesAsync(_argon2Options.HashLength);
+        var hash = await argon2.GetBytesAsync(argon2Options.HashLength);
 
         // Combine salt and hash
         var result = new byte[salt.Length + hash.Length];
@@ -130,8 +130,8 @@ public class PasswordService : IPasswordService
         try
         {
             var combined = Convert.FromBase64String(hashedPassword);
-            var salt = new byte[_argon2Options.SaltLength];
-            var hash = new byte[_argon2Options.HashLength];
+            var salt = new byte[argon2Options.SaltLength];
+            var hash = new byte[argon2Options.HashLength];
 
             Buffer.BlockCopy(combined, 0, salt, 0, salt.Length);
             Buffer.BlockCopy(combined, salt.Length, hash, 0, hash.Length);
@@ -139,17 +139,17 @@ public class PasswordService : IPasswordService
             using var argon2 = new Argon2id(Encoding.UTF8.GetBytes(password))
             {
                 Salt = salt,
-                MemorySize = _argon2Options.MemorySize,
-                Iterations = _argon2Options.Iterations,
-                DegreeOfParallelism = _argon2Options.DegreeOfParallelism
+                MemorySize = argon2Options.MemorySize,
+                Iterations = argon2Options.Iterations,
+                DegreeOfParallelism = argon2Options.DegreeOfParallelism
             };
 
-            var computedHash = await argon2.GetBytesAsync(_argon2Options.HashLength);
+            var computedHash = await argon2.GetBytesAsync(argon2Options.HashLength);
             return CryptographicOperations.FixedTimeEquals(hash, computedHash);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error verifying password hash");
+            logger.LogError(ex, "Error verifying password hash");
             return false;
         }
     }
@@ -166,60 +166,60 @@ public class PasswordService : IPasswordService
         }
 
         // Length validation
-        if (password.Length < _passwordOptions.MinLength)
+        if (password.Length < passwordOptions.MinLength)
         {
             result.IsValid = false;
-            result.Errors.Add($"Password must be at least {_passwordOptions.MinLength} characters long");
+            result.Errors.Add($"Password must be at least {passwordOptions.MinLength} characters long");
         }
 
-        if (password.Length > _passwordOptions.MaxLength)
+        if (password.Length > passwordOptions.MaxLength)
         {
             result.IsValid = false;
-            result.Errors.Add($"Password cannot exceed {_passwordOptions.MaxLength} characters");
+            result.Errors.Add($"Password cannot exceed {passwordOptions.MaxLength} characters");
         }
 
         // Character requirements
-        if (_passwordOptions.RequireUppercase && !password.Any(char.IsUpper))
+        if (passwordOptions.RequireUppercase && !password.Any(char.IsUpper))
         {
             result.IsValid = false;
             result.Errors.Add("Password must contain at least one uppercase letter");
         }
 
-        if (_passwordOptions.RequireLowercase && !password.Any(char.IsLower))
+        if (passwordOptions.RequireLowercase && !password.Any(char.IsLower))
         {
             result.IsValid = false;
             result.Errors.Add("Password must contain at least one lowercase letter");
         }
 
-        if (_passwordOptions.RequireDigit && !password.Any(char.IsDigit))
+        if (passwordOptions.RequireDigit && !password.Any(char.IsDigit))
         {
             result.IsValid = false;
             result.Errors.Add("Password must contain at least one digit");
         }
 
-        if (_passwordOptions.RequireSpecialChar && !password.Any(IsSpecialCharacter))
+        if (passwordOptions.RequireSpecialChar && !password.Any(IsSpecialCharacter))
         {
             result.IsValid = false;
             result.Errors.Add("Password must contain at least one special character");
         }
 
         // Consecutive character check
-        if (HasConsecutiveCharacters(password, _passwordOptions.MaxConsecutiveChars))
+        if (HasConsecutiveCharacters(password, passwordOptions.MaxConsecutiveChars))
         {
             result.IsValid = false;
-            result.Errors.Add($"Password cannot have more than {_passwordOptions.MaxConsecutiveChars} consecutive identical characters");
+            result.Errors.Add($"Password cannot have more than {passwordOptions.MaxConsecutiveChars} consecutive identical characters");
         }
 
         // Unique character check
         var uniqueChars = password.Distinct().Count();
-        if (uniqueChars < _passwordOptions.MinUniqueChars)
+        if (uniqueChars < passwordOptions.MinUniqueChars)
         {
             result.IsValid = false;
-            result.Errors.Add($"Password must contain at least {_passwordOptions.MinUniqueChars} unique characters");
+            result.Errors.Add($"Password must contain at least {passwordOptions.MinUniqueChars} unique characters");
         }
 
         // Common password check
-        if (_passwordOptions.CommonPasswords.Contains(password.ToLowerInvariant()))
+        if (passwordOptions.CommonPasswords.Contains(password.ToLowerInvariant()))
         {
             result.IsValid = false;
             result.Errors.Add("Password is too common, please choose a different one");
@@ -250,11 +250,11 @@ public class PasswordService : IPasswordService
     {
         try
         {
-            return await _breachService.IsPasswordBreachedAsync(password);
+            return await breachService.IsPasswordBreachedAsync(password);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to check password breach status");
+            logger.LogWarning(ex, "Failed to check password breach status");
             return false; // Fail open to not block users if service is down
         }
     }
@@ -275,13 +275,13 @@ public class PasswordService : IPasswordService
         using var rng = RandomNumberGenerator.Create();
 
         // Ensure at least one character from each required set
-        if (_passwordOptions.RequireLowercase)
+        if (passwordOptions.RequireLowercase)
             password.Append(GetRandomChar(lowercase, rng));
-        if (_passwordOptions.RequireUppercase)
+        if (passwordOptions.RequireUppercase)
             password.Append(GetRandomChar(uppercase, rng));
-        if (_passwordOptions.RequireDigit)
+        if (passwordOptions.RequireDigit)
             password.Append(GetRandomChar(digits, rng));
-        if (_passwordOptions.RequireSpecialChar)
+        if (passwordOptions.RequireSpecialChar)
             password.Append(GetRandomChar(specialChars, rng));
 
         // Fill remaining positions
@@ -296,8 +296,8 @@ public class PasswordService : IPasswordService
 
     public async Task<bool> IsPasswordInHistoryAsync(string userId, string password)
     {
-        var passwordHistory = await _passwordHistoryRepository.GetPasswordHistoryAsync(
-            userId, _passwordOptions.PasswordHistoryLimit);
+        var passwordHistory = await passwordHistoryRepository.GetPasswordHistoryAsync(
+            userId, passwordOptions.PasswordHistoryLimit);
 
         foreach (var historicalHash in passwordHistory)
         {
@@ -310,13 +310,13 @@ public class PasswordService : IPasswordService
 
     public async Task SavePasswordToHistoryAsync(string userId, string hashedPassword)
     {
-        await _passwordHistoryRepository.AddPasswordToHistoryAsync(userId, hashedPassword);
-        await _passwordHistoryRepository.CleanupOldPasswordsAsync(userId, _passwordOptions.PasswordHistoryLimit);
+        await passwordHistoryRepository.AddPasswordToHistoryAsync(userId, hashedPassword);
+        await passwordHistoryRepository.CleanupOldPasswordsAsync(userId, passwordOptions.PasswordHistoryLimit);
     }
 
     private byte[] GenerateSalt()
     {
-        var salt = new byte[_argon2Options.SaltLength];
+        var salt = new byte[argon2Options.SaltLength];
         RandomNumberGenerator.Fill(salt);
         return salt;
     }
@@ -412,14 +412,14 @@ public interface IHaveIBeenPwnedService
 
 public class HaveIBeenPwnedService : IHaveIBeenPwnedService
 {
-    private readonly HttpClient _httpClient;
-    private readonly ILogger<HaveIBeenPwnedService> _logger;
+    private readonly HttpClient httpClient;
+    private readonly ILogger<HaveIBeenPwnedService> logger;
 
     public HaveIBeenPwnedService(HttpClient httpClient, ILogger<HaveIBeenPwnedService> logger)
     {
-        _httpClient = httpClient;
-        _logger = logger;
-        _httpClient.DefaultRequestHeaders.Add("User-Agent", "YourAppName");
+        this.httpClient = httpClient;
+        this.logger = logger;
+        httpClient.DefaultRequestHeaders.Add("User-Agent", "YourAppName");
     }
 
     public async Task<bool> IsPasswordBreachedAsync(string password)
@@ -435,7 +435,7 @@ public class HaveIBeenPwnedService : IHaveIBeenPwnedService
             var prefix = hashString[..5];
             var suffix = hashString[5..];
 
-            var response = await _httpClient.GetAsync($"https://api.pwnedpasswords.com/range/{prefix}");
+            var response = await httpClient.GetAsync($"https://api.pwnedpasswords.com/range/{prefix}");
             response.EnsureSuccessStatusCode();
 
             var content = await response.Content.ReadAsStringAsync();
@@ -443,7 +443,7 @@ public class HaveIBeenPwnedService : IHaveIBeenPwnedService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking password breach status");
+            logger.LogError(ex, "Error checking password breach status");
             return false;
         }
     }
@@ -460,23 +460,23 @@ public interface IAccountLockoutService
 
 public class AccountLockoutService : IAccountLockoutService
 {
-    private readonly PasswordOptions _options;
-    private readonly IAccountLockoutRepository _repository;
-    private readonly ILogger<AccountLockoutService> _logger;
+    private readonly PasswordOptions options;
+    private readonly IAccountLockoutRepository repository;
+    private readonly ILogger<AccountLockoutService> logger;
 
     public AccountLockoutService(
         IOptions<PasswordOptions> options,
         IAccountLockoutRepository repository,
         ILogger<AccountLockoutService> logger)
     {
-        _options = options.Value;
-        _repository = repository;
-        _logger = logger;
+        options = options.Value;
+        this.repository = repository;
+        this.logger = logger;
     }
 
     public async Task<bool> IsAccountLockedAsync(string userId)
     {
-        var lockoutInfo = await _repository.GetLockoutInfoAsync(userId);
+        var lockoutInfo = await repository.GetLockoutInfoAsync(userId);
         if (lockoutInfo == null) return false;
 
         if (lockoutInfo.LockedUntil.HasValue && lockoutInfo.LockedUntil > DateTime.UtcNow)
@@ -495,29 +495,29 @@ public class AccountLockoutService : IAccountLockoutService
 
     public async Task RecordFailedLoginAttemptAsync(string userId)
     {
-        var lockoutInfo = await _repository.GetLockoutInfoAsync(userId) ?? new AccountLockoutInfo { UserId = userId };
+        var lockoutInfo = await repository.GetLockoutInfoAsync(userId) ?? new AccountLockoutInfo { UserId = userId };
         
         lockoutInfo.FailedAttempts++;
         lockoutInfo.LastFailedAttempt = DateTime.UtcNow;
 
-        if (lockoutInfo.FailedAttempts >= _options.MaxFailedAttempts)
+        if (lockoutInfo.FailedAttempts >= options.MaxFailedAttempts)
         {
-            lockoutInfo.LockedUntil = DateTime.UtcNow.Add(_options.LockoutDuration);
-            _logger.LogWarning("Account locked for user {UserId} due to {FailedAttempts} failed attempts", 
+            lockoutInfo.LockedUntil = DateTime.UtcNow.Add(options.LockoutDuration);
+            logger.LogWarning("Account locked for user {UserId} due to {FailedAttempts} failed attempts", 
                 userId, lockoutInfo.FailedAttempts);
         }
 
-        await _repository.UpdateLockoutInfoAsync(lockoutInfo);
+        await repository.UpdateLockoutInfoAsync(lockoutInfo);
     }
 
     public async Task ResetFailedLoginAttemptsAsync(string userId)
     {
-        await _repository.ResetLockoutInfoAsync(userId);
+        await repository.ResetLockoutInfoAsync(userId);
     }
 
     public async Task<TimeSpan?> GetLockoutTimeRemainingAsync(string userId)
     {
-        var lockoutInfo = await _repository.GetLockoutInfoAsync(userId);
+        var lockoutInfo = await repository.GetLockoutInfoAsync(userId);
         if (lockoutInfo?.LockedUntil == null) return null;
 
         var remaining = lockoutInfo.LockedUntil.Value - DateTime.UtcNow;
@@ -566,70 +566,70 @@ var app = builder.Build();
 // Usage in user service
 public class UserService
 {
-    private readonly IPasswordService _passwordService;
-    private readonly IAccountLockoutService _lockoutService;
+    private readonly IPasswordService passwordService;
+    private readonly IAccountLockoutService lockoutService;
 
     public async Task<bool> AuthenticateUserAsync(string email, string password)
     {
-        var user = await _userRepository.GetByEmailAsync(email);
+        var user = await userRepository.GetByEmailAsync(email);
         if (user == null) return false;
 
         // Check if account is locked
-        if (await _lockoutService.IsAccountLockedAsync(user.Id))
+        if (await lockoutService.IsAccountLockedAsync(user.Id))
         {
             throw new AccountLockedException("Account is temporarily locked due to too many failed attempts");
         }
 
         // Verify password
-        var isValid = await _passwordService.VerifyPasswordAsync(password, user.HashedPassword);
+        var isValid = await passwordService.VerifyPasswordAsync(password, user.HashedPassword);
         
         if (isValid)
         {
-            await _lockoutService.ResetFailedLoginAttemptsAsync(user.Id);
+            await lockoutService.ResetFailedLoginAttemptsAsync(user.Id);
             return true;
         }
         else
         {
-            await _lockoutService.RecordFailedLoginAttemptAsync(user.Id);
+            await lockoutService.RecordFailedLoginAttemptAsync(user.Id);
             return false;
         }
     }
 
     public async Task<bool> ChangePasswordAsync(string userId, string currentPassword, string newPassword)
     {
-        var user = await _userRepository.GetByIdAsync(userId);
+        var user = await userRepository.GetByIdAsync(userId);
         if (user == null) return false;
 
         // Verify current password
-        if (!await _passwordService.VerifyPasswordAsync(currentPassword, user.HashedPassword))
+        if (!await passwordService.VerifyPasswordAsync(currentPassword, user.HashedPassword))
             return false;
 
         // Validate new password
-        var validation = await _passwordService.ValidatePasswordAsync(newPassword, userId);
+        var validation = await passwordService.ValidatePasswordAsync(newPassword, userId);
         if (!validation.IsValid)
         {
             throw new PasswordValidationException(validation.Errors);
         }
 
         // Hash and save new password
-        var hashedPassword = await _passwordService.HashPasswordAsync(newPassword);
-        await _passwordService.SavePasswordToHistoryAsync(userId, user.HashedPassword);
+        var hashedPassword = await passwordService.HashPasswordAsync(newPassword);
+        await passwordService.SavePasswordToHistoryAsync(userId, user.HashedPassword);
         
         user.HashedPassword = hashedPassword;
         user.PasswordChangedAt = DateTime.UtcNow;
         
-        await _userRepository.UpdateAsync(user);
+        await userRepository.UpdateAsync(user);
         return true;
     }
 
     public async Task<string> GenerateTemporaryPasswordAsync()
     {
-        return _passwordService.GenerateSecurePassword(12);
+        return passwordService.GenerateSecurePassword(12);
     }
 
     public async Task<PasswordValidationResult> ValidatePasswordAsync(string password, string? userId = null)
     {
-        return await _passwordService.ValidatePasswordAsync(password, userId);
+        return await passwordService.ValidatePasswordAsync(password, userId);
     }
 }
 
@@ -638,26 +638,26 @@ public class UserService
 [Route("api/[controller]")]
 public class PasswordController : ControllerBase
 {
-    private readonly IPasswordService _passwordService;
+    private readonly IPasswordService passwordService;
 
     [HttpPost("validate")]
     public async Task<IActionResult> ValidatePassword([FromBody] ValidatePasswordRequest request)
     {
-        var result = await _passwordService.ValidatePasswordAsync(request.Password, request.UserId);
+        var result = await passwordService.ValidatePasswordAsync(request.Password, request.UserId);
         return Ok(result);
     }
 
     [HttpPost("generate")]
     public IActionResult GeneratePassword([FromQuery] int length = 16)
     {
-        var password = _passwordService.GenerateSecurePassword(length);
+        var password = passwordService.GenerateSecurePassword(length);
         return Ok(new { Password = password });
     }
 
     [HttpPost("check-breach")]
     public async Task<IActionResult> CheckBreach([FromBody] CheckBreachRequest request)
     {
-        var isCompromised = await _passwordService.IsPasswordCompromisedAsync(request.Password);
+        var isCompromised = await passwordService.IsPasswordCompromisedAsync(request.Password);
         return Ok(new { IsCompromised = isCompromised });
     }
 }

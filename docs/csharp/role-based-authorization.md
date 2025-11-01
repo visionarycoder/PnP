@@ -52,11 +52,11 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
 
 public class ResourceAccessHandler : AuthorizationHandler<ResourceAccessRequirement>
 {
-    private readonly IResourcePermissionService _permissionService;
+    private readonly IResourcePermissionService permissionService;
     
     public ResourceAccessHandler(IResourcePermissionService permissionService)
     {
-        _permissionService = permissionService;
+        this.permissionService = permissionService;
     }
     
     protected override async Task HandleRequirementAsync(
@@ -70,7 +70,7 @@ public class ResourceAccessHandler : AuthorizationHandler<ResourceAccessRequirem
             return;
         }
 
-        var hasAccess = await _permissionService.HasAccessAsync(
+        var hasAccess = await permissionService.HasAccessAsync(
             userId, requirement.Resource, requirement.Action);
             
         if (hasAccess)
@@ -114,10 +114,10 @@ public interface IPermissionService
 
 public class PermissionService : IPermissionService
 {
-    private readonly IUserRepository _userRepository;
-    private readonly IRoleRepository _roleRepository;
-    private readonly IPermissionRepository _permissionRepository;
-    private readonly ILogger<PermissionService> _logger;
+    private readonly IUserRepository userRepository;
+    private readonly IRoleRepository roleRepository;
+    private readonly IPermissionRepository permissionRepository;
+    private readonly ILogger<PermissionService> logger;
 
     public PermissionService(
         IUserRepository userRepository,
@@ -125,24 +125,24 @@ public class PermissionService : IPermissionService
         IPermissionRepository permissionRepository,
         ILogger<PermissionService> logger)
     {
-        _userRepository = userRepository;
-        _roleRepository = roleRepository;
-        _permissionRepository = permissionRepository;
-        _logger = logger;
+        this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+        this.permissionRepository = permissionRepository;
+        this.logger = logger;
     }
 
     public async Task<IEnumerable<string>> GetUserPermissionsAsync(string userId)
     {
         // Get direct user permissions
-        var userPermissions = await _permissionRepository.GetUserPermissionsAsync(userId);
+        var userPermissions = await permissionRepository.GetUserPermissionsAsync(userId);
         
         // Get permissions from user roles
-        var userRoles = await _userRepository.GetUserRolesAsync(userId);
-        var rolePermissions = new List<string>();
+        var userRoles = await userRepository.GetUserRolesAsync(userId);
+        var rolePermissions = new();
         
         foreach (var role in userRoles)
         {
-            var permissions = await _permissionRepository.GetRolePermissionsAsync(role);
+            var permissions = await permissionRepository.GetRolePermissionsAsync(role);
             rolePermissions.AddRange(permissions);
         }
         
@@ -152,31 +152,31 @@ public class PermissionService : IPermissionService
 
     public async Task<IEnumerable<string>> GetRolePermissionsAsync(string roleName)
     {
-        return await _permissionRepository.GetRolePermissionsAsync(roleName);
+        return await permissionRepository.GetRolePermissionsAsync(roleName);
     }
 
     public async Task AssignPermissionToRoleAsync(string roleName, string permission)
     {
-        await _permissionRepository.AssignPermissionToRoleAsync(roleName, permission);
-        _logger.LogInformation("Permission {Permission} assigned to role {Role}", permission, roleName);
+        await permissionRepository.AssignPermissionToRoleAsync(roleName, permission);
+        logger.LogInformation("Permission {Permission} assigned to role {Role}", permission, roleName);
     }
 
     public async Task RevokePermissionFromRoleAsync(string roleName, string permission)
     {
-        await _permissionRepository.RevokePermissionFromRoleAsync(roleName, permission);
-        _logger.LogInformation("Permission {Permission} revoked from role {Role}", permission, roleName);
+        await permissionRepository.RevokePermissionFromRoleAsync(roleName, permission);
+        logger.LogInformation("Permission {Permission} revoked from role {Role}", permission, roleName);
     }
 
     public async Task AssignPermissionToUserAsync(string userId, string permission)
     {
-        await _permissionRepository.AssignPermissionToUserAsync(userId, permission);
-        _logger.LogInformation("Permission {Permission} assigned to user {UserId}", permission, userId);
+        await permissionRepository.AssignPermissionToUserAsync(userId, permission);
+        logger.LogInformation("Permission {Permission} assigned to user {UserId}", permission, userId);
     }
 
     public async Task RevokePermissionFromUserAsync(string userId, string permission)
     {
-        await _permissionRepository.RevokePermissionFromUserAsync(userId, permission);
-        _logger.LogInformation("Permission {Permission} revoked from user {UserId}", permission, userId);
+        await permissionRepository.RevokePermissionFromUserAsync(userId, permission);
+        logger.LogInformation("Permission {Permission} revoked from user {UserId}", permission, userId);
     }
 }
 
@@ -190,28 +190,28 @@ public interface IResourcePermissionService
 
 public class ResourcePermissionService : IResourcePermissionService
 {
-    private readonly IResourceRepository _resourceRepository;
-    private readonly IPermissionService _permissionService;
+    private readonly IResourceRepository resourceRepository;
+    private readonly IPermissionService permissionService;
 
     public ResourcePermissionService(
         IResourceRepository resourceRepository,
         IPermissionService permissionService)
     {
-        _resourceRepository = resourceRepository;
-        _permissionService = permissionService;
+        this.resourceRepository = resourceRepository;
+        this.permissionService = permissionService;
     }
 
     public async Task<bool> HasAccessAsync(string userId, string resource, string action)
     {
         // Check if user has direct permission for this resource/action
-        var userPermissions = await _permissionService.GetUserPermissionsAsync(userId);
+        var userPermissions = await permissionService.GetUserPermissionsAsync(userId);
         var requiredPermission = $"{resource}.{action}";
         
         if (userPermissions.Contains(requiredPermission))
             return true;
 
         // Check if user owns the resource
-        var resourceEntity = await _resourceRepository.GetByIdAsync(resource);
+        var resourceEntity = await resourceRepository.GetByIdAsync(resource);
         if (resourceEntity?.OwnerId == userId && action == "read")
             return true;
 
@@ -225,13 +225,13 @@ public class ResourcePermissionService : IResourcePermissionService
     public async Task GrantAccessAsync(string userId, string resource, string action)
     {
         var permission = $"{resource}.{action}";
-        await _permissionService.AssignPermissionToUserAsync(userId, permission);
+        await permissionService.AssignPermissionToUserAsync(userId, permission);
     }
 
     public async Task RevokeAccessAsync(string userId, string resource, string action)
     {
         var permission = $"{resource}.{action}";
-        await _permissionService.RevokePermissionFromUserAsync(userId, permission);
+        await permissionService.RevokePermissionFromUserAsync(userId, permission);
     }
 }
 
@@ -241,22 +241,22 @@ public class ResourcePermissionService : IResourcePermissionService
 [Authorize]
 public class DocumentsController : ControllerBase
 {
-    private readonly IDocumentService _documentService;
-    private readonly IResourcePermissionService _resourcePermissionService;
+    private readonly IDocumentService documentService;
+    private readonly IResourcePermissionService resourcePermissionService;
 
     public DocumentsController(
         IDocumentService documentService,
         IResourcePermissionService resourcePermissionService)
     {
-        _documentService = documentService;
-        _resourcePermissionService = resourcePermissionService;
+        this.documentService = documentService;
+        this.resourcePermissionService = resourcePermissionService;
     }
 
     [HttpGet]
     [RequirePermission("documents.list")]
     public async Task<IActionResult> GetDocuments()
     {
-        var documents = await _documentService.GetUserDocumentsAsync(GetUserId());
+        var documents = await documentService.GetUserDocumentsAsync(GetUserId());
         return Ok(documents);
     }
 
@@ -265,12 +265,12 @@ public class DocumentsController : ControllerBase
     public async Task<IActionResult> GetDocument(string id)
     {
         // Additional check within the method
-        if (!await _resourcePermissionService.HasAccessAsync(GetUserId(), $"document:{id}", "read"))
+        if (!await resourcePermissionService.HasAccessAsync(GetUserId(), $"document:{id}", "read"))
         {
             return Forbid("Insufficient permissions to access this document");
         }
 
-        var document = await _documentService.GetByIdAsync(id);
+        var document = await documentService.GetByIdAsync(id);
         if (document == null)
             return NotFound();
 
@@ -281,12 +281,12 @@ public class DocumentsController : ControllerBase
     [RequirePermission("documents.create")]
     public async Task<IActionResult> CreateDocument([FromBody] CreateDocumentRequest request)
     {
-        var document = await _documentService.CreateAsync(request, GetUserId());
+        var document = await documentService.CreateAsync(request, GetUserId());
         
         // Grant owner full access to the new document
-        await _resourcePermissionService.GrantAccessAsync(GetUserId(), $"document:{document.Id}", "read");
-        await _resourcePermissionService.GrantAccessAsync(GetUserId(), $"document:{document.Id}", "write");
-        await _resourcePermissionService.GrantAccessAsync(GetUserId(), $"document:{document.Id}", "delete");
+        await resourcePermissionService.GrantAccessAsync(GetUserId(), $"document:{document.Id}", "read");
+        await resourcePermissionService.GrantAccessAsync(GetUserId(), $"document:{document.Id}", "write");
+        await resourcePermissionService.GrantAccessAsync(GetUserId(), $"document:{document.Id}", "delete");
 
         return CreatedAtAction(nameof(GetDocument), new { id = document.Id }, document);
     }
@@ -295,12 +295,12 @@ public class DocumentsController : ControllerBase
     [RequireResourceAccess("document", "write")]
     public async Task<IActionResult> UpdateDocument(string id, [FromBody] UpdateDocumentRequest request)
     {
-        if (!await _resourcePermissionService.HasAccessAsync(GetUserId(), $"document:{id}", "write"))
+        if (!await resourcePermissionService.HasAccessAsync(GetUserId(), $"document:{id}", "write"))
         {
             return Forbid("Insufficient permissions to modify this document");
         }
 
-        var document = await _documentService.UpdateAsync(id, request);
+        var document = await documentService.UpdateAsync(id, request);
         return Ok(document);
     }
 
@@ -308,12 +308,12 @@ public class DocumentsController : ControllerBase
     [RequireResourceAccess("document", "delete")]
     public async Task<IActionResult> DeleteDocument(string id)
     {
-        if (!await _resourcePermissionService.HasAccessAsync(GetUserId(), $"document:{id}", "delete"))
+        if (!await resourcePermissionService.HasAccessAsync(GetUserId(), $"document:{id}", "delete"))
         {
             return Forbid("Insufficient permissions to delete this document");
         }
 
-        await _documentService.DeleteAsync(id);
+        await documentService.DeleteAsync(id);
         return NoContent();
     }
 
@@ -325,11 +325,11 @@ public class DocumentsController : ControllerBase
 [Authorize(Roles = "Admin")]
 public class AdminController : ControllerBase
 {
-    private readonly IPermissionService _permissionService;
+    private readonly IPermissionService permissionService;
 
     public AdminController(IPermissionService permissionService)
     {
-        _permissionService = permissionService;
+        this.permissionService = permissionService;
     }
 
     [HttpPost("roles/{roleName}/permissions")]
@@ -337,14 +337,14 @@ public class AdminController : ControllerBase
         string roleName, 
         [FromBody] AssignPermissionRequest request)
     {
-        await _permissionService.AssignPermissionToRoleAsync(roleName, request.Permission);
+        await permissionService.AssignPermissionToRoleAsync(roleName, request.Permission);
         return Ok(new { Message = $"Permission {request.Permission} assigned to role {roleName}" });
     }
 
     [HttpDelete("roles/{roleName}/permissions/{permission}")]
     public async Task<IActionResult> RevokePermissionFromRole(string roleName, string permission)
     {
-        await _permissionService.RevokePermissionFromRoleAsync(roleName, permission);
+        await permissionService.RevokePermissionFromRoleAsync(roleName, permission);
         return Ok(new { Message = $"Permission {permission} revoked from role {roleName}" });
     }
 
@@ -353,7 +353,7 @@ public class AdminController : ControllerBase
         string userId, 
         [FromBody] AssignPermissionRequest request)
     {
-        await _permissionService.AssignPermissionToUserAsync(userId, request.Permission);
+        await permissionService.AssignPermissionToUserAsync(userId, request.Permission);
         return Ok(new { Message = $"Permission {request.Permission} assigned to user {userId}" });
     }
 }
@@ -465,13 +465,13 @@ using (var scope = app.Services.CreateScope())
 // Custom middleware for permission logging
 public class PermissionLoggingMiddleware
 {
-    private readonly RequestDelegate _next;
-    private readonly ILogger<PermissionLoggingMiddleware> _logger;
+    private readonly RequestDelegate next;
+    private readonly ILogger<PermissionLoggingMiddleware> logger;
 
     public PermissionLoggingMiddleware(RequestDelegate next, ILogger<PermissionLoggingMiddleware> logger)
     {
-        _next = next;
-        _logger = logger;
+        this.next = next;
+        this.logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -482,18 +482,18 @@ public class PermissionLoggingMiddleware
             var endpoint = context.Request.Path;
             var method = context.Request.Method;
             
-            _logger.LogInformation(
+            logger.LogInformation(
                 "User {UserId} accessing {Method} {Endpoint}",
                 userId, method, endpoint);
         }
 
-        await _next(context);
+        await next(context);
 
         // Log authorization failures
         if (context.Response.StatusCode == 403)
         {
             var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "Anonymous";
-            _logger.LogWarning(
+            logger.LogWarning(
                 "Authorization failed for user {UserId} accessing {Method} {Endpoint}",
                 userId, context.Request.Method, context.Request.Path);
         }
@@ -506,17 +506,17 @@ app.UseMiddleware<PermissionLoggingMiddleware>();
 // Client-side usage example
 public class PermissionChecker
 {
-    private readonly HttpClient _httpClient;
+    private readonly HttpClient httpClient;
     
     public async Task<bool> HasPermissionAsync(string permission)
     {
-        var response = await _httpClient.GetAsync($"api/permissions/check/{permission}");
+        var response = await httpClient.GetAsync($"api/permissions/check/{permission}");
         return response.IsSuccessStatusCode;
     }
     
     public async Task<bool> CanAccessResourceAsync(string resource, string action)
     {
-        var response = await _httpClient.GetAsync($"api/permissions/resource/{resource}/{action}");
+        var response = await httpClient.GetAsync($"api/permissions/resource/{resource}/{action}");
         return response.IsSuccessStatusCode;
     }
 }

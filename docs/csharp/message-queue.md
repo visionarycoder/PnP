@@ -95,7 +95,7 @@ public class Message : IMessage
     {
         MessageId = Guid.NewGuid();
         Timestamp = DateTime.UtcNow;
-        Headers = new Dictionary<string, object>();
+        Headers = new();
         RetryCount = 0;
         MaxRetries = 3;
         Priority = 0;
@@ -151,7 +151,7 @@ public class InMemoryMessageQueue : IMessageQueue
     private readonly ConcurrentDictionary<Guid, IMessage> processingMessages;
     private readonly SemaphoreSlim semaphore;
     private readonly ILogger logger;
-    private readonly object lockObject = new object();
+    private readonly object lockObject = new();
     private volatile bool isDisposed = false;
 
     public InMemoryMessageQueue(string queueName, ILogger<InMemoryMessageQueue> logger = null)
@@ -159,8 +159,8 @@ public class InMemoryMessageQueue : IMessageQueue
         QueueName = queueName ?? throw new ArgumentNullException(nameof(queueName));
         this.logger = logger;
         priorityQueue = new PriorityQueue<IMessage, int>();
-        processingMessages = new ConcurrentDictionary<Guid, IMessage>();
-        semaphore = new SemaphoreSlim(0);
+        processingMessages = new();
+        semaphore = new(0);
     }
 
     public string QueueName { get; }
@@ -235,7 +235,7 @@ public class InMemoryMessageQueue : IMessageQueue
     {
         if (isDisposed) throw new ObjectDisposedException(nameof(InMemoryMessageQueue));
 
-        var messages = new List<IMessage>();
+        var messages = new();
         
         for (int i = 0; i < batchSize && !token.IsCancellationRequested; i++)
         {
@@ -315,7 +315,7 @@ public class MessageQueueManager : IMessageQueueManager
     {
         this.serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         this.logger = logger;
-        queues = new ConcurrentDictionary<string, IMessageQueue>();
+        queues = new();
     }
 
     public IMessageQueue GetOrCreateQueue(string queueName)
@@ -353,7 +353,7 @@ public class MessageQueueManager : IMessageQueueManager
 
     public async Task<Dictionary<string, int>> GetQueueLengthsAsync(CancellationToken token = default)
     {
-        var lengths = new Dictionary<string, int>();
+        var lengths = new();
         
         foreach (var kvp in queues)
         {
@@ -376,7 +376,7 @@ public class MessageRouter : IMessageRouter
     {
         this.queueManager = queueManager ?? throw new ArgumentNullException(nameof(queueManager));
         this.logger = logger;
-        routeRules = new List<RouteRule>();
+        routeRules = new();
     }
 
     public void RegisterRoute<T>(string queueName) where T : class
@@ -602,8 +602,8 @@ public class MessageProcessor<T> : BackgroundService where T : class
     {
         logger?.LogInformation("Message processor started for queue {QueueName}", queue.QueueName);
 
-        var concurrentTasks = new List<Task>();
-        var semaphore = new SemaphoreSlim(options.MaxConcurrency);
+        var concurrentTasks = new();
+        var semaphore = new(options.MaxConcurrency);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -887,7 +887,7 @@ public class MessageBatchContext<T> : IMessageBatchContext<T> where T : class
     public MessageBatchContext(IEnumerable<BatchMessageItem<T>> items)
     {
         Items = items ?? throw new ArgumentNullException(nameof(items));
-        processingResults = new ConcurrentDictionary<Guid, bool>();
+        processingResults = new();
     }
 
     public IEnumerable<BatchMessageItem<T>> Items { get; }
@@ -931,7 +931,7 @@ public class OrderCreatedMessage
     public string CustomerEmail { get; set; }
     public decimal TotalAmount { get; set; }
     public DateTime CreatedAt { get; set; }
-    public List<OrderItem> Items { get; set; } = new List<OrderItem>();
+    public List<OrderItem> Items { get; set; } = new();
 }
 
 public class OrderItem
@@ -1019,8 +1019,8 @@ public class PaymentBatchHandler : IMessageBatchHandler<PaymentProcessedMessage>
         try
         {
             // Batch processing logic
-            var successfulPayments = new List<Guid>();
-            var failedPayments = new List<Guid>();
+            var successfulPayments = new();
+            var failedPayments = new();
 
             foreach (var payment in payments)
             {

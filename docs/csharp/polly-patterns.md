@@ -277,7 +277,7 @@ public class EnhancedPolicyRegistry
     {
         this.registry = registry ?? throw new ArgumentNullException(nameof(registry));
         this.logger = logger;
-        this.metrics = new Dictionary<string, PolicyMetrics>();
+        this.metrics = new();
     }
 
     public async Task<T> ExecuteAsync<T>(string policyName, Func<Context, Task<T>> operation, Context context = null)
@@ -373,7 +373,7 @@ public class EnhancedPolicyRegistry
 // Policy metrics for monitoring and observability
 public class PolicyMetrics
 {
-    private readonly object lockObj = new object();
+    private readonly object lockObj = new();
     
     public long TotalExecutions { get; private set; }
     public long SuccessfulExecutions { get; private set; }
@@ -533,7 +533,7 @@ public class ResilientHttpClient : HttpClient
 // Polly policy builder with fluent API
 public class PollyPolicyBuilder
 {
-    private readonly List<IAsyncPolicy> policies = new List<IAsyncPolicy>();
+    private readonly List<IAsyncPolicy> policies = new();
     private readonly ILogger logger;
 
     public PollyPolicyBuilder(ILogger logger = null)
@@ -894,8 +894,8 @@ public class PollyHealthCheck : Microsoft.Extensions.Diagnostics.HealthChecks.IH
         try
         {
             var allMetrics = registry.GetAllMetrics().ToList();
-            var unhealthyPolicies = new List<string>();
-            var data = new Dictionary<string, object>();
+            var unhealthyPolicies = new();
+            var data = new();
 
             foreach (var (name, metrics) in allMetrics)
             {

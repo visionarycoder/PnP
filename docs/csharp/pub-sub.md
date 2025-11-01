@@ -98,7 +98,7 @@ public class Event : IEvent
     {
         EventId = Guid.NewGuid();
         Timestamp = DateTime.UtcNow;
-        Headers = new Dictionary<string, object>();
+        Headers = new();
         Priority = 0;
     }
 
@@ -278,7 +278,7 @@ public class TopicManager
 
     public TopicManager(ILogger<TopicManager> logger = null)
     {
-        topics = new ConcurrentDictionary<string, Topic>();
+        topics = new();
         this.logger = logger;
     }
 
@@ -436,7 +436,7 @@ public class InMemoryEventBroker : IEventBroker, IDisposable
         ILogger<InMemoryEventBroker> logger = null)
     {
         topicSubscriptions = new ConcurrentDictionary<string, ConcurrentBag<ISubscription>>();
-        allSubscriptions = new ConcurrentDictionary<Guid, ISubscription>();
+        allSubscriptions = new();
         topicManager = new TopicManager(serviceProvider?.GetService<ILogger<TopicManager>>());
         this.serviceProvider = serviceProvider;
         this.logger = logger;
@@ -710,7 +710,7 @@ public class ReactiveEventBroker : IEventBroker, IDisposable
     public ReactiveEventBroker(ILogger<ReactiveEventBroker> logger = null)
     {
         topicSubjects = new ConcurrentDictionary<string, Subject<IEvent>>();
-        subscriptionDisposables = new ConcurrentDictionary<Guid, IDisposable>();
+        subscriptionDisposables = new();
         topicManager = new TopicManager();
         this.logger = logger;
     }
@@ -1132,7 +1132,7 @@ public class PersistentEventBroker : IEventBroker, IDisposable
 {
     private readonly InMemoryEventBroker inmemoryBroker;
     private readonly List<IEvent> eventStore;
-    private readonly object storeLock = new object();
+    private readonly object storeLock = new();
     private readonly ILogger logger;
     private volatile bool isDisposed = false;
 
@@ -1140,7 +1140,7 @@ public class PersistentEventBroker : IEventBroker, IDisposable
     {
         inmemoryBroker = new InMemoryEventBroker(serviceProvider, 
             serviceProvider?.GetService<ILogger<InMemoryEventBroker>>());
-        eventStore = new List<IEvent>();
+        eventStore = new();
         this.logger = logger;
     }
 

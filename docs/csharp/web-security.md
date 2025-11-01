@@ -98,18 +98,18 @@ public class RateLimitOptions
 // Security middleware
 public class SecurityHeadersMiddleware
 {
-    private readonly RequestDelegate _next;
-    private readonly WebSecurityOptions _options;
-    private readonly ILogger<SecurityHeadersMiddleware> _logger;
+    private readonly RequestDelegate next;
+    private readonly WebSecurityOptions options;
+    private readonly ILogger<SecurityHeadersMiddleware> logger;
 
     public SecurityHeadersMiddleware(
         RequestDelegate next,
         IOptions<WebSecurityOptions> options,
         ILogger<SecurityHeadersMiddleware> logger)
     {
-        _next = next;
-        _options = options.Value;
-        _logger = logger;
+        this.next = next;
+        options = options.Value;
+        this.logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -118,41 +118,41 @@ public class SecurityHeadersMiddleware
         AddSecurityHeaders(context);
 
         // Add CSP header
-        if (_options.ContentSecurityPolicy.Enabled)
+        if (options.ContentSecurityPolicy.Enabled)
         {
             AddContentSecurityPolicy(context);
         }
 
-        await _next(context);
+        await next(context);
     }
 
     private void AddSecurityHeaders(HttpContext context)
     {
         var headers = context.Response.Headers;
 
-        if (_options.Headers.XFrameOptions)
+        if (options.Headers.XFrameOptions)
         {
-            headers["X-Frame-Options"] = _options.Headers.XFrameValue;
+            headers["X-Frame-Options"] = options.Headers.XFrameValue;
         }
 
-        if (_options.Headers.XContentTypeOptions)
+        if (options.Headers.XContentTypeOptions)
         {
             headers["X-Content-Type-Options"] = "nosniff";
         }
 
-        if (_options.Headers.XssProtection)
+        if (options.Headers.XssProtection)
         {
             headers["X-XSS-Protection"] = "1; mode=block";
         }
 
-        if (_options.Headers.ReferrerPolicy)
+        if (options.Headers.ReferrerPolicy)
         {
-            headers["Referrer-Policy"] = _options.Headers.ReferrerValue;
+            headers["Referrer-Policy"] = options.Headers.ReferrerValue;
         }
 
-        if (_options.Headers.PermissionsPolicy)
+        if (options.Headers.PermissionsPolicy)
         {
-            var policy = string.Join(", ", _options.Headers.DisabledFeatures.Select(f => $"{f}=()"));
+            var policy = string.Join(", ", options.Headers.DisabledFeatures.Select(f => $"{f}=()"));
             headers["Permissions-Policy"] = policy;
         }
 
@@ -162,7 +162,7 @@ public class SecurityHeadersMiddleware
 
     private void AddContentSecurityPolicy(HttpContext context)
     {
-        var csp = _options.ContentSecurityPolicy;
+        var csp = options.ContentSecurityPolicy;
         var policy = new StringBuilder();
 
         policy.Append($"default-src {csp.DefaultSrc}; ");
@@ -195,23 +195,23 @@ public interface ICsrfProtectionService
 
 public class CsrfProtectionService : ICsrfProtectionService
 {
-    private readonly IAntiforgery _antiforgery;
-    private readonly CsrfOptions _options;
-    private readonly ILogger<CsrfProtectionService> _logger;
+    private readonly IAntiforgery antiforgery;
+    private readonly CsrfOptions options;
+    private readonly ILogger<CsrfProtectionService> logger;
 
     public CsrfProtectionService(
         IAntiforgery antiforgery,
         IOptions<WebSecurityOptions> options,
         ILogger<CsrfProtectionService> logger)
     {
-        _antiforgery = antiforgery;
-        _options = options.Value.Csrf;
-        _logger = logger;
+        this.antiforgery = antiforgery;
+        options = options.Value.Csrf;
+        this.logger = logger;
     }
 
     public string GenerateToken(HttpContext context)
     {
-        var tokenSet = _antiforgery.GetAndStoreTokens(context);
+        var tokenSet = antiforgery.GetAndStoreTokens(context);
         return tokenSet.RequestToken!;
     }
 
@@ -219,19 +219,19 @@ public class CsrfProtectionService : ICsrfProtectionService
     {
         try
         {
-            await _antiforgery.ValidateRequestAsync(context);
+            await antiforgery.ValidateRequestAsync(context);
             return true;
         }
         catch (AntiforgeryValidationException ex)
         {
-            _logger.LogWarning(ex, "CSRF token validation failed for request {Path}", context.Request.Path);
+            logger.LogWarning(ex, "CSRF token validation failed for request {Path}", context.Request.Path);
             return false;
         }
     }
 
     public async Task<bool> ValidateRequestAsync(HttpContext context)
     {
-        if (!_options.Enabled)
+        if (!options.Enabled)
         {
             return true;
         }
@@ -261,10 +261,10 @@ public interface IXssProtectionService
 
 public class XssProtectionService : IXssProtectionService
 {
-    private readonly XssOptions _options;
-    private readonly HtmlEncoder _htmlEncoder;
-    private readonly JavaScriptEncoder _jsEncoder;
-    private readonly ILogger<XssProtectionService> _logger;
+    private readonly XssOptions options;
+    private readonly HtmlEncoder htmlEncoder;
+    private readonly JavaScriptEncoder jsEncoder;
+    private readonly ILogger<XssProtectionService> logger;
 
     public XssProtectionService(
         IOptions<WebSecurityOptions> options,
@@ -272,10 +272,10 @@ public class XssProtectionService : IXssProtectionService
         JavaScriptEncoder jsEncoder,
         ILogger<XssProtectionService> logger)
     {
-        _options = options.Value.Xss;
-        _htmlEncoder = htmlEncoder;
-        _jsEncoder = jsEncoder;
-        _logger = logger;
+        options = options.Value.Xss;
+        this.htmlEncoder = htmlEncoder;
+        this.jsEncoder = jsEncoder;
+        this.logger = logger;
     }
 
     public string SanitizeInput(string input)
@@ -285,7 +285,7 @@ public class XssProtectionService : IXssProtectionService
             return input;
         }
 
-        if (!_options.SanitizeInput)
+        if (!options.SanitizeInput)
         {
             return input;
         }
@@ -322,8 +322,8 @@ public class XssProtectionService : IXssProtectionService
         }
 
         // Simple HTML sanitization - for production use a library like HtmlSanitizer
-        var allowedTags = _options.AllowedTags.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var allowedAttributes = _options.AllowedAttributes.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var allowedTags = options.AllowedTags.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var allowedAttributes = options.AllowedAttributes.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         // This is a simplified implementation - use AntiXSS or HtmlSanitizer in production
         return Regex.Replace(html, @"<[^>]+>", match =>
@@ -365,7 +365,7 @@ public class XssProtectionService : IXssProtectionService
         {
             if (Regex.IsMatch(input, pattern, RegexOptions.IgnoreCase))
             {
-                _logger.LogWarning("Potentially malicious input detected: {Pattern}", pattern);
+                logger.LogWarning("Potentially malicious input detected: {Pattern}", pattern);
                 return false;
             }
         }
@@ -375,35 +375,35 @@ public class XssProtectionService : IXssProtectionService
 
     public string EncodeForHtml(string input)
     {
-        return _htmlEncoder.Encode(input);
+        return htmlEncoder.Encode(input);
     }
 
     public string EncodeForAttribute(string input)
     {
-        return _htmlEncoder.Encode(input);
+        return htmlEncoder.Encode(input);
     }
 
     public string EncodeForJavaScript(string input)
     {
-        return _jsEncoder.Encode(input);
+        return jsEncoder.Encode(input);
     }
 }
 
 // Input validation middleware
 public class InputValidationMiddleware
 {
-    private readonly RequestDelegate _next;
-    private readonly IXssProtectionService _xssProtection;
-    private readonly ILogger<InputValidationMiddleware> _logger;
+    private readonly RequestDelegate next;
+    private readonly IXssProtectionService xssProtection;
+    private readonly ILogger<InputValidationMiddleware> logger;
 
     public InputValidationMiddleware(
         RequestDelegate next,
         IXssProtectionService xssProtection,
         ILogger<InputValidationMiddleware> logger)
     {
-        _next = next;
-        _xssProtection = xssProtection;
-        _logger = logger;
+        this.next = next;
+        this.xssProtection = xssProtection;
+        this.logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -411,9 +411,9 @@ public class InputValidationMiddleware
         // Validate query parameters
         foreach (var param in context.Request.Query)
         {
-            if (!_xssProtection.IsValidInput(param.Value))
+            if (!xssProtection.IsValidInput(param.Value))
             {
-                _logger.LogWarning("Malicious input detected in query parameter {Key}", param.Key);
+                logger.LogWarning("Malicious input detected in query parameter {Key}", param.Key);
                 context.Response.StatusCode = 400;
                 await context.Response.WriteAsync("Invalid input detected");
                 return;
@@ -426,9 +426,9 @@ public class InputValidationMiddleware
             var form = await context.Request.ReadFormAsync();
             foreach (var field in form)
             {
-                if (!_xssProtection.IsValidInput(field.Value))
+                if (!xssProtection.IsValidInput(field.Value))
                 {
-                    _logger.LogWarning("Malicious input detected in form field {Key}", field.Key);
+                    logger.LogWarning("Malicious input detected in form field {Key}", field.Key);
                     context.Response.StatusCode = 400;
                     await context.Response.WriteAsync("Invalid input detected");
                     return;
@@ -436,17 +436,17 @@ public class InputValidationMiddleware
             }
         }
 
-        await _next(context);
+        await next(context);
     }
 }
 
 // Rate limiting middleware
 public class RateLimitingMiddleware
 {
-    private readonly RequestDelegate _next;
-    private readonly RateLimitOptions _options;
-    private readonly IMemoryCache _cache;
-    private readonly ILogger<RateLimitingMiddleware> _logger;
+    private readonly RequestDelegate next;
+    private readonly RateLimitOptions options;
+    private readonly IMemoryCache cache;
+    private readonly ILogger<RateLimitingMiddleware> logger;
 
     public RateLimitingMiddleware(
         RequestDelegate next,
@@ -454,33 +454,33 @@ public class RateLimitingMiddleware
         IMemoryCache cache,
         ILogger<RateLimitingMiddleware> logger)
     {
-        _next = next;
-        _options = options.Value.RateLimit;
-        _cache = cache;
-        _logger = logger;
+        this.next = next;
+        options = options.Value.RateLimit;
+        this.cache = cache;
+        this.logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
     {
-        if (!_options.Enabled)
+        if (!options.Enabled)
         {
-            await _next(context);
+            await next(context);
             return;
         }
 
         var path = context.Request.Path.Value;
-        if (_options.ExemptPaths.Any(ep => path?.StartsWith(ep, StringComparison.OrdinalIgnoreCase) == true))
+        if (options.ExemptPaths.Any(ep => path?.StartsWith(ep, StringComparison.OrdinalIgnoreCase) == true))
         {
-            await _next(context);
+            await next(context);
             return;
         }
 
         var clientId = GetClientIdentifier(context);
         var key = $"rate_limit_{clientId}";
 
-        if (_cache.TryGetValue(key, out RateLimitInfo? info))
+        if (cache.TryGetValue(key, out RateLimitInfo? info))
         {
-            if (info!.RequestCount >= _options.RequestsPerMinute)
+            if (info!.RequestCount >= options.RequestsPerMinute)
             {
                 context.Response.StatusCode = 429;
                 context.Response.Headers["Retry-After"] = "60";
@@ -493,10 +493,10 @@ public class RateLimitingMiddleware
         else
         {
             info = new RateLimitInfo { RequestCount = 1, WindowStart = DateTime.UtcNow };
-            _cache.Set(key, info, _options.WindowSize);
+            cache.Set(key, info, options.WindowSize);
         }
 
-        await _next(context);
+        await next(context);
     }
 
     private string GetClientIdentifier(HttpContext context)
@@ -523,17 +523,17 @@ public class RateLimitInfo
 [Route("api/[controller]")]
 public class SecurityController : ControllerBase
 {
-    private readonly ILogger<SecurityController> _logger;
+    private readonly ILogger<SecurityController> logger;
 
     public SecurityController(ILogger<SecurityController> logger)
     {
-        _logger = logger;
+        this.logger = logger;
     }
 
     [HttpPost("csp-report")]
     public IActionResult CspReport([FromBody] CspReportRequest report)
     {
-        _logger.LogWarning("CSP Violation: {Report}", JsonSerializer.Serialize(report));
+        logger.LogWarning("CSP Violation: {Report}", JsonSerializer.Serialize(report));
 
         // Store violation for analysis
         // You might want to store this in a database or send to a monitoring service
@@ -755,21 +755,21 @@ app.UseAuthorization();
 [Secure(RequireHttps = true, ValidateCsrf = true)]
 public class UserController : ControllerBase
 {
-    private readonly IXssProtectionService _xssProtection;
-    private readonly ICsrfProtectionService _csrfProtection;
+    private readonly IXssProtectionService xssProtection;
+    private readonly ICsrfProtectionService csrfProtection;
 
     public UserController(
         IXssProtectionService xssProtection,
         ICsrfProtectionService csrfProtection)
     {
-        _xssProtection = xssProtection;
-        _csrfProtection = csrfProtection;
+        this.xssProtection = xssProtection;
+        this.csrfProtection = csrfProtection;
     }
 
     [HttpGet]
     public IActionResult Get()
     {
-        var token = _csrfProtection.GenerateToken(HttpContext);
+        var token = csrfProtection.GenerateToken(HttpContext);
         Response.Headers["X-CSRF-Token"] = token;
         
         return Ok(new { Message = "Secure endpoint", CsrfToken = token });
@@ -780,18 +780,18 @@ public class UserController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateUserRequest request)
     {
         // Validate CSRF token
-        if (!await _csrfProtection.ValidateRequestAsync(HttpContext))
+        if (!await csrfProtection.ValidateRequestAsync(HttpContext))
         {
             return BadRequest("Invalid CSRF token");
         }
 
         // Sanitize input
-        var sanitizedName = _xssProtection.SanitizeInput(request.Name);
-        var sanitizedEmail = _xssProtection.SanitizeInput(request.Email);
+        var sanitizedName = xssProtection.SanitizeInput(request.Name);
+        var sanitizedEmail = xssProtection.SanitizeInput(request.Email);
 
         // Validate input
-        if (!_xssProtection.IsValidInput(sanitizedName) || 
-            !_xssProtection.IsValidInput(sanitizedEmail))
+        if (!xssProtection.IsValidInput(sanitizedName) || 
+            !xssProtection.IsValidInput(sanitizedEmail))
         {
             return BadRequest("Invalid input detected");
         }
@@ -804,11 +804,11 @@ public class UserController : ControllerBase
 // Razor Pages usage
 public class IndexModel : PageModel
 {
-    private readonly IXssProtectionService _xssProtection;
+    private readonly IXssProtectionService xssProtection;
 
     public IndexModel(IXssProtectionService xssProtection)
     {
-        _xssProtection = xssProtection;
+        this.xssProtection = xssProtection;
     }
 
     public string SafeContent { get; set; } = string.Empty;
@@ -816,7 +816,7 @@ public class IndexModel : PageModel
     public void OnGet(string userInput)
     {
         // Safely encode user input for display
-        SafeContent = _xssProtection.EncodeForHtml(userInput ?? string.Empty);
+        SafeContent = xssProtection.EncodeForHtml(userInput ?? string.Empty);
     }
 }
 

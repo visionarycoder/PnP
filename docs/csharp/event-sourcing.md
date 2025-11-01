@@ -87,7 +87,7 @@ public abstract class DomainEvent : IDomainEvent
         EventId = Guid.NewGuid();
         Timestamp = DateTime.UtcNow;
         EventType = GetType().Name;
-        Metadata = new Dictionary<string, object>();
+        Metadata = new();
     }
 
     public Guid EventId { get; private set; }
@@ -107,7 +107,7 @@ public class InMemoryEventStore : IEventStore
     private readonly List<StoredEvent> globalEventLog;
     private readonly IEventSerializer eventSerializer;
     private readonly ILogger logger;
-    private readonly object lockObject = new object();
+    private readonly object lockObject = new();
     private long globalPosition = 0;
 
     public InMemoryEventStore(
@@ -115,8 +115,8 @@ public class InMemoryEventStore : IEventStore
         ILogger<InMemoryEventStore> logger = null)
     {
         eventStreams = new ConcurrentDictionary<Guid, List<StoredEvent>>();
-        snapshots = new ConcurrentDictionary<Guid, StoredSnapshot>();
-        globalEventLog = new List<StoredEvent>();
+        snapshots = new();
+        globalEventLog = new();
         this.eventSerializer = eventSerializer ?? new JsonEventSerializer();
         this.logger = logger;
     }
@@ -313,7 +313,7 @@ public class InMemoryEventStream : IEventStream
 // Abstract aggregate root base class
 public abstract class AggregateRoot : IAggregateRoot
 {
-    private readonly List<IEvent> uncommittedEvents = new List<IEvent>();
+    private readonly List<IEvent> uncommittedEvents = new();
     private readonly Dictionary<Type, Action<IEvent>> eventHandlers = new Dictionary<Type, Action<IEvent>>();
 
     protected AggregateRoot()
@@ -617,7 +617,7 @@ public class ProjectionManager : IProjectionManager
     {
         this.eventStore = eventStore ?? throw new ArgumentNullException(nameof(eventStore));
         this.logger = logger;
-        projections = new ConcurrentDictionary<string, IEventProjection>();
+        projections = new();
     }
 
     public void RegisterProjection(IEventProjection projection)
@@ -700,7 +700,7 @@ public class JsonEventSerializer : IEventSerializer
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
 
-        eventTypes = new Dictionary<string, Type>();
+        eventTypes = new();
         RegisterKnownEventTypes();
     }
 
@@ -1241,7 +1241,7 @@ public class AccountSummaryProjection : IEventProjection
 
     public AccountSummaryProjection()
     {
-        summaries = new ConcurrentDictionary<Guid, AccountSummary>();
+        summaries = new();
     }
 
     public string ProjectionName => "AccountSummary";

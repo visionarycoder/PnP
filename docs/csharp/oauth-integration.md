@@ -99,7 +99,7 @@ public class OAuthService : IOAuthService
         ILogger<OAuthService> logger,
         IOAuthStateService stateService)
     {
-        this.httpClientFactory = httpClientFactory;
+        httpClientFactory = httpClientFactory;
         options = options.Value;
         this.logger = logger;
         this.stateService = stateService;
@@ -488,7 +488,7 @@ public class OAuthStateService : IOAuthStateService
     
     public OAuthStateService(IMemoryCache cache, ILogger<OAuthStateService> logger)
     {
-        this.cache = cache;
+        cache = cache;
         this.logger = logger;
     }
 
@@ -581,7 +581,7 @@ public class OAuthController : ControllerBase
         IJwtService jwtService,
         ILogger<OAuthController> logger)
     {
-        this.oauthService = oauthService;
+        oauthService = oauthService;
         this.userService = userService;
         this.jwtService = jwtService;
         this.logger = logger;
@@ -847,7 +847,7 @@ public class OAuthSecurityMiddleware
 
     public OAuthSecurityMiddleware(RequestDelegate next, ILogger<OAuthSecurityMiddleware> logger)
     {
-        this.next = next;
+        next = next;
         this.logger = logger;
     }
 

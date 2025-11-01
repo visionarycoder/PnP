@@ -884,7 +884,7 @@ public class PollyHealthCheck : Microsoft.Extensions.Diagnostics.HealthChecks.IH
 
     public PollyHealthCheck(EnhancedPolicyRegistry registry)
     {
-        this.registry = registry ?? throw new ArgumentNullException(nameof(registry));
+        registry = registry ?? throw new ArgumentNullException(nameof(registry));
     }
 
     public Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(

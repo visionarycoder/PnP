@@ -97,7 +97,7 @@ public readonly struct ArrayPoolRental<T> : IDisposable
 
     public ArrayPoolRental(ArrayPool<T> pool, int minimumLength)
     {
-        this.pool = pool;
+        pool = pool;
         Array = pool.Rent(minimumLength);
         Length = minimumLength;
     }
@@ -181,7 +181,7 @@ public readonly struct ObjectPoolRental<T> : IDisposable where T : class
 
     public ObjectPoolRental(ObjectPool<T> pool, T obj)
     {
-        this.pool = pool;
+        pool = pool;
         Object = obj;
     }
 
@@ -668,7 +668,7 @@ public class MonitoredArrayPool<T> : ArrayPool<T>
 
     public MonitoredArrayPool(ArrayPool<T> innerPool, PoolPerformanceMonitor monitor, string poolName)
     {
-        this.innerPool = innerPool;
+        innerPool = innerPool;
         this.monitor = monitor;
         this.poolName = poolName;
     }
@@ -799,7 +799,7 @@ public class PooledCsvReader : IDisposable
 
     public PooledCsvReader(TextReader reader)
     {
-        this.reader = reader;
+        reader = reader;
         fields = new PooledList<string>();
         charPool = ArrayPool<char>.Shared;
         buffer = charPool.Rent(1024);

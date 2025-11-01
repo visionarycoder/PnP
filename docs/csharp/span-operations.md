@@ -164,7 +164,7 @@ public ref struct SpanSplitEnumerator
 
     public SpanSplitEnumerator(ReadOnlySpan<char> span, char separator)
     {
-        this.span = span;
+        span = span;
         this.separator = separator;
         separators = default;
         useMultipleSeparators = false;
@@ -828,7 +828,7 @@ public ref struct SpanStringBuilder
 
     public SpanStringBuilder(Span<char> buffer)
     {
-        this.buffer = buffer;
+        buffer = buffer;
         length = 0;
     }
 

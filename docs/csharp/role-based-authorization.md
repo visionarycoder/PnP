@@ -56,7 +56,7 @@ public class ResourceAccessHandler : AuthorizationHandler<ResourceAccessRequirem
     
     public ResourceAccessHandler(IResourcePermissionService permissionService)
     {
-        this.permissionService = permissionService;
+        permissionService = permissionService;
     }
     
     protected override async Task HandleRequirementAsync(
@@ -125,7 +125,7 @@ public class PermissionService : IPermissionService
         IPermissionRepository permissionRepository,
         ILogger<PermissionService> logger)
     {
-        this.userRepository = userRepository;
+        userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.permissionRepository = permissionRepository;
         this.logger = logger;
@@ -197,7 +197,7 @@ public class ResourcePermissionService : IResourcePermissionService
         IResourceRepository resourceRepository,
         IPermissionService permissionService)
     {
-        this.resourceRepository = resourceRepository;
+        resourceRepository = resourceRepository;
         this.permissionService = permissionService;
     }
 
@@ -248,7 +248,7 @@ public class DocumentsController : ControllerBase
         IDocumentService documentService,
         IResourcePermissionService resourcePermissionService)
     {
-        this.documentService = documentService;
+        documentService = documentService;
         this.resourcePermissionService = resourcePermissionService;
     }
 
@@ -329,7 +329,7 @@ public class AdminController : ControllerBase
 
     public AdminController(IPermissionService permissionService)
     {
-        this.permissionService = permissionService;
+        permissionService = permissionService;
     }
 
     [HttpPost("roles/{roleName}/permissions")]
@@ -470,7 +470,7 @@ public class PermissionLoggingMiddleware
 
     public PermissionLoggingMiddleware(RequestDelegate next, ILogger<PermissionLoggingMiddleware> logger)
     {
-        this.next = next;
+        next = next;
         this.logger = logger;
     }
 

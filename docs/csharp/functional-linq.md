@@ -21,7 +21,7 @@ public readonly struct Maybe<T>
 
     private Maybe(T value)
     {
-        this.value = value;
+        value = value;
         hasValue = value != null;
     }
 
@@ -499,7 +499,7 @@ public class Pipeline<T>
 
     public Pipeline(IEnumerable<T> source)
     {
-        this.source = source;
+        source = source;
     }
 
     public Pipeline<TResult> Map<TResult>(Func<T, TResult> selector)

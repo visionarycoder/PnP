@@ -751,7 +751,7 @@ internal class CircuitBreakerPolicy : IResiliencePolicy
 
     public CircuitBreakerPolicy(CircuitBreaker circuitBreaker)
     {
-        this.circuitBreaker = circuitBreaker;
+        circuitBreaker = circuitBreaker;
     }
 
     public async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken)
@@ -766,7 +766,7 @@ internal class RetryPolicyWrapper : IResiliencePolicy
 
     public RetryPolicyWrapper(RetryPolicy retryPolicy)
     {
-        this.retryPolicy = retryPolicy;
+        retryPolicy = retryPolicy;
     }
 
     public async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken)
@@ -781,7 +781,7 @@ internal class TimeoutPolicyWrapper : IResiliencePolicy
 
     public TimeoutPolicyWrapper(TimeoutPolicy timeoutPolicy)
     {
-        this.timeoutPolicy = timeoutPolicy;
+        timeoutPolicy = timeoutPolicy;
     }
 
     public async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken)
@@ -796,7 +796,7 @@ internal class BulkheadPolicy : IResiliencePolicy
 
     public BulkheadPolicy(BulkheadIsolation bulkhead)
     {
-        this.bulkhead = bulkhead;
+        bulkhead = bulkhead;
     }
 
     public async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken)

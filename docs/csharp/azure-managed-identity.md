@@ -243,7 +243,7 @@ public class AzureServiceClientFactory : IAzureServiceClientFactory
         IManagedIdentityService managedIdentityService,
         ILogger<AzureServiceClientFactory> logger)
     {
-        this.managedIdentityService = managedIdentityService;
+        managedIdentityService = managedIdentityService;
         this.logger = logger;
     }
 
@@ -311,7 +311,7 @@ public class ManagedIdentityConfigurationService : IManagedIdentityConfiguration
         IConfiguration configuration,
         ILogger<ManagedIdentityConfigurationService> logger)
     {
-        this.managedIdentityService = managedIdentityService;
+        managedIdentityService = managedIdentityService;
         this.configuration = configuration;
         this.logger = logger;
         configCache = new();
@@ -433,7 +433,7 @@ public class ManagedIdentityHealthCheckMiddleware
         IManagedIdentityService managedIdentityService,
         ILogger<ManagedIdentityHealthCheckMiddleware> logger)
     {
-        this.next = next;
+        next = next;
         this.managedIdentityService = managedIdentityService;
         this.logger = logger;
     }
@@ -548,7 +548,7 @@ public class ManagedIdentityTokenHandler : DelegatingHandler
         IOptionsMonitor<ManagedIdentityTokenOptions> options,
         IHttpClientFactory httpClientFactory)
     {
-        this.managedIdentityService = managedIdentityService;
+        managedIdentityService = managedIdentityService;
         this.options = options;
         clientName = string.Empty; // Will be set by the factory
     }
@@ -651,7 +651,7 @@ public class SecureController : ControllerBase
         IManagedIdentityConfigurationService configurationService,
         IAzureServiceClientFactory clientFactory)
     {
-        this.managedIdentityService = managedIdentityService;
+        managedIdentityService = managedIdentityService;
         this.configurationService = configurationService;
         this.clientFactory = clientFactory;
     }
@@ -705,7 +705,7 @@ public class ManagedIdentityBackgroundService : BackgroundService
         IManagedIdentityService managedIdentityService,
         ILogger<ManagedIdentityBackgroundService> logger)
     {
-        this.managedIdentityService = managedIdentityService;
+        managedIdentityService = managedIdentityService;
         this.logger = logger;
     }
 

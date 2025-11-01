@@ -35,7 +35,7 @@ public class AsyncLazy<T>(Func<Task<T>> taskFactory)
 // Thread-safe AsyncLazy with cancellation support
 public class AsyncLazyCancellable<T>(Func<CancellationToken, Task<T>> taskFactory)
 {
-    private readonly Func<CancellationToken, Task<T>> this.taskFactory = taskFactory ?? throw new ArgumentNullException(nameof(taskFactory));
+    private readonly Func<CancellationToken, Task<T>> taskFactory = taskFactory ?? throw new ArgumentNullException(nameof(taskFactory));
     private readonly object lockObj = new();
     private Task<T>? cachedTask;
 
@@ -80,8 +80,8 @@ public class AsyncLazyCancellable<T>(Func<CancellationToken, Task<T>> taskFactor
 // AsyncLazy with expiration
 public class AsyncLazyWithExpiration<T>(Func<Task<T>> taskFactory, TimeSpan expiration)
 {
-    private readonly Func<Task<T>> this.taskFactory = taskFactory ?? throw new ArgumentNullException(nameof(taskFactory));
-    private readonly TimeSpan this.expiration = expiration;
+    private readonly Func<Task<T>> taskFactory = taskFactory ?? throw new ArgumentNullException(nameof(taskFactory));
+    private readonly TimeSpan expiration = expiration;
     private readonly object lockObj = new();
     private Task<T>? cachedTask;
     private DateTime creationTime;
@@ -119,7 +119,7 @@ public class AsyncLazyWithExpiration<T>(Func<Task<T>> taskFactory, TimeSpan expi
 // Async memoization utility
 public class AsyncMemoizer<TKey, TValue>(Func<TKey, Task<TValue>> asyncFunc) where TKey : notnull
 {
-    private readonly Func<TKey, Task<TValue>> this.asyncFunc = asyncFunc ?? throw new ArgumentNullException(nameof(asyncFunc));
+    private readonly Func<TKey, Task<TValue>> asyncFunc = asyncFunc ?? throw new ArgumentNullException(nameof(asyncFunc));
     private readonly ConcurrentDictionary<TKey, AsyncLazy<TValue>> cache = new();
 
     public Task<TValue> GetAsync(TKey key)
@@ -144,7 +144,7 @@ public class AsyncMemoizer<TKey, TValue>(Func<TKey, Task<TValue>> asyncFunc) whe
 // Async lazy factory with dependency injection support
 public class AsyncLazyFactory<T>(Func<IServiceProvider, Task<T>> factory, IServiceProvider serviceProvider)
 {
-    private readonly Func<IServiceProvider, Task<T>> this.factory = factory ?? throw new ArgumentNullException(nameof(factory));
+    private readonly Func<IServiceProvider, Task<T>> factory = factory ?? throw new ArgumentNullException(nameof(factory));
     private readonly AsyncLazy<T> lazy = new(() => factory(serviceProvider));
 
     public Task<T> GetValueAsync() => lazy.Value;
@@ -155,7 +155,7 @@ public class AsyncLazyFactory<T>(Func<IServiceProvider, Task<T>> factory, IServi
 // Async lazy collection for batch operations
 public class AsyncLazyCollection<T>(Func<Task<T[]>> batchLoader)
 {
-    private readonly Func<Task<T[]>> this.batchLoader = batchLoader ?? throw new ArgumentNullException(nameof(batchLoader));
+    private readonly Func<Task<T[]>> batchLoader = batchLoader ?? throw new ArgumentNullException(nameof(batchLoader));
     private readonly AsyncLazy<T[]> lazy = new(batchLoader);
     private readonly ConcurrentDictionary<int, AsyncLazy<T>> itemCache = new();
 
@@ -185,7 +185,7 @@ public class AsyncLazyCollection<T>(Func<Task<T[]>> batchLoader)
 // Real-world examples
 public class ConfigurationService(string configSource)
 {
-    private readonly string this.configSource = configSource;
+    private readonly string configSource = configSource;
     private readonly AsyncLazyWithExpiration<AppConfig> configLazy = new(
         () => LoadConfigurationAsync(configSource),
         TimeSpan.FromMinutes(5)); // Refresh config every 5 minutes
@@ -260,7 +260,7 @@ public class ApiClientService
 
     public ApiClientService(HttpClient httpClient)
     {
-        this.httpClient = httpClient;
+        httpClient = httpClient;
         apiMemoizer = new AsyncMemoizer<string, string>(FetchFromApiAsync);
     }
 
@@ -372,7 +372,7 @@ public class DatabaseConnection : IDbConnection
     
     public DatabaseConnection(string connectionString)
     {
-        this.connectionString = connectionString;
+        connectionString = connectionString;
         IsOpen = true; // Simulate open connection
     }
     

@@ -677,7 +677,7 @@ public static class CollectionOptimizations
 
         public ArrayEnumerator(T[] array)
         {
-            this.array = array;
+            array = array;
             this.index = -1;
         }
 
@@ -897,7 +897,7 @@ public static class MemoryOptimizations
 
         public ExpensiveObjectPool(Func<ExpensiveObject> factory)
         {
-            this.factory = factory;
+            factory = factory;
         }
 
         public ExpensiveObject Rent()

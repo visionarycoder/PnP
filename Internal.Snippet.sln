@@ -260,65 +260,65 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesignPatterns.Structural",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesignPatterns.Behavioral", "src\DesignPatterns.Behavioral\DesignPatterns.Behavioral.csproj", "{14AB05EE-1044-4FF1-AB27-B8E3B55BCC11}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.ActorModel", "src\Snippet.ActorModel\Snippet.ActorModel.csproj", "{EDCD05A6-2036-48A1-9651-D77F7E7E14FD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.ActorModel", "src\CSharp.ActorModel\CSharp.ActorModel.csproj", "{EDCD05A6-2036-48A1-9651-D77F7E7E14FD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.AsyncEnumerable", "src\Snippet.AsyncEnumerable\Snippet.AsyncEnumerable.csproj", "{0C6E7003-DA9B-4702-9BC2-3AC3F7951593}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.AsyncEnumerable", "src\CSharp.AsyncEnumerable\CSharp.AsyncEnumerable.csproj", "{0C6E7003-DA9B-4702-9BC2-3AC3F7951593}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.AsyncLazyLoading", "src\Snippet.AsyncLazyLoading\Snippet.AsyncLazyLoading.csproj", "{B90586F7-0EA2-4274-A771-1F19ABAE9F16}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.AsyncLazyLoading", "src\CSharp.AsyncLazyLoading\CSharp.AsyncLazyLoading.csproj", "{B90586F7-0EA2-4274-A771-1F19ABAE9F16}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.CacheAside", "src\Snippet.CacheAside\Snippet.CacheAside.csproj", "{6EA4DADD-F33E-4264-8587-ACB3F7B3CC8D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.CacheAside", "src\CSharp.CacheAside\CSharp.CacheAside.csproj", "{6EA4DADD-F33E-4264-8587-ACB3F7B3CC8D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.CacheInvalidation", "src\Snippet.CacheInvalidation\Snippet.CacheInvalidation.csproj", "{8DF005AE-966B-4D32-AE3C-14F62928DCA7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.CacheInvalidation", "src\CSharp.CacheInvalidation\CSharp.CacheInvalidation.csproj", "{8DF005AE-966B-4D32-AE3C-14F62928DCA7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.CancellationPatterns", "src\Snippet.CancellationPatterns\Snippet.CancellationPatterns.csproj", "{42B21B1F-E5F4-4BD1-9DF6-AF66F57E14F3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.CancellationPatterns", "src\CSharp.CancellationPatterns\CSharp.CancellationPatterns.csproj", "{42B21B1F-E5F4-4BD1-9DF6-AF66F57E14F3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.CircuitBreaker", "src\Snippet.CircuitBreaker\Snippet.CircuitBreaker.csproj", "{C6AA51AF-8E80-49DA-AA08-077E98F25EA8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.CircuitBreaker", "src\CSharp.CircuitBreaker\CSharp.CircuitBreaker.csproj", "{C6AA51AF-8E80-49DA-AA08-077E98F25EA8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.ConcurrentCollections", "src\Snippet.ConcurrentCollections\Snippet.ConcurrentCollections.csproj", "{1D2CD1A6-4019-4216-A87A-4AEE0AB896DF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.ConcurrentCollections", "src\CSharp.ConcurrentCollections\CSharp.ConcurrentCollections.csproj", "{1D2CD1A6-4019-4216-A87A-4AEE0AB896DF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.DistributedCache", "src\Snippet.DistributedCache\Snippet.DistributedCache.csproj", "{941EBAEA-AB14-48D0-8155-4CA8C730EDF6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.DistributedCache", "src\CSharp.DistributedCache\CSharp.DistributedCache.csproj", "{941EBAEA-AB14-48D0-8155-4CA8C730EDF6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.EventSourcing", "src\Snippet.EventSourcing\Snippet.EventSourcing.csproj", "{234F5517-8F1D-4070-9F98-D953F1E62F27}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.EventSourcing", "src\CSharp.EventSourcing\CSharp.EventSourcing.csproj", "{234F5517-8F1D-4070-9F98-D953F1E62F27}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.ExceptionHandling", "src\Snippet.ExceptionHandling\Snippet.ExceptionHandling.csproj", "{1363DE81-DAF3-4A38-836D-87206A742CEC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.ExceptionHandling", "src\CSharp.ExceptionHandling\CSharp.ExceptionHandling.csproj", "{1363DE81-DAF3-4A38-836D-87206A742CEC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.FunctionalLinq", "src\Snippet.FunctionalLinq\Snippet.FunctionalLinq.csproj", "{8B253154-AEDE-43F4-83AD-82358916BA1A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.FunctionalLinq", "src\CSharp.FunctionalLinq\CSharp.FunctionalLinq.csproj", "{8B253154-AEDE-43F4-83AD-82358916BA1A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.LinqExtensions", "src\Snippet.LinqExtensions\Snippet.LinqExtensions.csproj", "{8FE8CD11-1C56-4074-81FB-20CCDDEA7DFA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.LinqExtensions", "src\CSharp.LinqExtensions\CSharp.LinqExtensions.csproj", "{8FE8CD11-1C56-4074-81FB-20CCDDEA7DFA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.LoggingPatterns", "src\Snippet.LoggingPatterns\Snippet.LoggingPatterns.csproj", "{8C55305C-4576-457B-B9B9-A90291E43DCF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.LoggingPatterns", "src\CSharp.LoggingPatterns\CSharp.LoggingPatterns.csproj", "{8C55305C-4576-457B-B9B9-A90291E43DCF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.Memoization", "src\Snippet.Memoization\Snippet.Memoization.csproj", "{401A4D3E-7B11-4A92-B746-534E5A905015}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.Memoization", "src\CSharp.Memoization\CSharp.Memoization.csproj", "{401A4D3E-7B11-4A92-B746-534E5A905015}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.MemoryPools", "src\Snippet.MemoryPools\Snippet.MemoryPools.csproj", "{622634C0-2AC1-4510-8EE6-2C01AB5D2594}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.MemoryPools", "src\CSharp.MemoryPools\CSharp.MemoryPools.csproj", "{622634C0-2AC1-4510-8EE6-2C01AB5D2594}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.MessageQueue", "src\Snippet.MessageQueue\Snippet.MessageQueue.csproj", "{B5BBB54C-5CFC-44A8-91C9-30B4C2D41208}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.MessageQueue", "src\CSharp.MessageQueue\CSharp.MessageQueue.csproj", "{B5BBB54C-5CFC-44A8-91C9-30B4C2D41208}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.MicroOptimizations", "src\Snippet.MicroOptimizations\Snippet.MicroOptimizations.csproj", "{0F076762-1745-4F4B-B684-E5EB7A0B8FAD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.MicroOptimizations", "src\CSharp.MicroOptimizations\CSharp.MicroOptimizations.csproj", "{0F076762-1745-4F4B-B684-E5EB7A0B8FAD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.PerformanceLinq", "src\Snippet.PerformanceLinq\Snippet.PerformanceLinq.csproj", "{4B6DD711-DDF7-4664-95A0-0A7AD13AA93B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.PerformanceLinq", "src\CSharp.PerformanceLinq\CSharp.PerformanceLinq.csproj", "{4B6DD711-DDF7-4664-95A0-0A7AD13AA93B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.PollyPatterns", "src\Snippet.PollyPatterns\Snippet.PollyPatterns.csproj", "{3506F23D-8AAC-4571-9680-77ED42F00D2B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.PollyPatterns", "src\CSharp.PollyPatterns\CSharp.PollyPatterns.csproj", "{3506F23D-8AAC-4571-9680-77ED42F00D2B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.ProducerConsumer", "src\Snippet.ProducerConsumer\Snippet.ProducerConsumer.csproj", "{3328D689-548B-4033-AEAF-468ECBB23DDB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.ProducerConsumer", "src\CSharp.ProducerConsumer\CSharp.ProducerConsumer.csproj", "{3328D689-548B-4033-AEAF-468ECBB23DDB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.PubSub", "src\Snippet.PubSub\Snippet.PubSub.csproj", "{5BA3C842-C932-4287-A5EB-4656DE6AD589}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.PubSub", "src\CSharp.PubSub\CSharp.PubSub.csproj", "{5BA3C842-C932-4287-A5EB-4656DE6AD589}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.QueryOptimization", "src\Snippet.QueryOptimization\Snippet.QueryOptimization.csproj", "{E98A1F7C-E04B-4CC5-B4E3-C7AFFB8ADA59}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.QueryOptimization", "src\CSharp.QueryOptimization\CSharp.QueryOptimization.csproj", "{E98A1F7C-E04B-4CC5-B4E3-C7AFFB8ADA59}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.ReaderWriterLocks", "src\Snippet.ReaderWriterLocks\Snippet.ReaderWriterLocks.csproj", "{658FB639-9EA2-4553-9BFA-CC8B662C71A8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.ReaderWriterLocks", "src\CSharp.ReaderWriterLocks\CSharp.ReaderWriterLocks.csproj", "{658FB639-9EA2-4553-9BFA-CC8B662C71A8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.RetryPattern", "src\Snippet.RetryPattern\Snippet.RetryPattern.csproj", "{FBCAD236-0F1F-4203-8B64-0AB8E2A27754}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.RetryPattern", "src\CSharp.RetryPattern\CSharp.RetryPattern.csproj", "{FBCAD236-0F1F-4203-8B64-0AB8E2A27754}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.SagaPatterns", "src\Snippet.SagaPatterns\Snippet.SagaPatterns.csproj", "{77E4CBB4-B0CC-4EDC-9401-D8895AAF5F12}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.SagaPatterns", "src\CSharp.SagaPatterns\CSharp.SagaPatterns.csproj", "{77E4CBB4-B0CC-4EDC-9401-D8895AAF5F12}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.SpanOperations", "src\Snippet.SpanOperations\Snippet.SpanOperations.csproj", "{ABA0C245-194B-4645-994D-C1FC0C834193}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.SpanOperations", "src\CSharp.SpanOperations\CSharp.SpanOperations.csproj", "{ABA0C245-194B-4645-994D-C1FC0C834193}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.StringTruncate", "src\Snippet.StringTruncate\Snippet.StringTruncate.csproj", "{E71DC991-028C-4D63-8C4D-BAC09C5D2EBB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.StringTruncate", "src\CSharp.StringTruncate\CSharp.StringTruncate.csproj", "{E71DC991-028C-4D63-8C4D-BAC09C5D2EBB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.TaskCombinators", "src\Snippet.TaskCombinators\Snippet.TaskCombinators.csproj", "{DDB8346D-2C0A-46F7-99CA-A9A6449F46C4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.TaskCombinators", "src\CSharp.TaskCombinators\CSharp.TaskCombinators.csproj", "{DDB8346D-2C0A-46F7-99CA-A9A6449F46C4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snippet.Vectorization", "src\Snippet.Vectorization\Snippet.Vectorization.csproj", "{BDED732A-9924-4C56-BE71-9BD3BC423620}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.Vectorization", "src\CSharp.Vectorization\CSharp.Vectorization.csproj", "{BDED732A-9924-4C56-BE71-9BD3BC423620}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

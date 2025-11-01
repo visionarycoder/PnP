@@ -898,7 +898,7 @@ public class CachedRepository<TEntity, TKey> : ICachedRepository<TEntity, TKey>
 }
 
 // Supporting classes and interfaces
-public class CacheEntry&lt;T&gt;
+public class CacheEntry<T>
 {
     public T Value { get; set; }
     public DateTime CreatedAt { get; set; }

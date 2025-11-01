@@ -1,6 +1,6 @@
 # Span and Memory Operations
 
-**Description**: High-performance memory operations using Span&lt;T&gt;, Memory&lt;T&gt;, and ReadOnlySpan&lt;T&gt; for zero-allocation algorithms, efficient string processing, and memory-safe operations without garbage collection overhead.
+**Description**: High-performance memory operations using Span<T>, Memory<T>, and ReadOnlySpan<T> for zero-allocation algorithms, efficient string processing, and memory-safe operations without garbage collection overhead.
 
 **Language/Technology**: C# / .NET
 
@@ -255,7 +255,7 @@ public static class SpanNumerics
     }
 
     // Min/Max operations
-    public static T Min&lt;T&gt;(ReadOnlySpan&lt;T&gt; span) where T : IComparable&lt;T&gt;
+    public static T Min<T>(ReadOnlySpan<T> span) where T : IComparable<T>
     {
         if (span.IsEmpty)
             throw new ArgumentException("Span cannot be empty");
@@ -269,7 +269,7 @@ public static class SpanNumerics
         return min;
     }
 
-    public static T Max&lt;T&gt;(ReadOnlySpan&lt;T&gt; span) where T : IComparable&lt;T&gt;
+    public static T Max<T>(ReadOnlySpan<T> span) where T : IComparable<T>
     {
         if (span.IsEmpty)
             throw new ArgumentException("Span cannot be empty");
@@ -303,7 +303,7 @@ public static class SpanNumerics
     }
 
     // Find index of min/max element
-    public static int IndexOfMin&lt;T&gt;(ReadOnlySpan&lt;T&gt; span) where T : IComparable&lt;T&gt;
+    public static int IndexOfMin<T>(ReadOnlySpan<T> span) where T : IComparable<T>
     {
         if (span.IsEmpty)
             return -1;
@@ -323,7 +323,7 @@ public static class SpanNumerics
         return minIndex;
     }
 
-    public static int IndexOfMax&lt;T&gt;(ReadOnlySpan&lt;T&gt; span) where T : IComparable&lt;T&gt;
+    public static int IndexOfMax<T>(ReadOnlySpan<T> span) where T : IComparable<T>
     {
         if (span.IsEmpty)
             return -1;
@@ -371,7 +371,7 @@ public static class SpanNumerics
 public static class SpanAlgorithms
 {
     // Binary search on sorted span
-    public static int BinarySearch&lt;T&gt;(ReadOnlySpan&lt;T&gt; span, T value) where T : IComparable&lt;T&gt;
+    public static int BinarySearch<T>(ReadOnlySpan<T> span, T value) where T : IComparable<T>
     {
         int left = 0;
         int right = span.Length - 1;
@@ -393,7 +393,7 @@ public static class SpanAlgorithms
     }
 
     // Quick sort implementation for spans
-    public static void QuickSort&lt;T&gt;(Span&lt;T&gt; span) where T : IComparable&lt;T&gt;
+    public static void QuickSort<T>(Span<T> span) where T : IComparable<T>
     {
         if (span.Length <= 1)
             return;
@@ -401,7 +401,7 @@ public static class SpanAlgorithms
         QuickSortRecursive(span, 0, span.Length - 1);
     }
 
-    private static void QuickSortRecursive&lt;T&gt;(Span&lt;T&gt; span, int low, int high) where T : IComparable&lt;T&gt;
+    private static void QuickSortRecursive<T>(Span<T> span, int low, int high) where T : IComparable<T>
     {
         if (low < high)
         {
@@ -411,7 +411,7 @@ public static class SpanAlgorithms
         }
     }
 
-    private static int Partition&lt;T&gt;(Span&lt;T&gt; span, int low, int high) where T : IComparable&lt;T&gt;
+    private static int Partition<T>(Span<T> span, int low, int high) where T : IComparable<T>
     {
         T pivot = span[high];
         int i = low - 1;
@@ -430,7 +430,7 @@ public static class SpanAlgorithms
     }
 
     // Insertion sort for small spans (more efficient for small arrays)
-    public static void InsertionSort&lt;T&gt;(Span&lt;T&gt; span) where T : IComparable&lt;T&gt;
+    public static void InsertionSort<T>(Span<T> span) where T : IComparable<T>
     {
         for (int i = 1; i < span.Length; i++)
         {
@@ -448,7 +448,7 @@ public static class SpanAlgorithms
     }
 
     // Hybrid sort that chooses algorithm based on size
-    public static void HybridSort&lt;T&gt;(Span&lt;T&gt; span) where T : IComparable&lt;T&gt;
+    public static void HybridSort<T>(Span<T> span) where T : IComparable<T>
     {
         if (span.Length <= 16)
         {
@@ -461,7 +461,7 @@ public static class SpanAlgorithms
     }
 
     // Find all indices where predicate is true
-    public static void FindIndices&lt;T&gt;(ReadOnlySpan&lt;T&gt; span, Predicate&lt;T&gt; predicate, Span<int> indices, out int count)
+    public static void FindIndices<T>(ReadOnlySpan<T> span, Predicate<T> predicate, Span<int> indices, out int count)
     {
         count = 0;
         for (int i = 0; i < span.Length && count < indices.Length; i++)
@@ -474,7 +474,7 @@ public static class SpanAlgorithms
     }
 
     // Count elements matching predicate
-    public static int Count&lt;T&gt;(ReadOnlySpan&lt;T&gt; span, Predicate&lt;T&gt; predicate)
+    public static int Count<T>(ReadOnlySpan<T> span, Predicate<T> predicate)
     {
         int count = 0;
         for (int i = 0; i < span.Length; i++)
@@ -486,7 +486,7 @@ public static class SpanAlgorithms
     }
 
     // Check if any element matches predicate
-    public static bool Any&lt;T&gt;(ReadOnlySpan&lt;T&gt; span, Predicate&lt;T&gt; predicate)
+    public static bool Any<T>(ReadOnlySpan<T> span, Predicate<T> predicate)
     {
         for (int i = 0; i < span.Length; i++)
         {
@@ -497,7 +497,7 @@ public static class SpanAlgorithms
     }
 
     // Check if all elements match predicate
-    public static bool All&lt;T&gt;(ReadOnlySpan&lt;T&gt; span, Predicate&lt;T&gt; predicate)
+    public static bool All<T>(ReadOnlySpan<T> span, Predicate<T> predicate)
     {
         for (int i = 0; i < span.Length; i++)
         {
@@ -508,7 +508,7 @@ public static class SpanAlgorithms
     }
 
     // Remove duplicates from sorted span (in-place)
-    public static int RemoveDuplicates&lt;T&gt;(Span&lt;T&gt; span) where T : IEquatable&lt;T&gt;
+    public static int RemoveDuplicates<T>(Span<T> span) where T : IEquatable<T>
     {
         if (span.Length <= 1)
             return span.Length;
@@ -531,7 +531,7 @@ public static class SpanAlgorithms
     }
 }
 
-// Memory&lt;T&gt; operations for async scenarios
+// Memory<T> operations for async scenarios
 public static class MemoryOperations
 {
     // Asynchronous memory operations
@@ -546,12 +546,12 @@ public static class MemoryOperations
     }
 
     // Split memory into chunks for parallel processing
-    public static Memory&lt;T&gt;[] SplitIntoChunks&lt;T&gt;(Memory&lt;T&gt; memory, int chunkCount)
+    public static Memory<T>[] SplitIntoChunks<T>(Memory<T> memory, int chunkCount)
     {
         if (chunkCount <= 0)
             throw new ArgumentException("Chunk count must be positive");
 
-        var chunks = new Memory&lt;T&gt;[chunkCount];
+        var chunks = new Memory<T>[chunkCount];
         int chunkSize = memory.Length / chunkCount;
         int remainder = memory.Length % chunkCount;
 
@@ -567,9 +567,9 @@ public static class MemoryOperations
     }
 
     // Parallel processing of memory chunks
-    public static async Task ProcessInParallelAsync&lt;T&gt;(
-        Memory&lt;T&gt; memory, 
-        Func<Memory&lt;T&gt;, Task> processor, 
+    public static async Task ProcessInParallelAsync<T>(
+        Memory<T> memory, 
+        Func<Memory<T>, Task> processor, 
         int degreeOfParallelism = -1)
     {
         if (degreeOfParallelism <= 0)
@@ -582,7 +582,7 @@ public static class MemoryOperations
     }
 
     // Copy memory with overlap detection
-    public static void SafeCopy&lt;T&gt;(ReadOnlyMemory&lt;T&gt; source, Memory&lt;T&gt; destination)
+    public static void SafeCopy<T>(ReadOnlyMemory<T> source, Memory<T> destination)
     {
         if (source.Length > destination.Length)
             throw new ArgumentException("Destination is too small");
@@ -746,7 +746,7 @@ public static class SpanFormatters
     }
 
     // Join multiple formatted values
-    public static bool TryJoinFormat&lt;T&gt;(ReadOnlySpan&lt;T&gt; values, ReadOnlySpan<char> separator, 
+    public static bool TryJoinFormat<T>(ReadOnlySpan<T> values, ReadOnlySpan<char> separator, 
         Span<char> destination, out int charsWritten) where T : ISpanFormattable
     {
         charsWritten = 0;
@@ -855,7 +855,7 @@ public ref struct SpanStringBuilder
         return true;
     }
 
-    public bool TryAppend&lt;T&gt;(T value) where T : ISpanFormattable
+    public bool TryAppend<T>(T value) where T : ISpanFormattable
     {
         return value.TryFormat(_buffer.Slice(_length), out int charsWritten, ReadOnlySpan<char>.Empty, null) &&
                (_length += charsWritten) <= _buffer.Length;
@@ -877,10 +877,10 @@ public ref struct SpanStringBuilder
     }
 }
 
-// File I/O operations using Memory&lt;T&gt;
+// File I/O operations using Memory<T>
 public static class SpanFileOperations
 {
-    // Read file in chunks using Memory&lt;T&gt;
+    // Read file in chunks using Memory<T>
     public static async IAsyncEnumerable<ReadOnlyMemory<byte>> ReadFileChunksAsync(
         string filePath, int chunkSize = 4096)
     {
@@ -923,7 +923,7 @@ public static class SpanFileOperations
         }
     }
 
-    // Write data using Memory&lt;T&gt;
+    // Write data using Memory<T>
     public static async Task WriteDataAsync(string filePath, IAsyncEnumerable<ReadOnlyMemory<byte>> dataChunks)
     {
         using var file = File.Create(filePath);
@@ -1304,12 +1304,12 @@ SpanPerformanceUtils.BenchmarkNumericOperations(largeArray, 100);
 Console.WriteLine("\nMemory allocation comparison:");
 SpanPerformanceUtils.CompareAllocations();
 
-// Example 15: Async file operations with Memory&lt;T&gt;
+// Example 15: Async file operations with Memory<T>
 Console.WriteLine("\nAsync file operations:");
 
 // Create a temporary file for demonstration
 var tempFile = Path.GetTempFileName();
-var testData = "Line 1: Hello\nLine 2: World\nLine 3: Span operations\nLine 4: Memory&lt;T&gt;";
+var testData = "Line 1: Hello\nLine 2: World\nLine 3: Span operations\nLine 4: Memory<T>";
 await File.WriteAllTextAsync(tempFile, testData);
 
 Console.WriteLine("Processing file line by line:");
@@ -1353,30 +1353,30 @@ Console.WriteLine("\nSpan operations completed!");
 
 **Notes**:
 
-- Span&lt;T&gt; and Memory&lt;T&gt; provide zero-allocation, high-performance memory operations
-- ReadOnlySpan&lt;T&gt; ensures memory safety while allowing efficient read operations
+- Span<T> and Memory<T> provide zero-allocation, high-performance memory operations
+- ReadOnlySpan<T> ensures memory safety while allowing efficient read operations
 - Span-based string operations eliminate temporary string allocations during parsing
 - Vectorized operations automatically use SIMD instructions when available
-- Memory&lt;T&gt; is heap-allocatable and async-friendly, while Span&lt;T&gt; is stack-only
+- Memory<T> is heap-allocatable and async-friendly, while Span<T> is stack-only
 - SpanSplitEnumerator provides allocation-free string splitting with foreach support
 - In-place operations modify data directly without creating copies
 - Span algorithms often outperform LINQ for numerical and search operations
 - Buffer pooling with spans minimizes garbage collection pressure
 - Span formatters enable allocation-free string building for performance-critical scenarios
-- File I/O with Memory&lt;T&gt; provides better async performance than byte arrays
+- File I/O with Memory<T> provides better async performance than byte arrays
 - Performance monitoring shows significant allocation reduction compared to traditional approaches
 
 **Prerequisites**:
 
-- .NET Core 2.1+ or .NET Framework 4.7.1+ for Span&lt;T&gt; and Memory&lt;T&gt; support
+- .NET Core 2.1+ or .NET Framework 4.7.1+ for Span<T> and Memory<T> support
 - Understanding of memory management and reference semantics
 - Knowledge of vectorization and SIMD for numerical operations
-- Familiarity with async/await patterns for Memory&lt;T&gt; operations
+- Familiarity with async/await patterns for Memory<T> operations
 - Performance profiling tools to measure allocation and throughput improvements
 
 **Related Snippets**:
 
-- [Memory Pools](memory-pools.md) - ArrayPool&lt;T&gt; and object pooling strategies
-- [Vectorization](vectorization.md) - SIMD operations with Vector&lt;T&gt;
+- [Memory Pools](memory-pools.md) - ArrayPool<T> and object pooling strategies
+- [Vectorization](vectorization.md) - SIMD operations with Vector<T>
 - [Performance LINQ](performance-linq.md) - High-performance LINQ operations
 - [Micro Optimizations](micro-optimizations.md) - Low-level performance techniques

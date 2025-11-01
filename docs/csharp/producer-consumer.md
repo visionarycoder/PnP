@@ -23,23 +23,23 @@ using System.Runtime.CompilerServices;
 using System.Collections.Immutable;
 
 // Base interfaces for producer-consumer patterns
-public interface IProducer&lt;T&gt; : IDisposable
+public interface IProducer<T> : IDisposable
 {
     Task ProduceAsync(T item, CancellationToken cancellationToken = default);
-    Task ProduceBatchAsync(IEnumerable&lt;T&gt; items, CancellationToken cancellationToken = default);
+    Task ProduceBatchAsync(IEnumerable<T> items, CancellationToken cancellationToken = default);
     Task CompleteAsync();
     bool IsCompleted { get; }
-    event EventHandler<ProducerEventArgs&lt;T&gt;> ItemProduced;
+    event EventHandler<ProducerEventArgs<T>> ItemProduced;
     event EventHandler<Exception> ProductionError;
 }
 
-public interface IConsumer&lt;T&gt; : IDisposable
+public interface IConsumer<T> : IDisposable
 {
-    Task&lt;T&gt; ConsumeAsync(CancellationToken cancellationToken = default);
-    Task<IReadOnlyList&lt;T&gt;> ConsumeBatchAsync(int maxBatchSize, TimeSpan timeout, CancellationToken cancellationToken = default);
-    IAsyncEnumerable&lt;T&gt; ConsumeAllAsync(CancellationToken cancellationToken = default);
+    Task<T> ConsumeAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<T>> ConsumeBatchAsync(int maxBatchSize, TimeSpan timeout, CancellationToken cancellationToken = default);
+    IAsyncEnumerable<T> ConsumeAllAsync(CancellationToken cancellationToken = default);
     bool HasItems { get; }
-    event EventHandler<ConsumerEventArgs&lt;T&gt;> ItemConsumed;
+    event EventHandler<ConsumerEventArgs<T>> ItemConsumed;
     event EventHandler<Exception> ConsumptionError;
 }
 
@@ -51,7 +51,7 @@ public interface IPipeline<TInput, TOutput> : IDisposable
 }
 
 // Event arguments for producer-consumer events
-public class ProducerEventArgs&lt;T&gt; : EventArgs
+public class ProducerEventArgs<T> : EventArgs
 {
     public T Item { get; }
     public DateTime Timestamp { get; }
@@ -65,7 +65,7 @@ public class ProducerEventArgs&lt;T&gt; : EventArgs
     }
 }
 
-public class ConsumerEventArgs&lt;T&gt; : EventArgs
+public class ConsumerEventArgs<T> : EventArgs
 {
     public T Item { get; }
     public DateTime Timestamp { get; }
@@ -82,18 +82,18 @@ public class ConsumerEventArgs&lt;T&gt; : EventArgs
 }
 
 // Channel-based producer implementation
-public class ChannelProducer&lt;T&gt; : IProducer&lt;T&gt;
+public class ChannelProducer<T> : IProducer<T>
 {
-    private readonly ChannelWriter&lt;T&gt; writer;
+    private readonly ChannelWriter<T> writer;
     private readonly ILogger logger;
     private volatile bool isCompleted = false;
     private volatile bool isDisposed = false;
     private readonly SemaphoreSlim semaphore;
 
-    public event EventHandler<ProducerEventArgs&lt;T&gt;> ItemProduced;
+    public event EventHandler<ProducerEventArgs<T>> ItemProduced;
     public event EventHandler<Exception> ProductionError;
 
-    public ChannelProducer(ChannelWriter&lt;T&gt; writer, ILogger logger = null, int maxConcurrency = 1)
+    public ChannelProducer(ChannelWriter<T> writer, ILogger logger = null, int maxConcurrency = 1)
     {
         this.writer = writer ?? throw new ArgumentNullException(nameof(writer));
         this.logger = logger;
@@ -121,7 +121,7 @@ public class ChannelProducer&lt;T&gt; : IProducer&lt;T&gt;
             // Get approximate queue size (if supported)
             var queueSize = writer.CanCount ? writer.Count : -1;
             
-            ItemProduced?.Invoke(this, new ProducerEventArgs&lt;T&gt;(item, queueSize));
+            ItemProduced?.Invoke(this, new ProducerEventArgs<T>(item, queueSize));
         }
         catch (Exception ex)
         {
@@ -135,7 +135,7 @@ public class ChannelProducer&lt;T&gt; : IProducer&lt;T&gt;
         }
     }
 
-    public async Task ProduceBatchAsync(IEnumerable&lt;T&gt; items, CancellationToken cancellationToken = default)
+    public async Task ProduceBatchAsync(IEnumerable<T> items, CancellationToken cancellationToken = default)
     {
         if (isDisposed || isCompleted) return;
 
@@ -211,17 +211,17 @@ public class ChannelProducer&lt;T&gt; : IProducer&lt;T&gt;
 }
 
 // Channel-based consumer implementation
-public class ChannelConsumer&lt;T&gt; : IConsumer&lt;T&gt;
+public class ChannelConsumer<T> : IConsumer<T>
 {
-    private readonly ChannelReader&lt;T&gt; reader;
+    private readonly ChannelReader<T> reader;
     private readonly ILogger logger;
     private volatile bool isDisposed = false;
     private readonly SemaphoreSlim semaphore;
 
-    public event EventHandler<ConsumerEventArgs&lt;T&gt;> ItemConsumed;
+    public event EventHandler<ConsumerEventArgs<T>> ItemConsumed;
     public event EventHandler<Exception> ConsumptionError;
 
-    public ChannelConsumer(ChannelReader&lt;T&gt; reader, ILogger logger = null, int maxConcurrency = 1)
+    public ChannelConsumer(ChannelReader<T> reader, ILogger logger = null, int maxConcurrency = 1)
     {
         this.reader = reader ?? throw new ArgumentNullException(nameof(reader));
         this.logger = logger;
@@ -230,9 +230,9 @@ public class ChannelConsumer&lt;T&gt; : IConsumer&lt;T&gt;
 
     public bool HasItems => reader.CanCount ? reader.Count > 0 : !reader.Completion.IsCompleted;
 
-    public async Task&lt;T&gt; ConsumeAsync(CancellationToken cancellationToken = default)
+    public async Task<T> ConsumeAsync(CancellationToken cancellationToken = default)
     {
-        if (isDisposed) throw new ObjectDisposedException(nameof(ChannelConsumer&lt;T&gt;));
+        if (isDisposed) throw new ObjectDisposedException(nameof(ChannelConsumer<T>));
 
         await semaphore.WaitAsync(cancellationToken);
         
@@ -248,7 +248,7 @@ public class ChannelConsumer&lt;T&gt; : IConsumer&lt;T&gt;
             
             var remainingItems = reader.CanCount ? reader.Count : -1;
             
-            ItemConsumed?.Invoke(this, new ConsumerEventArgs&lt;T&gt;(item, stopwatch.Elapsed, remainingItems));
+            ItemConsumed?.Invoke(this, new ConsumerEventArgs<T>(item, stopwatch.Elapsed, remainingItems));
             
             return item;
         }
@@ -264,16 +264,16 @@ public class ChannelConsumer&lt;T&gt; : IConsumer&lt;T&gt;
         }
     }
 
-    public async Task<IReadOnlyList&lt;T&gt;> ConsumeBatchAsync(int maxBatchSize, TimeSpan timeout, 
+    public async Task<IReadOnlyList<T>> ConsumeBatchAsync(int maxBatchSize, TimeSpan timeout, 
         CancellationToken cancellationToken = default)
     {
-        if (isDisposed) throw new ObjectDisposedException(nameof(ChannelConsumer&lt;T&gt;));
+        if (isDisposed) throw new ObjectDisposedException(nameof(ChannelConsumer<T>));
 
         await semaphore.WaitAsync(cancellationToken);
         
         try
         {
-            var batch = new List&lt;T&gt;();
+            var batch = new List<T>();
             var stopwatch = Stopwatch.StartNew();
             
             using var timeoutCts = new CancellationTokenSource(timeout);
@@ -318,9 +318,9 @@ public class ChannelConsumer&lt;T&gt; : IConsumer&lt;T&gt;
         }
     }
 
-    public async IAsyncEnumerable&lt;T&gt; ConsumeAllAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<T> ConsumeAllAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        if (isDisposed) throw new ObjectDisposedException(nameof(ChannelConsumer&lt;T&gt;));
+        if (isDisposed) throw new ObjectDisposedException(nameof(ChannelConsumer<T>));
 
         await foreach (var item in reader.ReadAllAsync(cancellationToken))
         {
@@ -333,7 +333,7 @@ public class ChannelConsumer&lt;T&gt; : IConsumer&lt;T&gt;
             stopwatch.Stop();
             
             var remainingItems = reader.CanCount ? reader.Count : -1;
-            ItemConsumed?.Invoke(this, new ConsumerEventArgs&lt;T&gt;(item, stopwatch.Elapsed, remainingItems));
+            ItemConsumed?.Invoke(this, new ConsumerEventArgs<T>(item, stopwatch.Elapsed, remainingItems));
         }
     }
 
@@ -348,9 +348,9 @@ public class ChannelConsumer&lt;T&gt; : IConsumer&lt;T&gt;
 }
 
 // Priority producer-consumer with multiple priority levels
-public class PriorityProducerConsumer&lt;T&gt; : IDisposable
+public class PriorityProducerConsumer<T> : IDisposable
 {
-    private readonly SortedDictionary<int, Channel&lt;T&gt;> priorityChannels;
+    private readonly SortedDictionary<int, Channel<T>> priorityChannels;
     private readonly ReaderWriterLockSlim lockSlim;
     private readonly ILogger logger;
     private volatile bool isDisposed = false;
@@ -361,7 +361,7 @@ public class PriorityProducerConsumer&lt;T&gt; : IDisposable
         lockSlim = new ReaderWriterLockSlim();
         
         // Create channels for each priority level (sorted descending - higher priority first)
-        priorityChannels = new SortedDictionary<int, Channel&lt;T&gt;>(Comparer<int>.Create((x, y) => y.CompareTo(x)));
+        priorityChannels = new SortedDictionary<int, Channel<T>>(Comparer<int>.Create((x, y) => y.CompareTo(x)));
         
         foreach (var priority in priorities)
         {
@@ -372,7 +372,7 @@ public class PriorityProducerConsumer&lt;T&gt; : IDisposable
                 SingleWriter = false
             };
             
-            priorityChannels[priority] = Channel.CreateBounded&lt;T&gt;(options);
+            priorityChannels[priority] = Channel.CreateBounded<T>(options);
         }
     }
 
@@ -401,7 +401,7 @@ public class PriorityProducerConsumer&lt;T&gt; : IDisposable
 
     public async Task<(T Item, int Priority)> ConsumeAsync(CancellationToken cancellationToken = default)
     {
-        if (isDisposed) throw new ObjectDisposedException(nameof(PriorityProducerConsumer&lt;T&gt;));
+        if (isDisposed) throw new ObjectDisposedException(nameof(PriorityProducerConsumer<T>));
 
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -717,9 +717,9 @@ public class BatchProcessor<TInput, TOutput> : IPipeline<TInput, TOutput>, IDisp
 }
 
 // Backpressure-aware producer with adaptive rate limiting
-public class BackpressureProducer&lt;T&gt; : IProducer&lt;T&gt;
+public class BackpressureProducer<T> : IProducer<T>
 {
-    private readonly Channel&lt;T&gt; channel;
+    private readonly Channel<T> channel;
     private readonly ILogger logger;
     private readonly SemaphoreSlim rateLimitSemaphore;
     private volatile bool isCompleted = false;
@@ -727,7 +727,7 @@ public class BackpressureProducer&lt;T&gt; : IProducer&lt;T&gt;
     private volatile int currentRate = 100; // Items per second
     private readonly Timer rateLimitTimer;
 
-    public event EventHandler<ProducerEventArgs&lt;T&gt;> ItemProduced;
+    public event EventHandler<ProducerEventArgs<T>> ItemProduced;
     public event EventHandler<Exception> ProductionError;
 
     public BackpressureProducer(int capacity = 1000, int initialRate = 100, ILogger logger = null)
@@ -739,7 +739,7 @@ public class BackpressureProducer&lt;T&gt; : IProducer&lt;T&gt;
             SingleWriter = false
         };
 
-        channel = Channel.CreateBounded&lt;T&gt;(options);
+        channel = Channel.CreateBounded<T>(options);
         this.logger = logger;
         currentRate = initialRate;
         rateLimitSemaphore = new SemaphoreSlim(currentRate, currentRate);
@@ -749,7 +749,7 @@ public class BackpressureProducer&lt;T&gt; : IProducer&lt;T&gt;
     }
 
     public bool IsCompleted => isCompleted;
-    public ChannelReader&lt;T&gt; Reader => channel.Reader;
+    public ChannelReader<T> Reader => channel.Reader;
     public int CurrentRate => currentRate;
     public int QueueSize => channel.Reader.CanCount ? channel.Reader.Count : -1;
 
@@ -774,7 +774,7 @@ public class BackpressureProducer&lt;T&gt; : IProducer&lt;T&gt;
             logger?.LogTrace("Produced item. Queue size: {QueueSize}, Rate: {Rate}", 
                 queueSizeAfter, currentRate);
             
-            ItemProduced?.Invoke(this, new ProducerEventArgs&lt;T&gt;(item, queueSizeAfter));
+            ItemProduced?.Invoke(this, new ProducerEventArgs<T>(item, queueSizeAfter));
         }
         catch (Exception ex)
         {
@@ -784,7 +784,7 @@ public class BackpressureProducer&lt;T&gt; : IProducer&lt;T&gt;
         }
     }
 
-    public async Task ProduceBatchAsync(IEnumerable&lt;T&gt; items, CancellationToken cancellationToken = default)
+    public async Task ProduceBatchAsync(IEnumerable<T> items, CancellationToken cancellationToken = default)
     {
         foreach (var item in items)
         {
@@ -876,23 +876,23 @@ public class BackpressureProducer&lt;T&gt; : IProducer&lt;T&gt;
 }
 
 // Streaming data processor with windowing and aggregation
-public class StreamProcessor&lt;T&gt; : IDisposable
+public class StreamProcessor<T> : IDisposable
 {
-    private readonly Channel&lt;T&gt; inputChannel;
+    private readonly Channel<T> inputChannel;
     private readonly TimeSpan windowSize;
     private readonly TimeSpan slideInterval;
-    private readonly Func<IEnumerable&lt;T&gt;, object> aggregateFunction;
+    private readonly Func<IEnumerable<T>, object> aggregateFunction;
     private readonly ILogger logger;
     private readonly CancellationTokenSource cancellationTokenSource;
     private readonly Task processingTask;
     private volatile bool isDisposed = false;
 
-    public event EventHandler<WindowProcessedEventArgs&lt;T&gt;> WindowProcessed;
+    public event EventHandler<WindowProcessedEventArgs<T>> WindowProcessed;
 
     public StreamProcessor(
         TimeSpan windowSize,
         TimeSpan slideInterval,
-        Func<IEnumerable&lt;T&gt;, object> aggregateFunction,
+        Func<IEnumerable<T>, object> aggregateFunction,
         int capacity = 10000,
         ILogger logger = null)
     {
@@ -907,7 +907,7 @@ public class StreamProcessor&lt;T&gt; : IDisposable
             SingleWriter = false
         };
 
-        inputChannel = Channel.CreateUnbounded&lt;T&gt;(options);
+        inputChannel = Channel.CreateUnbounded<T>(options);
         cancellationTokenSource = new CancellationTokenSource();
 
         processingTask = ProcessStreamAsync(cancellationTokenSource.Token);
@@ -952,7 +952,7 @@ public class StreamProcessor&lt;T&gt; : IDisposable
                         var windowItems = window.Select(x => x.Item).ToList();
                         var aggregateResult = aggregateFunction(windowItems);
 
-                        var eventArgs = new WindowProcessedEventArgs&lt;T&gt;(
+                        var eventArgs = new WindowProcessedEventArgs<T>(
                             windowItems,
                             windowStart,
                             now,
@@ -974,7 +974,7 @@ public class StreamProcessor&lt;T&gt; : IDisposable
                 var finalWindowItems = window.Select(x => x.Item).ToList();
                 var finalAggregate = aggregateFunction(finalWindowItems);
                 
-                var finalEventArgs = new WindowProcessedEventArgs&lt;T&gt;(
+                var finalEventArgs = new WindowProcessedEventArgs<T>(
                     finalWindowItems,
                     DateTime.UtcNow - windowSize,
                     DateTime.UtcNow,
@@ -1014,14 +1014,14 @@ public class StreamProcessor&lt;T&gt; : IDisposable
     }
 }
 
-public class WindowProcessedEventArgs&lt;T&gt; : EventArgs
+public class WindowProcessedEventArgs<T> : EventArgs
 {
-    public IReadOnlyList&lt;T&gt; Items { get; }
+    public IReadOnlyList<T> Items { get; }
     public DateTime WindowStart { get; }
     public DateTime WindowEnd { get; }
     public object AggregateResult { get; }
 
-    public WindowProcessedEventArgs(IReadOnlyList&lt;T&gt; items, DateTime windowStart, DateTime windowEnd, object aggregateResult)
+    public WindowProcessedEventArgs(IReadOnlyList<T> items, DateTime windowStart, DateTime windowEnd, object aggregateResult)
     {
         Items = items;
         WindowStart = windowStart;

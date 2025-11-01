@@ -27,13 +27,13 @@ using System.Text;
 // Core distributed cache abstraction with advanced features
 public interface IAdvancedDistributedCache : IDistributedCache
 {
-    Task&lt;T&gt; GetAsync&lt;T&gt;(string key, CancellationToken token = default);
-    Task SetAsync&lt;T&gt;(string key, T value, DistributedCacheEntryOptions options = null, 
+    Task<T> GetAsync<T>(string key, CancellationToken token = default);
+    Task SetAsync<T>(string key, T value, DistributedCacheEntryOptions options = null, 
         CancellationToken token = default);
-    Task<(bool found, T value)> TryGetAsync&lt;T&gt;(string key, CancellationToken token = default);
-    Task<IDictionary<string, T>> GetManyAsync&lt;T&gt;(IEnumerable<string> keys, 
+    Task<(bool found, T value)> TryGetAsync<T>(string key, CancellationToken token = default);
+    Task<IDictionary<string, T>> GetManyAsync<T>(IEnumerable<string> keys, 
         CancellationToken token = default);
-    Task SetManyAsync&lt;T&gt;(IDictionary<string, T> items, DistributedCacheEntryOptions options = null,
+    Task SetManyAsync<T>(IDictionary<string, T> items, DistributedCacheEntryOptions options = null,
         CancellationToken token = default);
     Task RemoveManyAsync(IEnumerable<string> keys, CancellationToken token = default);
     Task RemoveByPatternAsync(string pattern, CancellationToken token = default);
@@ -76,7 +76,7 @@ public class RedisDistributedCache : IAdvancedDistributedCache, IDisposable
             this.options.MaxConcurrentOperations);
     }
 
-    public async Task&lt;T&gt; GetAsync&lt;T&gt;(string key, CancellationToken token = default)
+    public async Task<T> GetAsync<T>(string key, CancellationToken token = default)
     {
         ValidateKey(key);
         
@@ -100,7 +100,7 @@ public class RedisDistributedCache : IAdvancedDistributedCache, IDisposable
             }
             
             logger?.LogTrace("Cache hit for key {Key}", key);
-            return JsonSerializer.Deserialize&lt;T&gt;(dataHash.Value, jsonOptions);
+            return JsonSerializer.Deserialize<T>(dataHash.Value, jsonOptions);
         }
         catch (Exception ex)
         {
@@ -113,7 +113,7 @@ public class RedisDistributedCache : IAdvancedDistributedCache, IDisposable
         }
     }
 
-    public async Task SetAsync&lt;T&gt;(string key, T value, DistributedCacheEntryOptions options = null,
+    public async Task SetAsync<T>(string key, T value, DistributedCacheEntryOptions options = null,
         CancellationToken token = default)
     {
         ValidateKey(key);
@@ -172,12 +172,12 @@ public class RedisDistributedCache : IAdvancedDistributedCache, IDisposable
         }
     }
 
-    public async Task<(bool found, T value)> TryGetAsync&lt;T&gt;(string key, CancellationToken token = default)
+    public async Task<(bool found, T value)> TryGetAsync<T>(string key, CancellationToken token = default)
     {
         try
         {
-            var value = await GetAsync&lt;T&gt;(key, token).ConfigureAwait(false);
-            return (!EqualityComparer&lt;T&gt;.Default.Equals(value, default(T)), value);
+            var value = await GetAsync<T>(key, token).ConfigureAwait(false);
+            return (!EqualityComparer<T>.Default.Equals(value, default(T)), value);
         }
         catch
         {
@@ -185,22 +185,22 @@ public class RedisDistributedCache : IAdvancedDistributedCache, IDisposable
         }
     }
 
-    public async Task<IDictionary<string, T>> GetManyAsync&lt;T&gt;(IEnumerable<string> keys,
+    public async Task<IDictionary<string, T>> GetManyAsync<T>(IEnumerable<string> keys,
         CancellationToken token = default)
     {
         var keyList = keys.ToList();
         var tasks = keyList.Select(async key =>
         {
-            var value = await GetAsync&lt;T&gt;(key, token).ConfigureAwait(false);
+            var value = await GetAsync<T>(key, token).ConfigureAwait(false);
             return new KeyValuePair<string, T>(key, value);
         });
         
         var results = await Task.WhenAll(tasks).ConfigureAwait(false);
-        return results.Where(kvp => !EqualityComparer&lt;T&gt;.Default.Equals(kvp.Value, default(T)))
+        return results.Where(kvp => !EqualityComparer<T>.Default.Equals(kvp.Value, default(T)))
             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
     }
 
-    public async Task SetManyAsync&lt;T&gt;(IDictionary<string, T> items, 
+    public async Task SetManyAsync<T>(IDictionary<string, T> items, 
         DistributedCacheEntryOptions options = null, CancellationToken token = default)
     {
         var tasks = items.Select(kvp => SetAsync(kvp.Key, kvp.Value, options, token));
@@ -945,7 +945,7 @@ public interface IKeyGenerator<in T>
     string GenerateKey(T input);
 }
 
-public class DefaultKeyGenerator&lt;T&gt; : IKeyGenerator&lt;T&gt;
+public class DefaultKeyGenerator<T> : IKeyGenerator<T>
 {
     public string GenerateKey(T input)
     {
@@ -1354,10 +1354,10 @@ public class MultiLevelCache
         this.distributedCache = distributedCache;
     }
 
-    public async Task&lt;T&gt; GetAsync&lt;T&gt;(string key, Func<Task&lt;T&gt;> factory)
+    public async Task<T> GetAsync<T>(string key, Func<Task<T>> factory)
     {
         // Try memory cache first
-        var (found, value) = await distributedCache.TryGetAsync&lt;T&gt;(key);
+        var (found, value) = await distributedCache.TryGetAsync<T>(key);
         if (found)
         {
             // Cache in memory for faster access

@@ -1,6 +1,6 @@
 # Vectorization and SIMD Operations
 
-**Description**: High-performance numerical computations using SIMD (Single Instruction, Multiple Data) operations with Vector&lt;T&gt;, hardware acceleration, and vectorized algorithms for maximum throughput in mathematical and data processing operations.
+**Description**: High-performance numerical computations using SIMD (Single Instruction, Multiple Data) operations with Vector<T>, hardware acceleration, and vectorized algorithms for maximum throughput in mathematical and data processing operations.
 
 **Language/Technology**: C# / .NET
 
@@ -21,52 +21,52 @@ using System.Runtime.Intrinsics.X86;
 public static class VectorExtensions
 {
     // Check if vectorization is available and beneficial
-    public static bool IsVectorizationBeneficial&lt;T&gt;(int length) where T : struct
+    public static bool IsVectorizationBeneficial<T>(int length) where T : struct
     {
         return Vector.IsHardwareAccelerated && 
-               length >= Vector&lt;T&gt;.Count * 4; // Minimum threshold for benefit
+               length >= Vector<T>.Count * 4; // Minimum threshold for benefit
     }
 
     // Get optimal chunk size for vectorization
-    public static int GetOptimalChunkSize&lt;T&gt;() where T : struct
+    public static int GetOptimalChunkSize<T>() where T : struct
     {
-        return Vector&lt;T&gt;.Count * 8; // Process multiple vectors at once
+        return Vector<T>.Count * 8; // Process multiple vectors at once
     }
 
     // Convert array to vectors with remainder handling
-    public static (ReadOnlySpan<Vector&lt;T&gt;> vectors, ReadOnlySpan&lt;T&gt; remainder) AsVectors&lt;T&gt;(
-        this ReadOnlySpan&lt;T&gt; span) where T : struct
+    public static (ReadOnlySpan<Vector<T>> vectors, ReadOnlySpan<T> remainder) AsVectors<T>(
+        this ReadOnlySpan<T> span) where T : struct
     {
-        var vectorCount = span.Length / Vector&lt;T&gt;.Count;
-        var vectorBytes = vectorCount * Vector&lt;T&gt;.Count;
+        var vectorCount = span.Length / Vector<T>.Count;
+        var vectorBytes = vectorCount * Vector<T>.Count;
         
-        var vectors = MemoryMarshal.Cast<T, Vector&lt;T&gt;>(span.Slice(0, vectorBytes));
+        var vectors = MemoryMarshal.Cast<T, Vector<T>>(span.Slice(0, vectorBytes));
         var remainder = span.Slice(vectorBytes);
         
         return (vectors, remainder);
     }
 
     // Convert mutable span to vectors
-    public static (Span<Vector&lt;T&gt;> vectors, Span&lt;T&gt; remainder) AsVectors&lt;T&gt;(
-        this Span&lt;T&gt; span) where T : struct
+    public static (Span<Vector<T>> vectors, Span<T> remainder) AsVectors<T>(
+        this Span<T> span) where T : struct
     {
-        var vectorCount = span.Length / Vector&lt;T&gt;.Count;
-        var vectorBytes = vectorCount * Vector&lt;T&gt;.Count;
+        var vectorCount = span.Length / Vector<T>.Count;
+        var vectorBytes = vectorCount * Vector<T>.Count;
         
-        var vectors = MemoryMarshal.Cast<T, Vector&lt;T&gt;>(span.Slice(0, vectorBytes));
+        var vectors = MemoryMarshal.Cast<T, Vector<T>>(span.Slice(0, vectorBytes));
         var remainder = span.Slice(vectorBytes);
         
         return (vectors, remainder);
     }
 
     // Vectorized element-wise operations
-    public static void Add&lt;T&gt;(ReadOnlySpan&lt;T&gt; left, ReadOnlySpan&lt;T&gt; right, Span&lt;T&gt; result) 
+    public static void Add<T>(ReadOnlySpan<T> left, ReadOnlySpan<T> right, Span<T> result) 
         where T : struct
     {
         if (left.Length != right.Length || left.Length != result.Length)
             throw new ArgumentException("All spans must have the same length");
 
-        if (!IsVectorizationBeneficial&lt;T&gt;(left.Length))
+        if (!IsVectorizationBeneficial<T>(left.Length))
         {
             AddScalar(left, right, result);
             return;
@@ -86,7 +86,7 @@ public static class VectorExtensions
         AddScalar(leftRemainder, rightRemainder, resultRemainder);
     }
 
-    private static void AddScalar&lt;T&gt;(ReadOnlySpan&lt;T&gt; left, ReadOnlySpan&lt;T&gt; right, Span&lt;T&gt; result) 
+    private static void AddScalar<T>(ReadOnlySpan<T> left, ReadOnlySpan<T> right, Span<T> result) 
         where T : struct
     {
         if (typeof(T) == typeof(int))
@@ -125,13 +125,13 @@ public static class VectorExtensions
     }
 
     // Similar methods for other operations
-    public static void Multiply&lt;T&gt;(ReadOnlySpan&lt;T&gt; left, ReadOnlySpan&lt;T&gt; right, Span&lt;T&gt; result) 
+    public static void Multiply<T>(ReadOnlySpan<T> left, ReadOnlySpan<T> right, Span<T> result) 
         where T : struct
     {
         if (left.Length != right.Length || left.Length != result.Length)
             throw new ArgumentException("All spans must have the same length");
 
-        if (!IsVectorizationBeneficial&lt;T&gt;(left.Length))
+        if (!IsVectorizationBeneficial<T>(left.Length))
         {
             MultiplyScalar(left, right, result);
             return;
@@ -149,7 +149,7 @@ public static class VectorExtensions
         MultiplyScalar(leftRemainder, rightRemainder, resultRemainder);
     }
 
-    private static void MultiplyScalar&lt;T&gt;(ReadOnlySpan&lt;T&gt; left, ReadOnlySpan&lt;T&gt; right, Span&lt;T&gt; result) 
+    private static void MultiplyScalar<T>(ReadOnlySpan<T> left, ReadOnlySpan<T> right, Span<T> result) 
         where T : struct
     {
         if (typeof(T) == typeof(int))
@@ -618,22 +618,22 @@ public static class IntrinsicOperations
 public static class VectorizedAlgorithms
 {
     // Vectorized linear search
-    public static int IndexOf&lt;T&gt;(ReadOnlySpan&lt;T&gt; span, T value) where T : struct, IEquatable&lt;T&gt;
+    public static int IndexOf<T>(ReadOnlySpan<T> span, T value) where T : struct, IEquatable<T>
     {
-        if (Vector.IsHardwareAccelerated && span.Length >= Vector&lt;T&gt;.Count)
+        if (Vector.IsHardwareAccelerated && span.Length >= Vector<T>.Count)
         {
-            var searchVector = new Vector&lt;T&gt;(value);
+            var searchVector = new Vector<T>(value);
             var (vectors, remainder) = span.AsVectors();
 
             for (int i = 0; i < vectors.Length; i++)
             {
                 var equals = Vector.Equals(vectors[i], searchVector);
                 
-                if (Vector&lt;T&gt;.Zero != equals)
+                if (Vector<T>.Zero != equals)
                 {
                     // Found match, find exact index
-                    var startIndex = i * Vector&lt;T&gt;.Count;
-                    for (int j = 0; j < Vector&lt;T&gt;.Count; j++)
+                    var startIndex = i * Vector<T>.Count;
+                    for (int j = 0; j < Vector<T>.Count; j++)
                     {
                         if (span[startIndex + j].Equals(value))
                             return startIndex + j;
@@ -642,7 +642,7 @@ public static class VectorizedAlgorithms
             }
 
             // Check remainder
-            var remainderStart = vectors.Length * Vector&lt;T&gt;.Count;
+            var remainderStart = vectors.Length * Vector<T>.Count;
             for (int i = 0; i < remainder.Length; i++)
             {
                 if (remainder[i].Equals(value))
@@ -663,11 +663,11 @@ public static class VectorizedAlgorithms
     }
 
     // Vectorized fill operation
-    public static void Fill&lt;T&gt;(Span&lt;T&gt; span, T value) where T : struct
+    public static void Fill<T>(Span<T> span, T value) where T : struct
     {
-        if (Vector.IsHardwareAccelerated && span.Length >= Vector&lt;T&gt;.Count)
+        if (Vector.IsHardwareAccelerated && span.Length >= Vector<T>.Count)
         {
-            var valueVector = new Vector&lt;T&gt;(value);
+            var valueVector = new Vector<T>(value);
             var (vectors, remainder) = span.AsVectors();
 
             for (int i = 0; i < vectors.Length; i++)
@@ -717,10 +717,10 @@ public static class VectorizedAlgorithms
     }
 
     // Vectorized clamp operation
-    public static void Clamp&lt;T&gt;(Span&lt;T&gt; values, T min, T max) 
-        where T : struct, IComparable&lt;T&gt;
+    public static void Clamp<T>(Span<T> values, T min, T max) 
+        where T : struct, IComparable<T>
     {
-        if (Vector.IsHardwareAccelerated && values.Length >= Vector&lt;T&gt;.Count && 
+        if (Vector.IsHardwareAccelerated && values.Length >= Vector<T>.Count && 
             (typeof(T) == typeof(float) || typeof(T) == typeof(int)))
         {
             var (vectors, remainder) = values.AsVectors();
@@ -729,7 +729,7 @@ public static class VectorizedAlgorithms
             {
                 var minVec = new Vector<float>(Unsafe.As<T, float>(ref min));
                 var maxVec = new Vector<float>(Unsafe.As<T, float>(ref max));
-                var floatVectors = MemoryMarshal.Cast<Vector&lt;T&gt;, Vector<float>>(vectors);
+                var floatVectors = MemoryMarshal.Cast<Vector<T>, Vector<float>>(vectors);
 
                 for (int i = 0; i < floatVectors.Length; i++)
                 {
@@ -740,7 +740,7 @@ public static class VectorizedAlgorithms
             {
                 var minVec = new Vector<int>(Unsafe.As<T, int>(ref min));
                 var maxVec = new Vector<int>(Unsafe.As<T, int>(ref max));
-                var intVectors = MemoryMarshal.Cast<Vector&lt;T&gt;, Vector<int>>(vectors);
+                var intVectors = MemoryMarshal.Cast<Vector<T>, Vector<int>>(vectors);
 
                 for (int i = 0; i < intVectors.Length; i++)
                 {
@@ -757,7 +757,7 @@ public static class VectorizedAlgorithms
         }
     }
 
-    private static void ClampScalar&lt;T&gt;(Span&lt;T&gt; values, T min, T max) where T : IComparable&lt;T&gt;
+    private static void ClampScalar<T>(Span<T> values, T min, T max) where T : IComparable<T>
     {
         for (int i = 0; i < values.Length; i++)
         {
@@ -1310,7 +1310,7 @@ Console.WriteLine("\nVectorization examples completed!");
 
 **Notes**:
 
-- Vector&lt;T&gt; provides cross-platform SIMD operations that work on different CPU architectures
+- Vector<T> provides cross-platform SIMD operations that work on different CPU architectures
 - Hardware intrinsics (AVX2, SSE) offer maximum performance but are CPU-specific
 - Vectorization is most beneficial for large arrays (typically > 100 elements)
 - Always provide scalar fallbacks for small arrays or unsupported hardware
@@ -1334,7 +1334,7 @@ Console.WriteLine("\nVectorization examples completed!");
 
 **Related Snippets**:
 
-- [Span Operations](span-operations.md) - Memory operations with Span&lt;T&gt;
+- [Span Operations](span-operations.md) - Memory operations with Span<T>
 - [Memory Pools](memory-pools.md) - Memory management for vectorized operations
 - [Parallel Patterns](parallel-patterns.md) - CPU parallelization strategies  
 - [Micro Optimizations](micro-optimizations.md) - Low-level performance techniques

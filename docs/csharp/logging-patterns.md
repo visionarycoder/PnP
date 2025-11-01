@@ -56,7 +56,7 @@ public class LogContext
         contextStorage.Value = context;
     }
     
-    public static T GetProperty&lt;T&gt;(string key, T defaultValue = default)
+    public static T GetProperty<T>(string key, T defaultValue = default)
     {
         var context = contextStorage.Value;
         if (context?.TryGetValue(key, out var value) == true && value is T typedValue)
@@ -178,9 +178,9 @@ public interface IOperationLogger
 {
     IOperationTracker BeginOperation(string operationName, 
         Dictionary<string, object> properties = null);
-    Task&lt;T&gt; LogOperationAsync&lt;T&gt;(string operationName, Func<Task&lt;T&gt;> operation, 
+    Task<T> LogOperationAsync<T>(string operationName, Func<Task<T>> operation, 
         Dictionary<string, object> properties = null);
-    T LogOperation&lt;T&gt;(string operationName, Func&lt;T&gt; operation, 
+    T LogOperation<T>(string operationName, Func<T> operation, 
         Dictionary<string, object> properties = null);
     Task LogOperationAsync(string operationName, Func<Task> operation, 
         Dictionary<string, object> properties = null);
@@ -217,7 +217,7 @@ public class OperationLogger : IOperationLogger
         return new OperationTracker(logger, operationName, properties);
     }
     
-    public async Task&lt;T&gt; LogOperationAsync&lt;T&gt;(string operationName, Func<Task&lt;T&gt;> operation, 
+    public async Task<T> LogOperationAsync<T>(string operationName, Func<Task<T>> operation, 
         Dictionary<string, object> properties = null)
     {
         using var tracker = BeginOperation(operationName, properties);
@@ -238,7 +238,7 @@ public class OperationLogger : IOperationLogger
         }
     }
     
-    public T LogOperation&lt;T&gt;(string operationName, Func&lt;T&gt; operation, 
+    public T LogOperation<T>(string operationName, Func<T> operation, 
         Dictionary<string, object> properties = null)
     {
         using var tracker = BeginOperation(operationName, properties);
@@ -989,7 +989,7 @@ public sealed class HighPerformanceLogger
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private object SanitizeArg&lt;T&gt;(T arg)
+    private object SanitizeArg<T>(T arg)
     {
         return sanitizer?.SanitizeObject(arg) ?? arg;
     }

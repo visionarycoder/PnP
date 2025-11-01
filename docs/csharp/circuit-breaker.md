@@ -159,7 +159,7 @@ public class CircuitBreaker
     public CircuitBreakerMetrics Metrics => metrics;
 
     // Execute a function with circuit breaker protection
-    public async Task&lt;T&gt; ExecuteAsync&lt;T&gt;(Func<Task&lt;T&gt;> operation, CancellationToken cancellationToken = default)
+    public async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken = default)
     {
         if (!CanExecute())
         {
@@ -206,7 +206,7 @@ public class CircuitBreaker
     }
 
     // Synchronous execution
-    public T Execute&lt;T&gt;(Func&lt;T&gt; operation)
+    public T Execute<T>(Func<T> operation)
     {
         if (!CanExecute())
         {
@@ -381,9 +381,9 @@ public class CircuitBreaker
 }
 
 // Generic circuit breaker for typed operations
-public class CircuitBreaker&lt;T&gt; : CircuitBreaker
+public class CircuitBreaker<T> : CircuitBreaker
 {
-    public CircuitBreaker(CircuitBreakerOptions options, ILogger<CircuitBreaker&lt;T&gt;> logger = null)
+    public CircuitBreaker(CircuitBreakerOptions options, ILogger<CircuitBreaker<T>> logger = null)
         : base(options, logger as ILogger<CircuitBreaker>)
     {
     }
@@ -473,12 +473,12 @@ public class BulkheadIsolation
     public int CurrentCount => semaphore.CurrentCount;
     public int AvailableCount => MaxConcurrency - CurrentCount;
 
-    public async Task&lt;T&gt; ExecuteAsync&lt;T&gt;(Func<Task&lt;T&gt;> operation, CancellationToken cancellationToken = default)
+    public async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken = default)
     {
         return await ExecuteAsync(operation, TimeSpan.FromMilliseconds(-1), cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task&lt;T&gt; ExecuteAsync&lt;T&gt;(Func<Task&lt;T&gt;> operation, TimeSpan timeout, CancellationToken cancellationToken = default)
+    public async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, TimeSpan timeout, CancellationToken cancellationToken = default)
     {
         var acquired = false;
         
@@ -555,7 +555,7 @@ public class RetryPolicy
         this.logger = logger;
     }
 
-    public async Task&lt;T&gt; ExecuteAsync&lt;T&gt;(Func<Task&lt;T&gt;> operation, CancellationToken cancellationToken = default)
+    public async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken = default)
     {
         var attempt = 0;
         Exception lastException = null;
@@ -653,7 +653,7 @@ public class TimeoutPolicy
         this.logger = logger;
     }
 
-    public async Task&lt;T&gt; ExecuteAsync&lt;T&gt;(Func<Task&lt;T&gt;> operation, CancellationToken cancellationToken = default)
+    public async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken = default)
     {
         using var timeoutCts = new CancellationTokenSource(timeout);
         using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
@@ -714,9 +714,9 @@ public class ResiliencePolicy
         return this;
     }
 
-    public async Task&lt;T&gt; ExecuteAsync&lt;T&gt;(Func<Task&lt;T&gt;> operation, CancellationToken cancellationToken = default)
+    public async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken = default)
     {
-        Func<Task&lt;T&gt;> wrappedOperation = operation;
+        Func<Task<T>> wrappedOperation = operation;
 
         // Wrap operation with policies in reverse order (last added = innermost)
         for (int i = policies.Count - 1; i >= 0; i--)
@@ -742,7 +742,7 @@ public class ResiliencePolicy
 // Internal interfaces and wrappers for composite policy
 internal interface IResiliencePolicy
 {
-    Task&lt;T&gt; ExecuteAsync&lt;T&gt;(Func<Task&lt;T&gt;> operation, CancellationToken cancellationToken);
+    Task<T> ExecuteAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken);
 }
 
 internal class CircuitBreakerPolicy : IResiliencePolicy
@@ -754,7 +754,7 @@ internal class CircuitBreakerPolicy : IResiliencePolicy
         this.circuitBreaker = circuitBreaker;
     }
 
-    public async Task&lt;T&gt; ExecuteAsync&lt;T&gt;(Func<Task&lt;T&gt;> operation, CancellationToken cancellationToken)
+    public async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken)
     {
         return await circuitBreaker.ExecuteAsync(operation, cancellationToken).ConfigureAwait(false);
     }
@@ -769,7 +769,7 @@ internal class RetryPolicyWrapper : IResiliencePolicy
         this.retryPolicy = retryPolicy;
     }
 
-    public async Task&lt;T&gt; ExecuteAsync&lt;T&gt;(Func<Task&lt;T&gt;> operation, CancellationToken cancellationToken)
+    public async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken)
     {
         return await retryPolicy.ExecuteAsync(operation, cancellationToken).ConfigureAwait(false);
     }
@@ -784,7 +784,7 @@ internal class TimeoutPolicyWrapper : IResiliencePolicy
         this.timeoutPolicy = timeoutPolicy;
     }
 
-    public async Task&lt;T&gt; ExecuteAsync&lt;T&gt;(Func<Task&lt;T&gt;> operation, CancellationToken cancellationToken)
+    public async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken)
     {
         return await timeoutPolicy.ExecuteAsync(operation, cancellationToken).ConfigureAwait(false);
     }
@@ -799,7 +799,7 @@ internal class BulkheadPolicy : IResiliencePolicy
         this.bulkhead = bulkhead;
     }
 
-    public async Task&lt;T&gt; ExecuteAsync&lt;T&gt;(Func<Task&lt;T&gt;> operation, CancellationToken cancellationToken)
+    public async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken)
     {
         return await bulkhead.ExecuteAsync(operation, cancellationToken).ConfigureAwait(false);
     }
@@ -869,7 +869,7 @@ public static class ResilienceExtensions
         return registry.GetOrCreate(name, new CircuitBreakerOptions());
     }
 
-    public static async Task&lt;T&gt; WithCircuitBreaker&lt;T&gt;(this Task&lt;T&gt; task, CircuitBreaker circuitBreaker)
+    public static async Task<T> WithCircuitBreaker<T>(this Task<T> task, CircuitBreaker circuitBreaker)
     {
         return await circuitBreaker.ExecuteAsync(() => task).ConfigureAwait(false);
     }
@@ -879,19 +879,19 @@ public static class ResilienceExtensions
         await circuitBreaker.ExecuteAsync(() => task).ConfigureAwait(false);
     }
 
-    public static async Task&lt;T&gt; WithRetry&lt;T&gt;(this Func<Task&lt;T&gt;> operation, RetryOptions options, ILogger logger = null)
+    public static async Task<T> WithRetry<T>(this Func<Task<T>> operation, RetryOptions options, ILogger logger = null)
     {
         var retryPolicy = new RetryPolicy(options, logger);
         return await retryPolicy.ExecuteAsync(operation).ConfigureAwait(false);
     }
 
-    public static async Task&lt;T&gt; WithTimeout&lt;T&gt;(this Func<Task&lt;T&gt;> operation, TimeSpan timeout, ILogger logger = null)
+    public static async Task<T> WithTimeout<T>(this Func<Task<T>> operation, TimeSpan timeout, ILogger logger = null)
     {
         var timeoutPolicy = new TimeoutPolicy(timeout, logger);
         return await timeoutPolicy.ExecuteAsync(operation).ConfigureAwait(false);
     }
 
-    public static async Task&lt;T&gt; WithBulkhead&lt;T&gt;(this Func<Task&lt;T&gt;> operation, BulkheadIsolation bulkhead)
+    public static async Task<T> WithBulkhead<T>(this Func<Task<T>> operation, BulkheadIsolation bulkhead)
     {
         return await bulkhead.ExecuteAsync(operation).ConfigureAwait(false);
     }

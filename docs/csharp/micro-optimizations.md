@@ -658,9 +658,9 @@ public static class ArithmeticOptimizations
 public static class CollectionOptimizations
 {
     // Pre-sized collections to avoid reallocations
-    public static List&lt;T&gt; CreateOptimalList&lt;T&gt;(int expectedSize)
+    public static List<T> CreateOptimalList<T>(int expectedSize)
     {
-        return new List&lt;T&gt;(expectedSize);
+        return new List<T>(expectedSize);
     }
 
     public static Dictionary<TKey, TValue> CreateOptimalDictionary<TKey, TValue>(int expectedSize) 
@@ -670,7 +670,7 @@ public static class CollectionOptimizations
     }
 
     // Struct enumerators to avoid allocations
-    public struct ArrayEnumerator&lt;T&gt;
+    public struct ArrayEnumerator<T>
     {
         private readonly T[] array;
         private int index;
@@ -691,9 +691,9 @@ public static class CollectionOptimizations
     }
 
     // Use ArrayPool for temporary collections
-    public static void ProcessWithPooledArray&lt;T&gt;(int size, Action<T[]> processor)
+    public static void ProcessWithPooledArray<T>(int size, Action<T[]> processor)
     {
-        var pool = ArrayPool&lt;T&gt;.Shared;
+        var pool = ArrayPool<T>.Shared;
         var array = pool.Rent(size);
         
         try
@@ -714,7 +714,7 @@ public static class CollectionOptimizations
     }
 
     // Batch processing to improve cache locality
-    public static void ProcessInBatches&lt;T&gt;(IList&lt;T&gt; items, int batchSize, Action&lt;T&gt; processor)
+    public static void ProcessInBatches<T>(IList<T> items, int batchSize, Action<T> processor)
     {
         for (int i = 0; i < items.Count; i += batchSize)
         {
@@ -843,7 +843,7 @@ public static class PerformanceMeasurement
 public static class JitOptimizations
 {
     // Force JIT compilation to avoid first-call overhead
-    public static void WarmupMethod&lt;T&gt;(Func&lt;T&gt; method)
+    public static void WarmupMethod<T>(Func<T> method)
     {
         // Call method once to trigger JIT compilation
         _ = method();
@@ -853,7 +853,7 @@ public static class JitOptimizations
     }
 
     // Generic specialization hint
-    public static void ProcessGeneric&lt;T&gt;(T[] items) where T : struct
+    public static void ProcessGeneric<T>(T[] items) where T : struct
     {
         // The JIT will create specialized versions for each T
         for (int i = 0; i < items.Length; i++)
@@ -917,7 +917,7 @@ public static class MemoryOptimizations
         public void Reset() { /* Reset state for reuse */ }
     }
 
-    // Stack allocation with Span&lt;T&gt;
+    // Stack allocation with Span<T>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static unsafe void ProcessOnStack()
     {
@@ -931,7 +931,7 @@ public static class MemoryOptimizations
     }
 
     // Reduce boxing with generic constraints
-    public static void ProcessValue&lt;T&gt;(T value) where T : struct
+    public static void ProcessValue<T>(T value) where T : struct
     {
         // No boxing for value types
         Console.WriteLine(value.ToString());

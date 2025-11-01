@@ -1554,6 +1554,7 @@ Console.WriteLine("\nConcurrent collections examples completed!");
 - Use memory-efficient ring buffers for high-frequency producer-consumer scenarios
 - Implement object pooling to reduce garbage collection pressure in high-allocation scenarios
 - Provide comprehensive performance comparisons between different concurrent collection implementations
+- **After performance tests, ensure to dispose or clear any wrapper objects (such as custom queues or buffers) to avoid memory leaks in real-world scenarios.**
 
 **Prerequisites**:
 

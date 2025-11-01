@@ -18,6 +18,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Data;
+using System.Text.RegularExpressions;
+using System.Text.Json;
 
 // Managed Identity configuration options
 public class ManagedIdentityOptions

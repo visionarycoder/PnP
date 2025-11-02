@@ -493,14 +493,8 @@ public static class ImmutableCollectionExtensions
 }
 
 // Function pipeline builder
-public class Pipeline<T>
+public class Pipeline<T>(IEnumerable<T> source)
 {
-    private readonly IEnumerable<T> source;
-
-    public Pipeline(IEnumerable<T> source)
-    {
-        source = source;
-    }
 
     public Pipeline<TResult> Map<TResult>(Func<T, TResult> selector)
     {
@@ -715,14 +709,9 @@ public static class LazyFunctional
     }
 
     // Thunk for delayed computation
-    public class Thunk<T>
+    public class Thunk<T>(Func<T> computation)
     {
-        private readonly Lazy<T> lazy;
-
-        public Thunk(Func<T> computation)
-        {
-            lazy = new Lazy<T>(computation);
-        }
+        private readonly Lazy<T> lazy = new(computation);
 
         public T Force() => lazy.Value;
         public bool IsForced => lazy.IsValueCreated;
@@ -1092,20 +1081,20 @@ Console.WriteLine($"Cycled colors: [{string.Join(", ", cycledColors)}]");
 Console.WriteLine("\nMemoization Examples:");
 
 // Expensive recursive function
-Func<int, long> fibonacci_slow = null!;
-fibonacci_slow = n => n <= 1 ? n : fibonacci_slow(n - 1) + fibonacci_slow(n - 2);
+Func<int, long> fibonacciSlow = null!;
+fibonacciSlow = n => n <= 1 ? n : fibonacciSlow(n - 1) + fibonacciSlow(n - 2);
 
 // Memoized version
-var fibonacci_fast = fibonacci_slow.Memoize();
+var fibonacciFast = fibonacciSlow.Memoize();
 
 var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-var result40 = fibonacci_fast(40);
+var result40 = fibonacciFast(40);
 stopwatch.Stop();
 Console.WriteLine($"Fibonacci(40) = {result40} (calculated in {stopwatch.ElapsedMilliseconds}ms)");
 
 // Second call should be much faster due to memoization
 stopwatch.Restart();
-result40 = fibonacci_fast(40);
+result40 = fibonacciFast(40);
 stopwatch.Stop();
 Console.WriteLine($"Fibonacci(40) = {result40} (cached in {stopwatch.ElapsedMilliseconds}ms)");
 

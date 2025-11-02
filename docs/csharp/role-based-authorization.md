@@ -50,14 +50,8 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
     }
 }
 
-public class ResourceAccessHandler : AuthorizationHandler<ResourceAccessRequirement>
+public class ResourceAccessHandler(IResourcePermissionService permissionService) : AuthorizationHandler<ResourceAccessRequirement>
 {
-    private readonly IResourcePermissionService permissionService;
-    
-    public ResourceAccessHandler(IResourcePermissionService permissionService)
-    {
-        permissionService = permissionService;
-    }
     
     protected override async Task HandleRequirementAsync(
         AuthorizationHandlerContext context,

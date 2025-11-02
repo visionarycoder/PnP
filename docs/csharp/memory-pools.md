@@ -660,18 +660,8 @@ public class PoolPerformanceMonitor
 }
 
 // Monitored ArrayPool wrapper
-public class MonitoredArrayPool<T> : ArrayPool<T>
+public class MonitoredArrayPool<T>(ArrayPool<T> innerPool, PoolPerformanceMonitor monitor, string poolName) : ArrayPool<T>
 {
-    private readonly ArrayPool<T> innerPool;
-    private readonly PoolPerformanceMonitor monitor;
-    private readonly string poolName;
-
-    public MonitoredArrayPool(ArrayPool<T> innerPool, PoolPerformanceMonitor monitor, string poolName)
-    {
-        innerPool = innerPool;
-        this.monitor = monitor;
-        this.poolName = poolName;
-    }
 
     public override T[] Rent(int minimumLength)
     {
@@ -1037,10 +1027,10 @@ using (var writer = new PooledBufferWriter<byte>())
     writer.Write(data2);
     
     // Get the result
-    var result_bytes = writer.WrittenSpan.ToArray();
-    var text = System.Text.Encoding.UTF8.GetString(result_bytes);
+    var resultBytes = writer.WrittenSpan.ToArray();
+    var text = System.Text.Encoding.UTF8.GetString(resultBytes);
     
-    Console.WriteLine($"BufferWriter result: '{text}' ({result_bytes.Length} bytes)");
+    Console.WriteLine($"BufferWriter result: '{text}' ({resultBytes.Length} bytes)");
 }
 
 // Example 8: String operations with pooling
@@ -1188,7 +1178,7 @@ for (int i = 0; i < 1000; i++)
     var sb = new StringBuilder();
     sb.Append("Test string ");
     sb.Append(i);
-    var result_unpooled = sb.ToString();
+    var resultUnpooled = sb.ToString();
 }
 stopwatch.Stop();
 Console.WriteLine($"Without pooling: {stopwatch.ElapsedMilliseconds}ms");
@@ -1197,7 +1187,7 @@ Console.WriteLine($"Without pooling: {stopwatch.ElapsedMilliseconds}ms");
 stopwatch.Restart();
 for (int i = 0; i < 1000; i++)
 {
-    var result_pooled = StringBuilderPool.Build(sb =>
+    var resultPooled = StringBuilderPool.Build(sb =>
     {
         sb.Append("Test string ");
         sb.Append(i);

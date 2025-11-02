@@ -105,18 +105,17 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{F1B2C3D4-E
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "algorithms", "algorithms", "{A1B2C3D4-E5F6-7890-ABCD-123456789013}"
 	ProjectSection(SolutionItems) = preProject
-		docs\algorithms\README.md = docs\algorithms\README.md
 		docs\algorithms\data-structures.md = docs\algorithms\data-structures.md
 		docs\algorithms\dynamic-programming.md = docs\algorithms\dynamic-programming.md
 		docs\algorithms\graph-algorithms.md = docs\algorithms\graph-algorithms.md
+		docs\algorithms\README.md = docs\algorithms\README.md
 		docs\algorithms\searching-algorithms.md = docs\algorithms\searching-algorithms.md
 		docs\algorithms\sorting-algorithms.md = docs\algorithms\sorting-algorithms.md
 		docs\algorithms\string-algorithms.md = docs\algorithms\string-algorithms.md
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "aspire", "aspire", "{C3D4E5F6-G7H8-I901-JKLM-345678901234}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "aspire", "aspire", "{037F0DF2-9368-48AD-967E-1CBE71467727}"
 	ProjectSection(SolutionItems) = preProject
-		docs\aspire\README.md = docs\aspire\README.md
 		docs\aspire\configuration-management.md = docs\aspire\configuration-management.md
 		docs\aspire\deployment-strategies.md = docs\aspire\deployment-strategies.md
 		docs\aspire\document-pipeline-architecture.md = docs\aspire\document-pipeline-architecture.md
@@ -126,6 +125,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "aspire", "aspire", "{C3D4E5
 		docs\aspire\ml-service-orchestration.md = docs\aspire\ml-service-orchestration.md
 		docs\aspire\orleans-integration.md = docs\aspire\orleans-integration.md
 		docs\aspire\production-deployment.md = docs\aspire\production-deployment.md
+		docs\aspire\README.md = docs\aspire\README.md
 		docs\aspire\resource-dependencies.md = docs\aspire\resource-dependencies.md
 		docs\aspire\scaling-strategies.md = docs\aspire\scaling-strategies.md
 		docs\aspire\service-orchestration.md = docs\aspire\service-orchestration.md
@@ -133,22 +133,21 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "aspire", "aspire", "{C3D4E5
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "bash", "bash", "{A1B2C3D4-E5F6-7890-ABCD-123456789014}"
 	ProjectSection(SolutionItems) = preProject
-		docs\bash\README.md = docs\bash\README.md
 		docs\bash\file-operations.md = docs\bash\file-operations.md
+		docs\bash\README.md = docs\bash\README.md
 		docs\bash\system-admin.md = docs\bash\system-admin.md
 		docs\bash\text-processing.md = docs\bash\text-processing.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "cmd", "cmd", "{A1B2C3D4-E5F6-7890-ABCD-123456789015}"
 	ProjectSection(SolutionItems) = preProject
-		docs\cmd\README.md = docs\cmd\README.md
 		docs\cmd\basic-commands.md = docs\cmd\basic-commands.md
 		docs\cmd\batch-scripts.md = docs\cmd\batch-scripts.md
+		docs\cmd\README.md = docs\cmd\README.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "csharp", "csharp", "{A1B2C3D4-E5F6-7890-ABCD-123456789016}"
 	ProjectSection(SolutionItems) = preProject
-		docs\csharp\README.md = docs\csharp\README.md
 		docs\csharp\actor-model.md = docs\csharp\actor-model.md
 		docs\csharp\async-enumerable.md = docs\csharp\async-enumerable.md
 		docs\csharp\async-lazy-loading.md = docs\csharp\async-lazy-loading.md
@@ -177,6 +176,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "csharp", "csharp", "{A1B2C3
 		docs\csharp\pub-sub.md = docs\csharp\pub-sub.md
 		docs\csharp\query-optimization.md = docs\csharp\query-optimization.md
 		docs\csharp\reader-writer-locks.md = docs\csharp\reader-writer-locks.md
+		docs\csharp\README.md = docs\csharp\README.md
 		docs\csharp\retry-pattern.md = docs\csharp\retry-pattern.md
 		docs\csharp\role-based-authorization.md = docs\csharp\role-based-authorization.md
 		docs\csharp\saga-patterns.md = docs\csharp\saga-patterns.md
@@ -187,11 +187,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "csharp", "csharp", "{A1B2C3
 		docs\csharp\web-security.md = docs\csharp\web-security.md
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "database", "database", "{C1D2E3F4-G5H6-7890-IJKL-123456789012}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "database", "database", "{413F85D8-FEE8-4EBD-B7A0-5F6F5D9427CA}"
 	ProjectSection(SolutionItems) = preProject
-		docs\database\README.md = docs\database\README.md
 		docs\database\ml-database-examples.md = docs\database\ml-database-examples.md
 		docs\database\ml-databases.md = docs\database\ml-databases.md
+		docs\database\README.md = docs\database\README.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "design-patterns", "design-patterns", "{A1B2C3D4-E5F6-7890-ABCD-123456789017}"
@@ -214,7 +214,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "design-patterns", "design-p
 		docs\design-patterns\observer.md = docs\design-patterns\observer.md
 		docs\design-patterns\prototype.md = docs\design-patterns\prototype.md
 		docs\design-patterns\proxy.md = docs\design-patterns\proxy.md
-		docs\design-patterns\readme.md = docs\design-patterns\readme.md
+		docs\design-patterns\README.md = docs\design-patterns\README.md
 		docs\design-patterns\singleton.md = docs\design-patterns\singleton.md
 		docs\design-patterns\state.md = docs\design-patterns\state.md
 		docs\design-patterns\strategy.md = docs\design-patterns\strategy.md
@@ -222,23 +222,22 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "design-patterns", "design-p
 		docs\design-patterns\visitor.md = docs\design-patterns\visitor.md
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docker", "docker", "{A1B2C3D4-E5F6-7890-ABCD-123456789018}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docker", "docker", "{C81A449A-909F-4492-A841-B07B64F1469B}"
 	ProjectSection(SolutionItems) = preProject
-		docs\docker\README.md = docs\docker\README.md
 		docs\docker\dockerfile-examples.md = docs\docker\dockerfile-examples.md
+		docs\docker\README.md = docs\docker\README.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "git", "git", "{A1B2C3D4-E5F6-7890-ABCD-123456789019}"
 	ProjectSection(SolutionItems) = preProject
-		docs\git\README.md = docs\git\README.md
-		docs\git\common-commands.md = docs\git\common-commands.md
-		docs\git\worktrees.md = docs\git\worktrees.md
 		docs\git\advanced-techniques.md = docs\git\advanced-techniques.md
+		docs\git\common-commands.md = docs\git\common-commands.md
+		docs\git\README.md = docs\git\README.md
+		docs\git\worktrees.md = docs\git\worktrees.md
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "graphql", "graphql", "{D2E3F4G5-H6I7-8901-KLMN-234567890123}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "graphql", "graphql", "{E7EC1995-4F8D-4B49-BF3D-4A8C392A2F56}"
 	ProjectSection(SolutionItems) = preProject
-		docs\graphql\README.md = docs\graphql\README.md
 		docs\graphql\authorization.md = docs\graphql\authorization.md
 		docs\graphql\database-integration.md = docs\graphql\database-integration.md
 		docs\graphql\dataloader-patterns.md = docs\graphql\dataloader-patterns.md
@@ -248,20 +247,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "graphql", "graphql", "{D2E3
 		docs\graphql\orleans-integration.md = docs\graphql\orleans-integration.md
 		docs\graphql\performance-optimization.md = docs\graphql\performance-optimization.md
 		docs\graphql\query-patterns.md = docs\graphql\query-patterns.md
+		docs\graphql\README.md = docs\graphql\README.md
 		docs\graphql\realtime-processing.md = docs\graphql\realtime-processing.md
 		docs\graphql\schema-design.md = docs\graphql\schema-design.md
 		docs\graphql\subscription-patterns.md = docs\graphql\subscription-patterns.md
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "javascript", "javascript", "{A1B2C3D4-E5F6-7890-ABCD-123456789020}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "integration", "integration", "{4B46BC43-2AE0-4DF2-83A7-5C4716B847BB}"
 	ProjectSection(SolutionItems) = preProject
-		docs\javascript\README.md = docs\javascript\README.md
-		docs\javascript\array-methods.md = docs\javascript\array-methods.md
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "integration", "integration", "{E3F4G5H6-I7J8-9012-MNOP-345678901234}"
-	ProjectSection(SolutionItems) = preProject
-		docs\integration\README.md = docs\integration\README.md
 		docs\integration\audit-compliance.md = docs\integration\audit-compliance.md
 		docs\integration\authentication-flow.md = docs\integration\authentication-flow.md
 		docs\integration\authorization-patterns.md = docs\integration\authorization-patterns.md
@@ -276,29 +269,19 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "integration", "integration"
 		docs\integration\health-monitoring.md = docs\integration\health-monitoring.md
 		docs\integration\logging-strategy.md = docs\integration\logging-strategy.md
 		docs\integration\metrics-collection.md = docs\integration\metrics-collection.md
+		docs\integration\README.md = docs\integration\README.md
 		docs\integration\scaling-strategies.md = docs\integration\scaling-strategies.md
 		docs\integration\service-communication.md = docs\integration\service-communication.md
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "orleans", "orleans", "{B2C3D4E5-F6G7-H890-IJKL-234567890123}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "javascript", "javascript", "{A1B2C3D4-E5F6-7890-ABCD-123456789020}"
 	ProjectSection(SolutionItems) = preProject
-		docs\orleans\README.md = docs\orleans\README.md
-		docs\orleans\grain-fundamentals.md = docs\orleans\grain-fundamentals.md
-		docs\orleans\document-processing-grains.md = docs\orleans\document-processing-grains.md
-		docs\orleans\state-management.md = docs\orleans\state-management.md
-		docs\orleans\streaming-patterns.md = docs\orleans\streaming-patterns.md
-		docs\orleans\grain-placement.md = docs\orleans\grain-placement.md
-		docs\orleans\performance-optimization.md = docs\orleans\performance-optimization.md
-		docs\orleans\error-handling.md = docs\orleans\error-handling.md
-		docs\orleans\testing-strategies.md = docs\orleans\testing-strategies.md
-		docs\orleans\database-integration.md = docs\orleans\database-integration.md
-		docs\orleans\external-services.md = docs\orleans\external-services.md
-		docs\orleans\monitoring-diagnostics.md = docs\orleans\monitoring-diagnostics.md
+		docs\javascript\array-methods.md = docs\javascript\array-methods.md
+		docs\javascript\README.md = docs\javascript\README.md
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "mlnet", "mlnet", "{F4G5H6I7-J8K9-0123-QRST-456789012345}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "mlnet", "mlnet", "{471E109F-3073-4015-895F-C21FDD56B1E6}"
 	ProjectSection(SolutionItems) = preProject
-		docs\mlnet\README.md = docs\mlnet\README.md
 		docs\mlnet\batch-processing.md = docs\mlnet\batch-processing.md
 		docs\mlnet\custom-model-training.md = docs\mlnet\custom-model-training.md
 		docs\mlnet\feature-engineering.md = docs\mlnet\feature-engineering.md
@@ -306,54 +289,71 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "mlnet", "mlnet", "{F4G5H6I7
 		docs\mlnet\model-evaluation.md = docs\mlnet\model-evaluation.md
 		docs\mlnet\named-entity-recognition.md = docs\mlnet\named-entity-recognition.md
 		docs\mlnet\orleans-integration.md = docs\mlnet\orleans-integration.md
+		docs\mlnet\README.md = docs\mlnet\README.md
 		docs\mlnet\realtime-processing.md = docs\mlnet\realtime-processing.md
 		docs\mlnet\sentiment-analysis.md = docs\mlnet\sentiment-analysis.md
 		docs\mlnet\text-classification.md = docs\mlnet\text-classification.md
 		docs\mlnet\topic-modeling.md = docs\mlnet\topic-modeling.md
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "notebooks", "notebooks", "{G5H6I7J8-K9L0-1234-UVWX-567890123456}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "notebooks", "notebooks", "{5F9EC006-0ED6-49F3-8FEB-F614C8DA09AB}"
 	ProjectSection(SolutionItems) = preProject
 		docs\notebooks\readme.md = docs\notebooks\readme.md
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "orleans", "orleans", "{2BA42EC1-7AE7-4963-A0DF-B9AE9CE2C535}"
+	ProjectSection(SolutionItems) = preProject
+		docs\orleans\database-integration.md = docs\orleans\database-integration.md
+		docs\orleans\document-processing-grains.md = docs\orleans\document-processing-grains.md
+		docs\orleans\error-handling.md = docs\orleans\error-handling.md
+		docs\orleans\external-services.md = docs\orleans\external-services.md
+		docs\orleans\grain-fundamentals.md = docs\orleans\grain-fundamentals.md
+		docs\orleans\grain-placement.md = docs\orleans\grain-placement.md
+		docs\orleans\monitoring-diagnostics.md = docs\orleans\monitoring-diagnostics.md
+		docs\orleans\performance-optimization.md = docs\orleans\performance-optimization.md
+		docs\orleans\README.md = docs\orleans\README.md
+		docs\orleans\state-management.md = docs\orleans\state-management.md
+		docs\orleans\streaming-patterns.md = docs\orleans\streaming-patterns.md
+		docs\orleans\testing-strategies.md = docs\orleans\testing-strategies.md
+	EndProjectSection
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "powershell", "powershell", "{A1B2C3D4-E5F6-7890-ABCD-123456789021}"
 	ProjectSection(SolutionItems) = preProject
-		docs\powershell\README.md = docs\powershell\README.md
 		docs\powershell\active-directory.md = docs\powershell\active-directory.md
 		docs\powershell\automation-scripts.md = docs\powershell\automation-scripts.md
 		docs\powershell\file-operations.md = docs\powershell\file-operations.md
 		docs\powershell\network-operations.md = docs\powershell\network-operations.md
 		docs\powershell\powershell-basics.md = docs\powershell\powershell-basics.md
+		docs\powershell\README.md = docs\powershell\README.md
 		docs\powershell\system-admin.md = docs\powershell\system-admin.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "python", "python", "{A1B2C3D4-E5F6-7890-ABCD-123456789022}"
 	ProjectSection(SolutionItems) = preProject
-		docs\python\README.md = docs\python\README.md
 		docs\python\file-operations.md = docs\python\file-operations.md
+		docs\python\README.md = docs\python\README.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "sql", "sql", "{A1B2C3D4-E5F6-7890-ABCD-123456789023}"
 	ProjectSection(SolutionItems) = preProject
-		docs\sql\README.md = docs\sql\README.md
 		docs\sql\common-queries.md = docs\sql\common-queries.md
+		docs\sql\README.md = docs\sql\README.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "utilities", "utilities", "{A1B2C3D4-E5F6-7890-ABCD-123456789024}"
 	ProjectSection(SolutionItems) = preProject
-		docs\utilities\README.md = docs\utilities\README.md
 		docs\utilities\configuration-helpers.md = docs\utilities\configuration-helpers.md
 		docs\utilities\general-utilities.md = docs\utilities\general-utilities.md
 		docs\utilities\logging-utilities.md = docs\utilities\logging-utilities.md
+		docs\utilities\README.md = docs\utilities\README.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "web", "web", "{A1B2C3D4-E5F6-7890-ABCD-123456789025}"
 	ProjectSection(SolutionItems) = preProject
-		docs\web\README.md = docs\web\README.md
 		docs\web\accessibility.md = docs\web\accessibility.md
 		docs\web\css-layouts.md = docs\web\css-layouts.md
 		docs\web\html-templates.md = docs\web\html-templates.md
+		docs\web\README.md = docs\web\README.md
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesignPatterns.Creational", "src\DesignPatterns.Creational\DesignPatterns.Creational.csproj", "{3DADD3F0-45CA-49DE-83AF-E409E3E3770A}"
@@ -447,6 +447,25 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharp.WebSecurity", "src\CSharp.WebSecurity\CSharp.WebSecurity.csproj", "{A49F7964-CA1F-4F2C-BB9E-77F648EA69BF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Notebooks.MLDatabaseExamples", "src\Notebooks.MLDatabaseExamples\Notebooks.MLDatabaseExamples.csproj", "{B7F8E1D9-2C4A-4F5B-8E3D-9A1B2C3D4E5F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+	ProjectSection(SolutionItems) = preProject
+		scripts\setup-ml-databases.ps1 = scripts\setup-ml-databases.ps1
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		.gitattributes = .gitattributes
+		.gitignore = .gitignore
+		CONTRIBUTING.md = CONTRIBUTING.md
+		Directory.Build.props = Directory.Build.props
+		Directory.Build.targets = Directory.Build.targets
+		Directory.Packages.props = Directory.Packages.props
+		global.json = global.json
+		README.md = README.md
+		SNIPPET_TEMPLATE.md = SNIPPET_TEMPLATE.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1029,13 +1048,20 @@ Global
 		{F7890123-4567-8901-2345-6789012ABCDE} = {7F809123-4567-8901-2345-67890123456A}
 		{2A123456-7890-1234-5678-9012ABCDEF01} = {19012345-6789-0123-4567-89012ABCDEF0}
 		{A1B2C3D4-E5F6-7890-ABCD-123456789013} = {F1B2C3D4-E5F6-7890-ABCD-123456789012}
+		{037F0DF2-9368-48AD-967E-1CBE71467727} = {F1B2C3D4-E5F6-7890-ABCD-123456789012}
 		{A1B2C3D4-E5F6-7890-ABCD-123456789014} = {F1B2C3D4-E5F6-7890-ABCD-123456789012}
 		{A1B2C3D4-E5F6-7890-ABCD-123456789015} = {F1B2C3D4-E5F6-7890-ABCD-123456789012}
 		{A1B2C3D4-E5F6-7890-ABCD-123456789016} = {F1B2C3D4-E5F6-7890-ABCD-123456789012}
+		{413F85D8-FEE8-4EBD-B7A0-5F6F5D9427CA} = {F1B2C3D4-E5F6-7890-ABCD-123456789012}
 		{A1B2C3D4-E5F6-7890-ABCD-123456789017} = {F1B2C3D4-E5F6-7890-ABCD-123456789012}
-		{A1B2C3D4-E5F6-7890-ABCD-123456789018} = {F1B2C3D4-E5F6-7890-ABCD-123456789012}
+		{C81A449A-909F-4492-A841-B07B64F1469B} = {F1B2C3D4-E5F6-7890-ABCD-123456789012}
 		{A1B2C3D4-E5F6-7890-ABCD-123456789019} = {F1B2C3D4-E5F6-7890-ABCD-123456789012}
+		{E7EC1995-4F8D-4B49-BF3D-4A8C392A2F56} = {F1B2C3D4-E5F6-7890-ABCD-123456789012}
+		{4B46BC43-2AE0-4DF2-83A7-5C4716B847BB} = {F1B2C3D4-E5F6-7890-ABCD-123456789012}
 		{A1B2C3D4-E5F6-7890-ABCD-123456789020} = {F1B2C3D4-E5F6-7890-ABCD-123456789012}
+		{471E109F-3073-4015-895F-C21FDD56B1E6} = {F1B2C3D4-E5F6-7890-ABCD-123456789012}
+		{5F9EC006-0ED6-49F3-8FEB-F614C8DA09AB} = {F1B2C3D4-E5F6-7890-ABCD-123456789012}
+		{2BA42EC1-7AE7-4963-A0DF-B9AE9CE2C535} = {F1B2C3D4-E5F6-7890-ABCD-123456789012}
 		{A1B2C3D4-E5F6-7890-ABCD-123456789021} = {F1B2C3D4-E5F6-7890-ABCD-123456789012}
 		{A1B2C3D4-E5F6-7890-ABCD-123456789022} = {F1B2C3D4-E5F6-7890-ABCD-123456789012}
 		{A1B2C3D4-E5F6-7890-ABCD-123456789023} = {F1B2C3D4-E5F6-7890-ABCD-123456789012}
@@ -1087,5 +1113,8 @@ Global
 		{600AA46B-C535-40B2-9780-6DA64BA04C78} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{A49F7964-CA1F-4F2C-BB9E-77F648EA69BF} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{B7F8E1D9-2C4A-4F5B-8E3D-9A1B2C3D4E5F} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {381701A3-781A-4262-A456-42E4E53A099F}
 	EndGlobalSection
 EndGlobal

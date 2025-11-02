@@ -99,6 +99,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{F1B2C3D4-E5F6-7890-ABCD-123456789012}"
+	ProjectSection(SolutionItems) = preProject
+		docs\readme.md = docs\readme.md
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "algorithms", "algorithms", "{A1B2C3D4-E5F6-7890-ABCD-123456789013}"
 	ProjectSection(SolutionItems) = preProject
@@ -109,6 +112,23 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "algorithms", "algorithms", 
 		docs\algorithms\searching-algorithms.md = docs\algorithms\searching-algorithms.md
 		docs\algorithms\sorting-algorithms.md = docs\algorithms\sorting-algorithms.md
 		docs\algorithms\string-algorithms.md = docs\algorithms\string-algorithms.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "aspire", "aspire", "{C3D4E5F6-G7H8-I901-JKLM-345678901234}"
+	ProjectSection(SolutionItems) = preProject
+		docs\aspire\README.md = docs\aspire\README.md
+		docs\aspire\configuration-management.md = docs\aspire\configuration-management.md
+		docs\aspire\deployment-strategies.md = docs\aspire\deployment-strategies.md
+		docs\aspire\document-pipeline-architecture.md = docs\aspire\document-pipeline-architecture.md
+		docs\aspire\health-monitoring.md = docs\aspire\health-monitoring.md
+		docs\aspire\local-development.md = docs\aspire\local-development.md
+		docs\aspire\local-ml-development.md = docs\aspire\local-ml-development.md
+		docs\aspire\ml-service-orchestration.md = docs\aspire\ml-service-orchestration.md
+		docs\aspire\orleans-integration.md = docs\aspire\orleans-integration.md
+		docs\aspire\production-deployment.md = docs\aspire\production-deployment.md
+		docs\aspire\resource-dependencies.md = docs\aspire\resource-dependencies.md
+		docs\aspire\scaling-strategies.md = docs\aspire\scaling-strategies.md
+		docs\aspire\service-orchestration.md = docs\aspire\service-orchestration.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "bash", "bash", "{A1B2C3D4-E5F6-7890-ABCD-123456789014}"
@@ -167,6 +187,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "csharp", "csharp", "{A1B2C3
 		docs\csharp\web-security.md = docs\csharp\web-security.md
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "database", "database", "{C1D2E3F4-G5H6-7890-IJKL-123456789012}"
+	ProjectSection(SolutionItems) = preProject
+		docs\database\README.md = docs\database\README.md
+		docs\database\ml-database-examples.md = docs\database\ml-database-examples.md
+		docs\database\ml-databases.md = docs\database\ml-databases.md
+	EndProjectSection
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "design-patterns", "design-patterns", "{A1B2C3D4-E5F6-7890-ABCD-123456789017}"
 	ProjectSection(SolutionItems) = preProject
 		docs\design-patterns\abstract-factory.md = docs\design-patterns\abstract-factory.md
@@ -209,10 +236,85 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "git", "git", "{A1B2C3D4-E5F
 		docs\git\advanced-techniques.md = docs\git\advanced-techniques.md
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "graphql", "graphql", "{D2E3F4G5-H6I7-8901-KLMN-234567890123}"
+	ProjectSection(SolutionItems) = preProject
+		docs\graphql\README.md = docs\graphql\README.md
+		docs\graphql\authorization.md = docs\graphql\authorization.md
+		docs\graphql\database-integration.md = docs\graphql\database-integration.md
+		docs\graphql\dataloader-patterns.md = docs\graphql\dataloader-patterns.md
+		docs\graphql\error-handling.md = docs\graphql\error-handling.md
+		docs\graphql\mlnet-integration.md = docs\graphql\mlnet-integration.md
+		docs\graphql\mutation-patterns.md = docs\graphql\mutation-patterns.md
+		docs\graphql\orleans-integration.md = docs\graphql\orleans-integration.md
+		docs\graphql\performance-optimization.md = docs\graphql\performance-optimization.md
+		docs\graphql\query-patterns.md = docs\graphql\query-patterns.md
+		docs\graphql\realtime-processing.md = docs\graphql\realtime-processing.md
+		docs\graphql\schema-design.md = docs\graphql\schema-design.md
+		docs\graphql\subscription-patterns.md = docs\graphql\subscription-patterns.md
+	EndProjectSection
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "javascript", "javascript", "{A1B2C3D4-E5F6-7890-ABCD-123456789020}"
 	ProjectSection(SolutionItems) = preProject
 		docs\javascript\README.md = docs\javascript\README.md
 		docs\javascript\array-methods.md = docs\javascript\array-methods.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "integration", "integration", "{E3F4G5H6-I7J8-9012-MNOP-345678901234}"
+	ProjectSection(SolutionItems) = preProject
+		docs\integration\README.md = docs\integration\README.md
+		docs\integration\audit-compliance.md = docs\integration\audit-compliance.md
+		docs\integration\authentication-flow.md = docs\integration\authentication-flow.md
+		docs\integration\authorization-patterns.md = docs\integration\authorization-patterns.md
+		docs\integration\cicd-pipelines.md = docs\integration\cicd-pipelines.md
+		docs\integration\container-orchestration.md = docs\integration\container-orchestration.md
+		docs\integration\data-flow.md = docs\integration\data-flow.md
+		docs\integration\data-governance.md = docs\integration\data-governance.md
+		docs\integration\distributed-tracing.md = docs\integration\distributed-tracing.md
+		docs\integration\end-to-end-workflow.md = docs\integration\end-to-end-workflow.md
+		docs\integration\environment-management.md = docs\integration\environment-management.md
+		docs\integration\error-handling.md = docs\integration\error-handling.md
+		docs\integration\health-monitoring.md = docs\integration\health-monitoring.md
+		docs\integration\logging-strategy.md = docs\integration\logging-strategy.md
+		docs\integration\metrics-collection.md = docs\integration\metrics-collection.md
+		docs\integration\scaling-strategies.md = docs\integration\scaling-strategies.md
+		docs\integration\service-communication.md = docs\integration\service-communication.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "orleans", "orleans", "{B2C3D4E5-F6G7-H890-IJKL-234567890123}"
+	ProjectSection(SolutionItems) = preProject
+		docs\orleans\README.md = docs\orleans\README.md
+		docs\orleans\grain-fundamentals.md = docs\orleans\grain-fundamentals.md
+		docs\orleans\document-processing-grains.md = docs\orleans\document-processing-grains.md
+		docs\orleans\state-management.md = docs\orleans\state-management.md
+		docs\orleans\streaming-patterns.md = docs\orleans\streaming-patterns.md
+		docs\orleans\grain-placement.md = docs\orleans\grain-placement.md
+		docs\orleans\performance-optimization.md = docs\orleans\performance-optimization.md
+		docs\orleans\error-handling.md = docs\orleans\error-handling.md
+		docs\orleans\testing-strategies.md = docs\orleans\testing-strategies.md
+		docs\orleans\database-integration.md = docs\orleans\database-integration.md
+		docs\orleans\external-services.md = docs\orleans\external-services.md
+		docs\orleans\monitoring-diagnostics.md = docs\orleans\monitoring-diagnostics.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "mlnet", "mlnet", "{F4G5H6I7-J8K9-0123-QRST-456789012345}"
+	ProjectSection(SolutionItems) = preProject
+		docs\mlnet\README.md = docs\mlnet\README.md
+		docs\mlnet\batch-processing.md = docs\mlnet\batch-processing.md
+		docs\mlnet\custom-model-training.md = docs\mlnet\custom-model-training.md
+		docs\mlnet\feature-engineering.md = docs\mlnet\feature-engineering.md
+		docs\mlnet\model-deployment.md = docs\mlnet\model-deployment.md
+		docs\mlnet\model-evaluation.md = docs\mlnet\model-evaluation.md
+		docs\mlnet\named-entity-recognition.md = docs\mlnet\named-entity-recognition.md
+		docs\mlnet\orleans-integration.md = docs\mlnet\orleans-integration.md
+		docs\mlnet\realtime-processing.md = docs\mlnet\realtime-processing.md
+		docs\mlnet\sentiment-analysis.md = docs\mlnet\sentiment-analysis.md
+		docs\mlnet\text-classification.md = docs\mlnet\text-classification.md
+		docs\mlnet\topic-modeling.md = docs\mlnet\topic-modeling.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "notebooks", "notebooks", "{G5H6I7J8-K9L0-1234-UVWX-567890123456}"
+	ProjectSection(SolutionItems) = preProject
+		docs\notebooks\readme.md = docs\notebooks\readme.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "powershell", "powershell", "{A1B2C3D4-E5F6-7890-ABCD-123456789021}"

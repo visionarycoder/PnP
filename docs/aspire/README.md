@@ -33,6 +33,7 @@
 
 - [Health Monitoring](health-monitoring.md) - Service health checks and diagnostics
 - [Scaling Strategies](scaling-strategies.md) - Horizontal scaling and resource allocation
+- [Deployment Strategies](deployment-strategies.md) - Strategic deployment patterns and decision frameworks
 - [Production Deployment](production-deployment.md) - Moving from local to cloud environments
 
 ## Architecture Overview

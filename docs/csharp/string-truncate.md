@@ -60,7 +60,7 @@ class Program
         // Output: "Short"
         
         // Null or empty handling
-        string nullText = null;
+        string? nullText = null;
         Console.WriteLine(nullText.Truncate(20));
         // Output: null
     }

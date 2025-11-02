@@ -96,21 +96,12 @@ public class RateLimitOptions
 }
 
 // Security middleware
-public class SecurityHeadersMiddleware
+public class SecurityHeadersMiddleware(
+    RequestDelegate next,
+    IOptions<WebSecurityOptions> optionsAccessor,
+    ILogger<SecurityHeadersMiddleware> logger)
 {
-    private readonly RequestDelegate next;
-    private readonly WebSecurityOptions options;
-    private readonly ILogger<SecurityHeadersMiddleware> logger;
-
-    public SecurityHeadersMiddleware(
-        RequestDelegate next,
-        IOptions<WebSecurityOptions> options,
-        ILogger<SecurityHeadersMiddleware> logger)
-    {
-        next = next;
-        options = options.Value;
-        this.logger = logger;
-    }
+    private readonly WebSecurityOptions options = optionsAccessor.Value;
 
     public async Task InvokeAsync(HttpContext context)
     {
@@ -521,14 +512,8 @@ public class RateLimitInfo
 // Security controller for CSP reporting
 [ApiController]
 [Route("api/[controller]")]
-public class SecurityController : ControllerBase
+public class SecurityController(ILogger<SecurityController> logger) : ControllerBase
 {
-    private readonly ILogger<SecurityController> logger;
-
-    public SecurityController(ILogger<SecurityController> logger)
-    {
-        logger = logger;
-    }
 
     [HttpPost("csp-report")]
     public IActionResult CspReport([FromBody] CspReportRequest report)

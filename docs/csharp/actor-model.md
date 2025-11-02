@@ -49,7 +49,7 @@ public interface IActorContext
     IActorRef Sender { get; }
     IActorSystem System { get; }
     ILogger Logger { get; }
-    Task<IActorRef> ActorOf<T>(string name = null) where T : ActorBase, new();
+    Task<IActorRef> ActorOf<T>(string? name = null) where T : ActorBase, new();
     Task Tell(IActorRef target, IMessage message);
     Task<TResponse> Ask<TResponse>(IActorRef target, IMessage message, TimeSpan timeout);
     Task Stop(IActorRef actor);

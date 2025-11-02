@@ -3,6 +3,50 @@
     <!-- Enable central package management, https://learn.microsoft.com/en-us/nuget/consume-packages/Central-Package-Management -->
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
+  <PropertyGroup>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+  
   <ItemGroup>
+    <!-- Microsoft Extensions Framework -->
+    <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="9.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="9.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="9.0.6" />
+    
+    <!-- System Libraries -->
+    <PackageVersion Include="System.Text.Json" Version="9.0.6" />
+    <PackageVersion Include="System.Reactive" Version="6.0.1" />
+    
+    <!-- Azure Libraries -->
+    <PackageVersion Include="Azure.Identity" Version="1.13.1" />
+    <PackageVersion Include="Azure.Security.KeyVault.Secrets" Version="4.8.0" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.22.1" />
+    <PackageVersion Include="Microsoft.Extensions.Azure" Version="1.7.6" />
+    
+    <!-- ASP.NET Core Libraries -->
+    <PackageVersion Include="Microsoft.AspNetCore.App" Version="9.0.0" />
+    
+    <!-- Data Libraries -->
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.2" />
+    
+    <!-- External Libraries -->
+    <PackageVersion Include="StackExchange.Redis" Version="2.8.16" />
+    
+    <!-- Data & ML Libraries -->
+    <PackageVersion Include="Microsoft.DotNet.Interactive" Version="1.0.0-beta.25323.1" />
+    <PackageVersion Include="Microsoft.DotNet.Interactive.Jupyter" Version="1.0.0-beta.25323.1" />
+    <PackageVersion Include="Npgsql" Version="9.0.1" />
+    <PackageVersion Include="DuckDB.NET.Data.Full" Version="1.1.3" />
+    <PackageVersion Include="Microsoft.Data.Analysis" Version="0.22.0" />
+    <PackageVersion Include="Plotly.NET" Version="5.0.0" />
+    <PackageVersion Include="Plotly.NET.Interactive" Version="5.0.0" />
   </ItemGroup>
 </Project>

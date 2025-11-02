@@ -20,7 +20,7 @@ Global behavior is defined in:
 
 ## ✅ Testing Standards
 
-- **C#**: MSTest is used for all unit and integration tests.
+- **C#**: xUNit or MSTest are used for all unit and integration tests.
 - **UI (Angular & others)**: Playwright is used exclusively for UI testing.
 - **Data-driven testing** is encouraged across all domains.
 
@@ -34,6 +34,8 @@ Global behavior is defined in:
 
 Copilot is instructed to:
 
+- Follow Microsoft best practices and idioms for C# and .Net
+- Write idiomatic code for the target language/framework.
 - Prioritize readability and maintainability.
 - Avoid deprecated or insecure patterns.
 - Respect naming conventions and file scopes.
@@ -45,7 +47,7 @@ To contribute effectively:
 
 1. Review the relevant instruction files in `.github/instructions/`.
 2. Follow the testing and formatting standards.
-3. Use conventional commit messages (`feat:`, `fix:`, `test:`).
+3. Use conventional commit messages (`feat:`, `fix:`, `test:`, `docs:`, `style:`, `refactor:`, `perf:`, `build:`, `ci:`, `chore:`, `revert:`).
 4. Run all tests before submitting a pull request.
 
 ## 🤝 Collaboration

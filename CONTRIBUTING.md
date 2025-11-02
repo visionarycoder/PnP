@@ -312,6 +312,19 @@ If you're unsure about:
 
 Look at existing snippets in similar categories for guidance.
 
+## Commit Message Guidelines
+
+We follow the [Conventional Commits](https://www.conventionalcommits.org/) standard.
+
+Use one of the following types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
+
+## Commit Template Setup
+
+Run this once after cloning:
+
+git config commit.template .gitmessage.txt
+
+
 ## License
 
 By contributing to this repository, you agree that your contributions will be subject to the same license as the repository.

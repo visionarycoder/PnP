@@ -1,8 +1,9 @@
-# .NET Aspire Configuration Management
+# Enterprise Configuration Management with .NET Aspire
 
-**Description**: Patterns for managing settings across environments with .NET Aspire, including strongly-typed configuration, secrets management, environment-specific settings, and configuration reloading.
+**Description**: Production-ready configuration patterns for enterprise environments including hierarchical configuration with validation, Azure Key Vault integration, feature flags with gradual rollouts, configuration-as-code with GitOps workflows, and comprehensive audit trails for compliance.
 
-**Language/Technology**: C#, .NET Aspire, .NET 9.0
+**Language/Technology**: C#, .NET Aspire, .NET 9.0, Azure Key Vault, Feature Management
+**Enterprise Features**: Hierarchical environment overrides, secret rotation, compliance auditing, feature flag management, and configuration validation with strong typing
 
 **Code**:
 
@@ -301,10 +302,10 @@ public interface IConfigurationValidator
 
 public class ConfigurationValidator : IConfigurationValidator
 {
-    private readonly IOptionsMonitor<DocumentProcessingOptions> _docOptions;
-    private readonly IOptionsMonitor<OrleansConfiguration> _orleansOptions;
-    private readonly ILogger<ConfigurationValidator> _logger;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IOptionsMonitor<DocumentProcessingOptions> docOptions;
+    private readonly IOptionsMonitor<OrleansConfiguration> orleansOptions;
+    private readonly ILogger<ConfigurationValidator> logger;
+    private readonly IServiceProvider serviceProvider;
 
     public ConfigurationValidator(
         IOptionsMonitor<DocumentProcessingOptions> docOptions,
@@ -312,10 +313,10 @@ public class ConfigurationValidator : IConfigurationValidator
         ILogger<ConfigurationValidator> logger,
         IServiceProvider serviceProvider)
     {
-        _docOptions = docOptions;
-        _orleansOptions = orleansOptions;
-        _logger = logger;
-        _serviceProvider = serviceProvider;
+        docOptions = docOptions;
+        orleansOptions = orleansOptions;
+        logger = logger;
+        serviceProvider = serviceProvider;
     }
 
     public async Task<ValidationResult> ValidateAsync()
@@ -324,11 +325,11 @@ public class ConfigurationValidator : IConfigurationValidator
         var warnings = new List<ValidationWarning>();
 
         // Validate document processing configuration
-        var docConfig = _docOptions.CurrentValue;
+        var docConfig = docOptions.CurrentValue;
         ValidateDocumentProcessingConfig(docConfig, errors, warnings);
 
         // Validate Orleans configuration
-        var orleansConfig = _orleansOptions.CurrentValue;
+        var orleansConfig = orleansOptions.CurrentValue;
         ValidateOrleansConfig(orleansConfig, errors, warnings);
 
         // Validate service dependencies
@@ -342,15 +343,15 @@ public class ConfigurationValidator : IConfigurationValidator
 
         if (errors.Count > 0)
         {
-            _logger.LogError("Configuration validation failed with {ErrorCount} errors", errors.Count);
+            logger.LogError("Configuration validation failed with {ErrorCount} errors", errors.Count);
         }
         else if (warnings.Count > 0)
         {
-            _logger.LogWarning("Configuration validation passed with {WarningCount} warnings", warnings.Count);
+            logger.LogWarning("Configuration validation passed with {WarningCount} warnings", warnings.Count);
         }
         else
         {
-            _logger.LogInformation("Configuration validation passed successfully");
+            logger.LogInformation("Configuration validation passed successfully");
         }
 
         return result;
@@ -363,7 +364,7 @@ public class ConfigurationValidator : IConfigurationValidator
 
         try
         {
-            using var scope = _serviceProvider.CreateScope();
+            using var scope = serviceProvider.CreateScope();
             
             switch (serviceName.ToLowerInvariant())
             {
@@ -562,16 +563,16 @@ public record ValidationWarning(string Property, string Message);
 // Background service for continuous validation
 public class ConfigurationValidationService : BackgroundService
 {
-    private readonly IConfigurationValidator _validator;
-    private readonly ILogger<ConfigurationValidationService> _logger;
-    private readonly TimeSpan _validationInterval = TimeSpan.FromMinutes(5);
+    private readonly IConfigurationValidator validator;
+    private readonly ILogger<ConfigurationValidationService> logger;
+    private readonly TimeSpan validationInterval = TimeSpan.FromMinutes(5);
 
     public ConfigurationValidationService(
         IConfigurationValidator validator,
         ILogger<ConfigurationValidationService> logger)
     {
-        _validator = validator;
-        _logger = logger;
+        validator = validator;
+        logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -580,7 +581,7 @@ public class ConfigurationValidationService : BackgroundService
         await ValidateConfigurationAsync();
 
         // Periodic validation
-        using var timer = new PeriodicTimer(_validationInterval);
+        using var timer = new PeriodicTimer(validationInterval);
         
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
@@ -592,17 +593,17 @@ public class ConfigurationValidationService : BackgroundService
     {
         try
         {
-            var result = await _validator.ValidateAsync();
+            var result = await validator.ValidateAsync();
             
             if (!result.IsValid)
             {
-                _logger.LogError("Configuration validation failed: {Errors}", 
+                logger.LogError("Configuration validation failed: {Errors}", 
                     string.Join(", ", result.Errors.Select(e => $"{e.Property}: {e.Message}")));
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Configuration validation encountered an error");
+            logger.LogError(ex, "Configuration validation encountered an error");
         }
     }
 }
@@ -622,11 +623,11 @@ public interface IConfigurationMonitor
 
 public class ConfigurationMonitor : IConfigurationMonitor
 {
-    private readonly IOptionsMonitor<DocumentProcessingOptions> _docOptions;
-    private readonly IOptionsMonitor<OrleansConfiguration> _orleansOptions;
-    private readonly ILogger<ConfigurationMonitor> _logger;
-    private readonly ConcurrentQueue<ConfigurationChange> _recentChanges = new();
-    private readonly object _lock = new();
+    private readonly IOptionsMonitor<DocumentProcessingOptions> docOptions;
+    private readonly IOptionsMonitor<OrleansConfiguration> orleansOptions;
+    private readonly ILogger<ConfigurationMonitor> logger;
+    private readonly ConcurrentQueue<ConfigurationChange> recentChanges = new();
+    private readonly object lock = new();
 
     public event EventHandler<ConfigurationChangedEventArgs>? ConfigurationChanged;
 
@@ -635,12 +636,12 @@ public class ConfigurationMonitor : IConfigurationMonitor
         IOptionsMonitor<OrleansConfiguration> orleansOptions,
         ILogger<ConfigurationMonitor> logger)
     {
-        _docOptions = docOptions;
-        _orleansOptions = orleansOptions;
-        _logger = logger;
+        docOptions = docOptions;
+        orleansOptions = orleansOptions;
+        logger = logger;
 
         // Subscribe to configuration changes
-        _docOptions.OnChange((options, name) =>
+        docOptions.OnChange((options, name) =>
         {
             var change = new ConfigurationChange(
                 Section: "DocumentProcessing",
@@ -653,7 +654,7 @@ public class ConfigurationMonitor : IConfigurationMonitor
             RecordChange(change);
         });
 
-        _orleansOptions.OnChange((options, name) =>
+        orleansOptions.OnChange((options, name) =>
         {
             var change = new ConfigurationChange(
                 Section: "Orleans",
@@ -669,8 +670,8 @@ public class ConfigurationMonitor : IConfigurationMonitor
 
     public async Task<ConfigurationSnapshot> GetCurrentSnapshotAsync()
     {
-        var docConfig = _docOptions.CurrentValue;
-        var orleansConfig = _orleansOptions.CurrentValue;
+        var docConfig = docOptions.CurrentValue;
+        var orleansConfig = orleansOptions.CurrentValue;
 
         var snapshot = new ConfigurationSnapshot(
             DocumentProcessing: docConfig,
@@ -685,7 +686,7 @@ public class ConfigurationMonitor : IConfigurationMonitor
     public async Task<List<ConfigurationChange>> GetRecentChangesAsync(TimeSpan period)
     {
         var cutoff = DateTime.UtcNow - period;
-        var changes = _recentChanges
+        var changes = recentChanges
             .Where(c => c.Timestamp >= cutoff)
             .OrderByDescending(c => c.Timestamp)
             .ToList();
@@ -695,18 +696,18 @@ public class ConfigurationMonitor : IConfigurationMonitor
 
     private void RecordChange(ConfigurationChange change)
     {
-        lock (_lock)
+        lock (lock)
         {
-            _recentChanges.Enqueue(change);
+            recentChanges.Enqueue(change);
             
             // Keep only recent changes (last 100)
-            while (_recentChanges.Count > 100)
+            while (recentChanges.Count > 100)
             {
-                _recentChanges.TryDequeue(out _);
+                recentChanges.TryDequeue(out _);
             }
         }
 
-        _logger.LogInformation("Configuration changed: {Section}.{Property}", change.Section, change.Property);
+        logger.LogInformation("Configuration changed: {Section}.{Property}", change.Section, change.Property);
         
         ConfigurationChanged?.Invoke(this, new ConfigurationChangedEventArgs(change));
     }
@@ -714,8 +715,8 @@ public class ConfigurationMonitor : IConfigurationMonitor
     private string GetConfigurationVersion()
     {
         // Generate a hash of current configuration for versioning
-        var docConfig = JsonSerializer.Serialize(_docOptions.CurrentValue);
-        var orleansConfig = JsonSerializer.Serialize(_orleansOptions.CurrentValue);
+        var docConfig = JsonSerializer.Serialize(docOptions.CurrentValue);
+        var orleansConfig = JsonSerializer.Serialize(orleansOptions.CurrentValue);
         var combined = docConfig + orleansConfig;
         
         using var sha = SHA256.Create();
@@ -846,26 +847,26 @@ public class ConfigurationChangedEventArgs : EventArgs
 [Route("api/[controller]")]
 public class ConfigurationController : ControllerBase
 {
-    private readonly IConfigurationMonitor _monitor;
-    private readonly IConfigurationValidator _validator;
+    private readonly IConfigurationMonitor monitor;
+    private readonly IConfigurationValidator validator;
 
     public ConfigurationController(IConfigurationMonitor monitor, IConfigurationValidator validator)
     {
-        _monitor = monitor;
-        _validator = validator;
+        monitor = monitor;
+        validator = validator;
     }
 
     [HttpGet("current")]
     public async Task<ActionResult<ConfigurationSnapshot>> GetCurrentConfiguration()
     {
-        var snapshot = await _monitor.GetCurrentSnapshotAsync();
+        var snapshot = await monitor.GetCurrentSnapshotAsync();
         return Ok(snapshot);
     }
 
     [HttpGet("validate")]
     public async Task<ActionResult<ValidationResult>> ValidateConfiguration()
     {
-        var result = await _validator.ValidateAsync();
+        var result = await validator.ValidateAsync();
         return Ok(result);
     }
 
@@ -873,7 +874,7 @@ public class ConfigurationController : ControllerBase
     public async Task<ActionResult<List<ConfigurationChange>>> GetRecentChanges(
         [FromQuery] int hours = 24)
     {
-        var changes = await _monitor.GetRecentChangesAsync(TimeSpan.FromHours(hours));
+        var changes = await monitor.GetRecentChangesAsync(TimeSpan.FromHours(hours));
         return Ok(changes);
     }
 }

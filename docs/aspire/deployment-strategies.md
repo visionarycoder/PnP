@@ -1,8 +1,9 @@
-# .NET Aspire Deployment Strategies
+# Enterprise Deployment Strategies with .NET Aspire
 
-**Description**: Core deployment strategy patterns for .NET Aspire applications, covering deployment methodologies, rollout strategies, environment management, and strategic deployment decision frameworks.
+**Description**: Advanced enterprise deployment strategies including blue-green deployments, canary releases with automated rollback, multi-region disaster recovery, zero-downtime migrations, compliance-driven deployment pipelines, and advanced GitOps workflows with enterprise governance.
 
-**Language/Technology**: C#, .NET Aspire, .NET 9.0, DevOps, Cloud Architecture
+**Language/Technology**: C#, .NET Aspire, .NET 9.0, Azure DevOps, GitHub Actions, GitOps, Terraform
+**Enterprise Features**: Zero-downtime deployments, automated rollbacks, disaster recovery, compliance pipelines, multi-region strategies, and enterprise governance frameworks
 
 **Code**:
 

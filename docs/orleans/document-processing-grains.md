@@ -1,8 +1,8 @@
-# Document Processing Grains
+# Enterprise Orleans Document Processing Architecture
 
-**Description**: Specialized Orleans grains for document processing workflows, content analysis, and distributed document management patterns.
+**Description**: Production-scale Orleans document processing with intelligent workflow orchestration, AI-powered content analysis, distributed coordination, enterprise compliance, and real-time monitoring for mission-critical document management systems.
 
-**Language/Technology**: C# 12, Orleans
+**Language/Technology**: C# (.NET 9.0), Orleans 8.0+, Azure AI Services, Cognitive Search
 
 ## Table of Contents
 

@@ -1,8 +1,8 @@
-# Orleans Integration for ML.NET
+# Enterprise Orleans-ML.NET Distributed AI Architecture
 
-**Description**: Integration patterns for ML.NET with Microsoft Orleans framework, enabling distributed machine learning services with grain-based architecture, stateful model management, and scalable inference pipelines for high-throughput scenarios.
+**Description**: Production-scale distributed machine learning using Orleans actor model with ML.NET, featuring stateful AI grains, intelligent model sharding, fault-tolerant inference pipelines, elastic scaling, and enterprise monitoring for mission-critical AI workloads.
 
-**Language/Technology**: C#, ML.NET, Microsoft Orleans, ASP.NET Core
+**Language/Technology**: C# (.NET 9.0), ML.NET 3.0+, Orleans 8.0+, Azure Service Fabric
 
 **Code**:
 
@@ -60,53 +60,53 @@ public interface IMLPipelineGrain : IGrainWithStringKey
 // ML Model Grain Implementation
 public class MLModelGrain : Grain, IMLModelGrain
 {
-    private readonly ILogger<MLModelGrain> _logger;
-    private readonly IMLModelRepository _modelRepository;
-    private readonly IMLMetricsCollector _metricsCollector;
+    private readonly ILogger<MLModelGrain> logger;
+    private readonly IMLModelRepository modelRepository;
+    private readonly IMLMetricsCollector metricsCollector;
     
-    private ITransformer? _model;
-    private MLContext? _mlContext;
-    private ModelInfo? _modelInfo;
-    private readonly ConcurrentQueue<PredictionMetrics> _recentPredictions;
-    private Timer? _metricsTimer;
+    private ITransformer? model;
+    private MLContext? mlContext;
+    private ModelInfo? modelInfo;
+    private readonly ConcurrentQueue<PredictionMetrics> recentPredictions;
+    private Timer? metricsTimer;
 
     public MLModelGrain(
         ILogger<MLModelGrain> logger,
         IMLModelRepository modelRepository,
         IMLMetricsCollector metricsCollector)
     {
-        _logger = logger;
-        _modelRepository = modelRepository;
-        _metricsCollector = metricsCollector;
-        _recentPredictions = new ConcurrentQueue<PredictionMetrics>();
+        logger = logger;
+        modelRepository = modelRepository;
+        metricsCollector = metricsCollector;
+        recentPredictions = new ConcurrentQueue<PredictionMetrics>();
     }
 
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Activating ML Model Grain {GrainId}", this.GetPrimaryKeyString());
+        logger.LogInformation("Activating ML Model Grain {GrainId}", this.GetPrimaryKeyString());
         
-        _mlContext = new MLContext(seed: 0);
+        mlContext = new MLContext(seed: 0);
         
         // Start metrics collection timer
-        _metricsTimer = RegisterTimer(CollectMetrics, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+        metricsTimer = RegisterTimer(CollectMetrics, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
         
         await base.OnActivateAsync(cancellationToken);
     }
 
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Deactivating ML Model Grain {GrainId}, Reason: {Reason}", 
+        logger.LogInformation("Deactivating ML Model Grain {GrainId}, Reason: {Reason}", 
             this.GetPrimaryKeyString(), reason);
         
-        _metricsTimer?.Dispose();
-        _model?.Dispose();
+        metricsTimer?.Dispose();
+        model?.Dispose();
         
         await base.OnDeactivateAsync(reason, cancellationToken);
     }
 
     public async Task<ModelInfo> GetModelInfoAsync()
     {
-        if (_modelInfo == null)
+        if (modelInfo == null)
         {
             return new ModelInfo(
                 Id: this.GetPrimaryKeyString(),
@@ -119,12 +119,12 @@ public class MLModelGrain : Grain, IMLModelGrain
                 ModelSize: 0);
         }
 
-        return await Task.FromResult(_modelInfo);
+        return await Task.FromResult(modelInfo);
     }
 
     public async Task<PredictionResult> PredictAsync(PredictionRequest request)
     {
-        if (_model == null || _mlContext == null)
+        if (model == null || mlContext == null)
         {
             return new PredictionResult(
                 Success: false,
@@ -137,16 +137,16 @@ public class MLModelGrain : Grain, IMLModelGrain
         
         try
         {
-            _logger.LogDebug("Processing prediction request {RequestId}", request.RequestId);
+            logger.LogDebug("Processing prediction request {RequestId}", request.RequestId);
 
             // Create data view from input
-            var dataView = _mlContext.Data.LoadFromEnumerable(new[] { request.Input });
+            var dataView = mlContext.Data.LoadFromEnumerable(new[] { request.Input });
             
             // Transform data and get predictions
-            var predictions = _model.Transform(dataView);
+            var predictions = model.Transform(dataView);
             
             // Extract prediction results (this would be specific to your model type)
-            var predictionResults = _mlContext.Data.CreateEnumerable<PredictionOutput>(predictions, false).ToArray();
+            var predictionResults = mlContext.Data.CreateEnumerable<PredictionOutput>(predictions, false).ToArray();
             
             stopwatch.Stop();
             
@@ -159,16 +159,16 @@ public class MLModelGrain : Grain, IMLModelGrain
                 InputSize: EstimateInputSize(request.Input),
                 ModelId: this.GetPrimaryKeyString());
 
-            _recentPredictions.Enqueue(metrics);
-            await _metricsCollector.RecordPredictionAsync(metrics);
+            recentPredictions.Enqueue(metrics);
+            await metricsCollector.RecordPredictionAsync(metrics);
 
             // Update model info
             if (_modelInfo != null)
             {
-                _modelInfo = _modelInfo with 
+                modelInfo = _modelInfo with 
                 { 
                     LastPredictionAt = DateTime.UtcNow,
-                    PredictionCount = _modelInfo.PredictionCount + 1
+                    PredictionCount = modelInfo.PredictionCount + 1
                 };
             }
 
@@ -177,12 +177,12 @@ public class MLModelGrain : Grain, IMLModelGrain
                 Predictions: predictionResults,
                 RequestId: request.RequestId,
                 ProcessingTime: stopwatch.Elapsed,
-                ModelVersion: _modelInfo?.Version);
+                ModelVersion: modelInfo?.Version);
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Prediction failed for request {RequestId}", request.RequestId);
+            logger.LogError(ex, "Prediction failed for request {RequestId}", request.RequestId);
             
             var errorMetrics = new PredictionMetrics(
                 RequestId: request.RequestId,
@@ -193,8 +193,8 @@ public class MLModelGrain : Grain, IMLModelGrain
                 ModelId: this.GetPrimaryKeyString(),
                 Error: ex.Message);
 
-            _recentPredictions.Enqueue(errorMetrics);
-            await _metricsCollector.RecordPredictionAsync(errorMetrics);
+            recentPredictions.Enqueue(errorMetrics);
+            await metricsCollector.RecordPredictionAsync(errorMetrics);
 
             return new PredictionResult(
                 Success: false,
@@ -206,7 +206,7 @@ public class MLModelGrain : Grain, IMLModelGrain
 
     public async Task<BatchPredictionResult> PredictBatchAsync(BatchPredictionRequest request)
     {
-        if (_model == null || _mlContext == null)
+        if (model == null || mlContext == null)
         {
             return new BatchPredictionResult(
                 Success: false,
@@ -222,7 +222,7 @@ public class MLModelGrain : Grain, IMLModelGrain
 
         try
         {
-            _logger.LogInformation("Processing batch prediction request {RequestId} with {Count} items", 
+            logger.LogInformation("Processing batch prediction request {RequestId} with {Count} items", 
                 request.RequestId, request.Inputs.Count);
 
             // Process in chunks to manage memory
@@ -233,15 +233,15 @@ public class MLModelGrain : Grain, IMLModelGrain
             {
                 try
                 {
-                    var dataView = _mlContext.Data.LoadFromEnumerable(chunk);
-                    var predictions = _model.Transform(dataView);
-                    var chunkResults = _mlContext.Data.CreateEnumerable<PredictionOutput>(predictions, false);
+                    var dataView = mlContext.Data.LoadFromEnumerable(chunk);
+                    var predictions = model.Transform(dataView);
+                    var chunkResults = mlContext.Data.CreateEnumerable<PredictionOutput>(predictions, false);
                     
                     results.AddRange(chunkResults);
                 }
                 catch (Exception chunkEx)
                 {
-                    _logger.LogWarning(chunkEx, "Failed to process chunk in batch {RequestId}", request.RequestId);
+                    logger.LogWarning(chunkEx, "Failed to process chunk in batch {RequestId}", request.RequestId);
                     errors.Add($"Chunk processing failed: {chunkEx.Message}");
                 }
             }
@@ -258,15 +258,15 @@ public class MLModelGrain : Grain, IMLModelGrain
                 ModelId: this.GetPrimaryKeyString(),
                 Errors: errors);
 
-            await _metricsCollector.RecordBatchPredictionAsync(batchMetrics);
+            await metricsCollector.RecordBatchPredictionAsync(batchMetrics);
 
             // Update model info
             if (_modelInfo != null)
             {
-                _modelInfo = _modelInfo with 
+                modelInfo = _modelInfo with 
                 { 
                     LastPredictionAt = DateTime.UtcNow,
-                    PredictionCount = _modelInfo.PredictionCount + results.Count
+                    PredictionCount = modelInfo.PredictionCount + results.Count
                 };
             }
 
@@ -277,12 +277,12 @@ public class MLModelGrain : Grain, IMLModelGrain
                 ProcessingTime: stopwatch.Elapsed,
                 ProcessedCount: results.Count,
                 Errors: errors,
-                ModelVersion: _modelInfo?.Version);
+                ModelVersion: modelInfo?.Version);
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Batch prediction failed for request {RequestId}", request.RequestId);
+            logger.LogError(ex, "Batch prediction failed for request {RequestId}", request.RequestId);
 
             return new BatchPredictionResult(
                 Success: false,
@@ -297,25 +297,25 @@ public class MLModelGrain : Grain, IMLModelGrain
     {
         try
         {
-            _logger.LogInformation("Loading model from {ModelPath} version {Version}", modelPath, version);
+            logger.LogInformation("Loading model from {ModelPath} version {Version}", modelPath, version);
 
-            if (_mlContext == null)
+            if (mlContext == null)
             {
-                _mlContext = new MLContext(seed: 0);
+                mlContext = new MLContext(seed: 0);
             }
 
             // Load model from repository
-            var modelData = await _modelRepository.LoadModelAsync(modelPath, version);
+            var modelData = await modelRepository.LoadModelAsync(modelPath, version);
             
             // Dispose previous model if exists
-            _model?.Dispose();
+            model?.Dispose();
             
             // Load new model
             using var stream = new MemoryStream(modelData.ModelBytes);
-            _model = _mlContext.Model.Load(stream, out var modelInputSchema);
+            model = mlContext.Model.Load(stream, out var modelInputSchema);
 
             // Update model info
-            _modelInfo = new ModelInfo(
+            modelInfo = new ModelInfo(
                 Id: this.GetPrimaryKeyString(),
                 Name: modelData.Name,
                 Version: version,
@@ -326,7 +326,7 @@ public class MLModelGrain : Grain, IMLModelGrain
                 ModelSize: modelData.ModelBytes.Length,
                 Schema: modelInputSchema.ToString());
 
-            _logger.LogInformation("Successfully loaded model {ModelId} version {Version}", 
+            logger.LogInformation("Successfully loaded model {ModelId} version {Version}", 
                 this.GetPrimaryKeyString(), version);
 
             return new LoadModelResult(
@@ -338,9 +338,9 @@ public class MLModelGrain : Grain, IMLModelGrain
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to load model from {ModelPath}", modelPath);
+            logger.LogError(ex, "Failed to load model from {ModelPath}", modelPath);
             
-            _modelInfo = _modelInfo?.WithStatus(ModelStatus.LoadFailed) ?? 
+            modelInfo = modelInfo?.WithStatus(ModelStatus.LoadFailed) ?? 
                 new ModelInfo(
                     Id: this.GetPrimaryKeyString(),
                     Name: "Load Failed",
@@ -364,14 +364,14 @@ public class MLModelGrain : Grain, IMLModelGrain
     {
         try
         {
-            _logger.LogInformation("Unloading model {ModelId}", this.GetPrimaryKeyString());
+            logger.LogInformation("Unloading model {ModelId}", this.GetPrimaryKeyString());
 
-            _model?.Dispose();
-            _model = null;
+            model?.Dispose();
+            model = null;
 
             if (_modelInfo != null)
             {
-                _modelInfo = _modelInfo with { Status = ModelStatus.Unloaded };
+                modelInfo = _modelInfo with { Status = ModelStatus.Unloaded };
             }
 
             return await Task.FromResult(new UnloadModelResult(
@@ -381,7 +381,7 @@ public class MLModelGrain : Grain, IMLModelGrain
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to unload model {ModelId}", this.GetPrimaryKeyString());
+            logger.LogError(ex, "Failed to unload model {ModelId}", this.GetPrimaryKeyString());
             
             return new UnloadModelResult(
                 Success: false,
@@ -393,7 +393,7 @@ public class MLModelGrain : Grain, IMLModelGrain
 
     public async Task<ModelMetrics> GetModelMetricsAsync()
     {
-        var recentMetrics = _recentPredictions.ToArray();
+        var recentMetrics = recentPredictions.ToArray();
         
         var totalRequests = recentMetrics.Length;
         var successfulRequests = recentMetrics.Count(m => m.Success);
@@ -419,8 +419,8 @@ public class MLModelGrain : Grain, IMLModelGrain
 
     public async Task<HealthStatus> GetHealthStatusAsync()
     {
-        var isHealthy = _model != null && _modelInfo?.Status == ModelStatus.Loaded;
-        var recentErrors = _recentPredictions.Where(m => !m.Success && 
+        var isHealthy = _model != null && modelInfo?.Status == ModelStatus.Loaded;
+        var recentErrors = recentPredictions.Where(m => !m.Success && 
             m.Timestamp > DateTime.UtcNow.AddMinutes(-5)).Count();
         
         if (recentErrors > 10)
@@ -431,20 +431,20 @@ public class MLModelGrain : Grain, IMLModelGrain
         return await Task.FromResult(new HealthStatus(
             IsHealthy: isHealthy,
             ModelId: this.GetPrimaryKeyString(),
-            Status: _modelInfo?.Status ?? ModelStatus.NotLoaded,
+            Status: modelInfo?.Status ?? ModelStatus.NotLoaded,
             RecentErrors: recentErrors,
-            LastPredictionAt: _modelInfo?.LastPredictionAt,
+            LastPredictionAt: modelInfo?.LastPredictionAt,
             CheckedAt: DateTime.UtcNow));
     }
 
     public async Task WarmupAsync(WarmupRequest request)
     {
-        if (_model == null || _mlContext == null)
+        if (model == null || mlContext == null)
         {
             throw new InvalidOperationException("Model not loaded");
         }
 
-        _logger.LogInformation("Warming up model {ModelId} with {Count} requests", 
+        logger.LogInformation("Warming up model {ModelId} with {Count} requests", 
             this.GetPrimaryKeyString(), request.WarmupInputs.Count);
 
         var tasks = request.WarmupInputs.Select(async input =>
@@ -460,12 +460,12 @@ public class MLModelGrain : Grain, IMLModelGrain
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Warmup request failed for model {ModelId}", this.GetPrimaryKeyString());
+                logger.LogWarning(ex, "Warmup request failed for model {ModelId}", this.GetPrimaryKeyString());
             }
         });
 
         await Task.WhenAll(tasks);
-        _logger.LogInformation("Model warmup completed for {ModelId}", this.GetPrimaryKeyString());
+        logger.LogInformation("Model warmup completed for {ModelId}", this.GetPrimaryKeyString());
     }
 
     private async Task CollectMetrics(object _)
@@ -473,18 +473,18 @@ public class MLModelGrain : Grain, IMLModelGrain
         try
         {
             var metrics = await GetModelMetricsAsync();
-            await _metricsCollector.RecordModelMetricsAsync(metrics);
+            await metricsCollector.RecordModelMetricsAsync(metrics);
             
             // Clean old metrics (keep last hour)
             var cutoffTime = DateTime.UtcNow.AddHours(-1);
-            while (_recentPredictions.TryPeek(out var oldMetric) && oldMetric.Timestamp < cutoffTime)
+            while (recentPredictions.TryPeek(out var oldMetric) && oldMetric.Timestamp < cutoffTime)
             {
-                _recentPredictions.TryDequeue(out _);
+                recentPredictions.TryDequeue(out _);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to collect metrics for model {ModelId}", this.GetPrimaryKeyString());
+            logger.LogWarning(ex, "Failed to collect metrics for model {ModelId}", this.GetPrimaryKeyString());
         }
     }
 
@@ -508,25 +508,25 @@ public class MLModelGrain : Grain, IMLModelGrain
 // ML Model Manager Grain Implementation
 public class MLModelManagerGrain : Grain, IMLModelManagerGrain
 {
-    private readonly ILogger<MLModelManagerGrain> _logger;
-    private readonly IClusterClient _clusterClient;
-    private readonly IMLModelRepository _modelRepository;
-    private readonly ConcurrentDictionary<string, ModelDeploymentInfo> _deployedModels;
+    private readonly ILogger<MLModelManagerGrain> logger;
+    private readonly IClusterClient clusterClient;
+    private readonly IMLModelRepository modelRepository;
+    private readonly ConcurrentDictionary<string, ModelDeploymentInfo> deployedModels;
 
     public MLModelManagerGrain(
         ILogger<MLModelManagerGrain> logger,
         IClusterClient clusterClient,
         IMLModelRepository modelRepository)
     {
-        _logger = logger;
-        _clusterClient = clusterClient;
-        _modelRepository = modelRepository;
-        _deployedModels = new ConcurrentDictionary<string, ModelDeploymentInfo>();
+        logger = logger;
+        clusterClient = clusterClient;
+        modelRepository = modelRepository;
+        deployedModels = new ConcurrentDictionary<string, ModelDeploymentInfo>();
     }
 
     public async Task<DeploymentResult> DeployModelAsync(ModelDeploymentRequest request)
     {
-        _logger.LogInformation("Deploying model {ModelId} version {Version} with {Instances} instances",
+        logger.LogInformation("Deploying model {ModelId} version {Version} with {Instances} instances",
             request.ModelId, request.Version, request.InstanceCount);
 
         try
@@ -545,7 +545,7 @@ public class MLModelManagerGrain : Grain, IMLModelManagerGrain
                 .Select(async i =>
                 {
                     var grainKey = $"{request.ModelId}-instance-{i}";
-                    var modelGrain = _clusterClient.GetGrain<IMLModelGrain>(grainKey);
+                    var modelGrain = clusterClient.GetGrain<IMLModelGrain>(grainKey);
                     
                     var loadResult = await modelGrain.LoadModelAsync(request.ModelPath, request.Version);
                     if (!loadResult.Success)
@@ -572,7 +572,7 @@ public class MLModelManagerGrain : Grain, IMLModelManagerGrain
                 InstanceIds = instanceIds.ToList()
             };
 
-            _logger.LogInformation("Successfully deployed model {ModelId} to {Count} instances",
+            logger.LogInformation("Successfully deployed model {ModelId} to {Count} instances",
                 request.ModelId, instanceIds.Length);
 
             return new DeploymentResult(
@@ -585,10 +585,10 @@ public class MLModelManagerGrain : Grain, IMLModelManagerGrain
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to deploy model {ModelId}", request.ModelId);
+            logger.LogError(ex, "Failed to deploy model {ModelId}", request.ModelId);
 
             // Update deployment status to failed
-            if (_deployedModels.TryGetValue(request.ModelId, out var failedDeployment))
+            if (deployedModels.TryGetValue(request.ModelId, out var failedDeployment))
             {
                 _deployedModels[request.ModelId] = failedDeployment with { Status = DeploymentStatus.Failed };
             }
@@ -606,19 +606,19 @@ public class MLModelManagerGrain : Grain, IMLModelManagerGrain
     {
         var modelInfos = new List<ModelInfo>();
 
-        foreach (var deployment in _deployedModels.Values.Where(d => d.Status == DeploymentStatus.Deployed))
+        foreach (var deployment in deployedModels.Values.Where(d => d.Status == DeploymentStatus.Deployed))
         {
             foreach (var instanceId in deployment.InstanceIds ?? new List<string>())
             {
                 try
                 {
-                    var modelGrain = _clusterClient.GetGrain<IMLModelGrain>(instanceId);
+                    var modelGrain = clusterClient.GetGrain<IMLModelGrain>(instanceId);
                     var modelInfo = await modelGrain.GetModelInfoAsync();
                     modelInfos.Add(modelInfo);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to get model info for instance {InstanceId}", instanceId);
+                    logger.LogWarning(ex, "Failed to get model info for instance {InstanceId}", instanceId);
                 }
             }
         }
@@ -628,7 +628,7 @@ public class MLModelManagerGrain : Grain, IMLModelManagerGrain
 
     public async Task<ModelInfo> GetModelAsync(string modelId)
     {
-        if (!_deployedModels.TryGetValue(modelId, out var deployment))
+        if (!deployedModels.TryGetValue(modelId, out var deployment))
         {
             throw new ArgumentException($"Model {modelId} not found");
         }
@@ -640,17 +640,17 @@ public class MLModelManagerGrain : Grain, IMLModelManagerGrain
 
         // Get info from first available instance
         var firstInstanceId = deployment.InstanceIds.First();
-        var modelGrain = _clusterClient.GetGrain<IMLModelGrain>(firstInstanceId);
+        var modelGrain = clusterClient.GetGrain<IMLModelGrain>(firstInstanceId);
         
         return await modelGrain.GetModelInfoAsync();
     }
 
     public async Task<ScalingResult> ScaleModelAsync(string modelId, ScalingRequest request)
     {
-        _logger.LogInformation("Scaling model {ModelId} to {TargetInstances} instances", 
+        logger.LogInformation("Scaling model {ModelId} to {TargetInstances} instances", 
             modelId, request.TargetInstanceCount);
 
-        if (!_deployedModels.TryGetValue(modelId, out var deployment))
+        if (!deployedModels.TryGetValue(modelId, out var deployment))
         {
             return new ScalingResult(
                 Success: false,
@@ -670,7 +670,7 @@ public class MLModelManagerGrain : Grain, IMLModelManagerGrain
                     .Select(async i =>
                     {
                         var grainKey = $"{modelId}-instance-{i}";
-                        var modelGrain = _clusterClient.GetGrain<IMLModelGrain>(grainKey);
+                        var modelGrain = clusterClient.GetGrain<IMLModelGrain>(grainKey);
                         
                         var loadResult = await modelGrain.LoadModelAsync(deployment.ModelPath ?? "", deployment.Version);
                         if (!loadResult.Success)
@@ -701,12 +701,12 @@ public class MLModelManagerGrain : Grain, IMLModelManagerGrain
                 {
                     try
                     {
-                        var modelGrain = _clusterClient.GetGrain<IMLModelGrain>(instanceId);
+                        var modelGrain = clusterClient.GetGrain<IMLModelGrain>(instanceId);
                         await modelGrain.UnloadModelAsync();
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "Failed to unload model instance {InstanceId}", instanceId);
+                        logger.LogWarning(ex, "Failed to unload model instance {InstanceId}", instanceId);
                     }
                 }
 
@@ -719,7 +719,7 @@ public class MLModelManagerGrain : Grain, IMLModelManagerGrain
                 };
             }
 
-            _logger.LogInformation("Successfully scaled model {ModelId} from {OldCount} to {NewCount} instances",
+            logger.LogInformation("Successfully scaled model {ModelId} from {OldCount} to {NewCount} instances",
                 modelId, currentInstanceCount, targetInstanceCount);
 
             return new ScalingResult(
@@ -731,7 +731,7 @@ public class MLModelManagerGrain : Grain, IMLModelManagerGrain
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to scale model {ModelId}", modelId);
+            logger.LogError(ex, "Failed to scale model {ModelId}", modelId);
             
             return new ScalingResult(
                 Success: false,
@@ -743,7 +743,7 @@ public class MLModelManagerGrain : Grain, IMLModelManagerGrain
 
     public async Task<LoadBalancingInfo> GetLoadBalancingInfoAsync(string modelId)
     {
-        if (!_deployedModels.TryGetValue(modelId, out var deployment))
+        if (!deployedModels.TryGetValue(modelId, out var deployment))
         {
             throw new ArgumentException($"Model {modelId} not found");
         }
@@ -756,7 +756,7 @@ public class MLModelManagerGrain : Grain, IMLModelManagerGrain
             {
                 try
                 {
-                    var modelGrain = _clusterClient.GetGrain<IMLModelGrain>(instanceId);
+                    var modelGrain = clusterClient.GetGrain<IMLModelGrain>(instanceId);
                     var metrics = await modelGrain.GetModelMetricsAsync();
                     var health = await modelGrain.GetHealthStatusAsync();
 
@@ -769,7 +769,7 @@ public class MLModelManagerGrain : Grain, IMLModelManagerGrain
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to get metrics for instance {InstanceId}", instanceId);
+                    logger.LogWarning(ex, "Failed to get metrics for instance {InstanceId}", instanceId);
                 }
             }
         }
@@ -787,7 +787,7 @@ public class MLModelManagerGrain : Grain, IMLModelManagerGrain
 
     public async Task<ModelPerformanceMetrics> GetPerformanceMetricsAsync(string modelId, TimeSpan period)
     {
-        if (!_deployedModels.TryGetValue(modelId, out var deployment))
+        if (!deployedModels.TryGetValue(modelId, out var deployment))
         {
             throw new ArgumentException($"Model {modelId} not found");
         }
@@ -800,13 +800,13 @@ public class MLModelManagerGrain : Grain, IMLModelManagerGrain
             {
                 try
                 {
-                    var modelGrain = _clusterClient.GetGrain<IMLModelGrain>(instanceId);
+                    var modelGrain = clusterClient.GetGrain<IMLModelGrain>(instanceId);
                     var metrics = await modelGrain.GetModelMetricsAsync();
                     allMetrics.Add(metrics);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to get metrics for instance {InstanceId}", instanceId);
+                    logger.LogWarning(ex, "Failed to get metrics for instance {InstanceId}", instanceId);
                 }
             }
         }
@@ -1127,13 +1127,13 @@ namespace DocumentProcessor.API.Controllers;
 [Route("api/ml")]
 public class OrleansMLController : ControllerBase
 {
-    private readonly IClusterClient _clusterClient;
-    private readonly ILogger<OrleansMLController> _logger;
+    private readonly IClusterClient clusterClient;
+    private readonly ILogger<OrleansMLController> logger;
 
     public OrleansMLController(IClusterClient clusterClient, ILogger<OrleansMLController> logger)
     {
-        _clusterClient = clusterClient;
-        _logger = logger;
+        clusterClient = clusterClient;
+        logger = logger;
     }
 
     [HttpPost("models/{modelId}/predict")]
@@ -1144,7 +1144,7 @@ public class OrleansMLController : ControllerBase
         try
         {
             // Get model manager to find the best instance
-            var modelManager = _clusterClient.GetGrain<IMLModelManagerGrain>("default");
+            var modelManager = clusterClient.GetGrain<IMLModelManagerGrain>("default");
             var loadBalancingInfo = await modelManager.GetLoadBalancingInfoAsync(modelId);
             
             if (loadBalancingInfo.HealthyInstances == 0)
@@ -1161,7 +1161,7 @@ public class OrleansMLController : ControllerBase
                 .OrderBy(i => i.RequestsPerMinute)
                 .First();
 
-            var modelGrain = _clusterClient.GetGrain<IMLModelGrain>(selectedInstance.InstanceId);
+            var modelGrain = clusterClient.GetGrain<IMLModelGrain>(selectedInstance.InstanceId);
 
             var predictionRequest = new PredictionRequest(
                 RequestId: request.RequestId,
@@ -1182,7 +1182,7 @@ public class OrleansMLController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Prediction failed for model {ModelId}, request {RequestId}", 
+            logger.LogError(ex, "Prediction failed for model {ModelId}, request {RequestId}", 
                 modelId, request.RequestId);
             
             return StatusCode(500, new PredictionResponse(
@@ -1199,7 +1199,7 @@ public class OrleansMLController : ControllerBase
     {
         try
         {
-            var modelManager = _clusterClient.GetGrain<IMLModelManagerGrain>("default");
+            var modelManager = clusterClient.GetGrain<IMLModelManagerGrain>("default");
             var loadBalancingInfo = await modelManager.GetLoadBalancingInfoAsync(modelId);
             
             if (loadBalancingInfo.HealthyInstances == 0)
@@ -1223,7 +1223,7 @@ public class OrleansMLController : ControllerBase
                     return new BatchPredictionResult(Success: true, Predictions: new List<PredictionOutput>(), 
                         RequestId: $"{request.RequestId}-{index}", ProcessingTime: TimeSpan.Zero, ProcessedCount: 0);
 
-                var modelGrain = _clusterClient.GetGrain<IMLModelGrain>(instance.InstanceId);
+                var modelGrain = clusterClient.GetGrain<IMLModelGrain>(instance.InstanceId);
                 var batchRequest = new BatchPredictionRequest(
                     RequestId: $"{request.RequestId}-{index}",
                     Inputs: batchInputs,
@@ -1273,7 +1273,7 @@ public class OrleansMLController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Batch prediction failed for model {ModelId}, request {RequestId}", 
+            logger.LogError(ex, "Batch prediction failed for model {ModelId}, request {RequestId}", 
                 modelId, request.RequestId);
             
             return StatusCode(500, new BatchPredictionResponse(
@@ -1288,7 +1288,7 @@ public class OrleansMLController : ControllerBase
     {
         try
         {
-            var modelManager = _clusterClient.GetGrain<IMLModelManagerGrain>("default");
+            var modelManager = clusterClient.GetGrain<IMLModelManagerGrain>("default");
             
             var deploymentRequest = new ModelDeploymentRequest(
                 ModelId: request.ModelId,
@@ -1310,7 +1310,7 @@ public class OrleansMLController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Model deployment failed for {ModelId}", request.ModelId);
+            logger.LogError(ex, "Model deployment failed for {ModelId}", request.ModelId);
             return StatusCode(500, "Internal server error");
         }
     }
@@ -1320,7 +1320,7 @@ public class OrleansMLController : ControllerBase
     {
         try
         {
-            var modelManager = _clusterClient.GetGrain<IMLModelManagerGrain>("default");
+            var modelManager = clusterClient.GetGrain<IMLModelManagerGrain>("default");
             var models = await modelManager.GetActiveModelsAsync();
 
             return Ok(new ModelsListResponse(
@@ -1330,7 +1330,7 @@ public class OrleansMLController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get active models");
+            logger.LogError(ex, "Failed to get active models");
             return StatusCode(500, "Internal server error");
         }
     }
@@ -1342,7 +1342,7 @@ public class OrleansMLController : ControllerBase
     {
         try
         {
-            var modelManager = _clusterClient.GetGrain<IMLModelManagerGrain>("default");
+            var modelManager = clusterClient.GetGrain<IMLModelManagerGrain>("default");
             var metrics = await modelManager.GetPerformanceMetricsAsync(modelId, TimeSpan.FromHours(periodHours));
 
             return Ok(new ModelPerformanceResponse(
@@ -1352,7 +1352,7 @@ public class OrleansMLController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get metrics for model {ModelId}", modelId);
+            logger.LogError(ex, "Failed to get metrics for model {ModelId}", modelId);
             return StatusCode(500, "Internal server error");
         }
     }
@@ -1364,7 +1364,7 @@ public class OrleansMLController : ControllerBase
     {
         try
         {
-            var modelManager = _clusterClient.GetGrain<IMLModelManagerGrain>("default");
+            var modelManager = clusterClient.GetGrain<IMLModelManagerGrain>("default");
             
             var scalingRequest = new ScalingRequest(
                 TargetInstanceCount: request.TargetInstanceCount,
@@ -1382,7 +1382,7 @@ public class OrleansMLController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to scale model {ModelId}", modelId);
+            logger.LogError(ex, "Failed to scale model {ModelId}", modelId);
             return StatusCode(500, "Internal server error");
         }
     }
@@ -1392,14 +1392,14 @@ public class OrleansMLController : ControllerBase
     {
         try
         {
-            var modelManager = _clusterClient.GetGrain<IMLModelManagerGrain>("default");
+            var modelManager = clusterClient.GetGrain<IMLModelManagerGrain>("default");
             var loadBalancingInfo = await modelManager.GetLoadBalancingInfoAsync(modelId);
 
             var healthChecks = new List<InstanceHealthStatus>();
 
             foreach (var instance in loadBalancingInfo.InstanceMetrics)
             {
-                var modelGrain = _clusterClient.GetGrain<IMLModelGrain>(instance.InstanceId);
+                var modelGrain = clusterClient.GetGrain<IMLModelGrain>(instance.InstanceId);
                 var health = await modelGrain.GetHealthStatusAsync();
                 
                 healthChecks.Add(new InstanceHealthStatus(
@@ -1423,7 +1423,7 @@ public class OrleansMLController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Health check failed for model {ModelId}", modelId);
+            logger.LogError(ex, "Health check failed for model {ModelId}", modelId);
             return StatusCode(500, "Internal server error");
         }
     }

@@ -119,7 +119,7 @@ services:
     volumes:
       - ./src:/app/src:cached
       - ./logs:/app/logs
-    depends_on:
+    dependson:
       postgres:
         condition: service_healthy
       redis:
@@ -133,7 +133,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      startperiod: 40s
 
   postgres:
     image: pgvector/pgvector:pg16
@@ -144,7 +144,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgresdata:/var/lib/postgresql/data
       - ./database/init:/docker-entrypoint-initdb.d
     networks:
       - app-network
@@ -159,7 +159,7 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - redis_data:/data
+      - redisdata:/data
     networks:
       - app-network
     healthcheck:
@@ -176,7 +176,7 @@ services:
       - CHROMA_SERVER_HOST=0.0.0.0
       - CHROMA_SERVER_HTTP_PORT=8000
     volumes:
-      - chroma_data:/chroma/chroma
+      - chromadata:/chroma/chroma
     networks:
       - app-network
 
@@ -186,7 +186,7 @@ services:
       - "9090:9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
+      - prometheusdata:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -202,18 +202,18 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin123
     volumes:
-      - grafana_data:/var/lib/grafana
+      - grafanadata:/var/lib/grafana
       - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
       - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
     networks:
       - app-network
 
 volumes:
-  postgres_data:
-  redis_data:
-  chroma_data:
-  prometheus_data:
-  grafana_data:
+  postgresdata:
+  redisdata:
+  chromadata:
+  prometheusdata:
+  grafanadata:
 
 networks:
   app-network:

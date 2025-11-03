@@ -1,8 +1,8 @@
-# Testing Strategies
+# Enterprise Orleans Testing Framework
 
-**Description**: Orleans testing patterns for unit testing, integration testing, and end-to-end testing of grain applications.
+**Description**: Production-grade Orleans testing with chaos engineering, performance validation, distributed integration testing, automated quality gates, and comprehensive test automation for mission-critical distributed systems.
 
-**Language/Technology**: C# 12, Orleans, xUnit
+**Language/Technology**: C# (.NET 9.0), Orleans 8.0+, xUnit, NBomber, Testcontainers
 
 ## Table of Contents
 

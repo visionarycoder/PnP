@@ -155,18 +155,18 @@ public interface IMLModelService
 // ML model service implementation
 public class MLModelService : IMLModelService, IDisposable
 {
-    private readonly ILogger<MLModelService> _logger;
-    private readonly MLContext _mlContext;
-    private readonly Dictionary<string, ITransformer> _models;
-    private readonly Dictionary<string, PredictionEngine<object, object>> _predictionEngines;
-    private readonly SemaphoreSlim _modelLock = new(1, 1);
+    private readonly ILogger<MLModelService> logger;
+    private readonly MLContext mlContext;
+    private readonly Dictionary<string, ITransformer> models;
+    private readonly Dictionary<string, PredictionEngine<object, object>> predictionEngines;
+    private readonly SemaphoreSlim modelLock = new(1, 1);
 
     public MLModelService(ILogger<MLModelService> logger, IConfiguration configuration)
     {
-        _logger = logger;
-        _mlContext = new MLContext(seed: 0);
-        _models = new Dictionary<string, ITransformer>();
-        _predictionEngines = new Dictionary<string, PredictionEngine<object, object>>();
+        logger = logger;
+        mlContext = new MLContext(seed: 0);
+        models = new Dictionary<string, ITransformer>();
+        predictionEngines = new Dictionary<string, PredictionEngine<object, object>>();
         
         // Load models asynchronously
         _ = Task.Run(LoadModelsAsync);
@@ -174,7 +174,7 @@ public class MLModelService : IMLModelService, IDisposable
 
     private async Task LoadModelsAsync()
     {
-        await _modelLock.WaitAsync();
+        await modelLock.WaitAsync();
         try
         {
             // Load pre-trained models from files or train new ones
@@ -184,15 +184,15 @@ public class MLModelService : IMLModelService, IDisposable
             await LoadSummarizationModelAsync();
             await LoadEntityExtractionModelAsync();
             
-            _logger.LogInformation("All ML models loaded successfully");
+            logger.LogInformation("All ML models loaded successfully");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error loading ML models");
+            logger.LogError(ex, "Error loading ML models");
         }
         finally
         {
-            _modelLock.Release();
+            modelLock.Release();
         }
     }
 
@@ -203,10 +203,10 @@ public class MLModelService : IMLModelService, IDisposable
             // Try to load existing model
             if (File.Exists("models/classification_model.zip"))
             {
-                var model = _mlContext.Model.Load("models/classification_model.zip", out _);
+                var model = mlContext.Model.Load("models/classification_model.zip", out _);
                 _models["classification"] = model;
                 
-                var predictionEngine = _mlContext.Model.CreatePredictionEngine<DocumentClassificationModel, DocumentClassificationPrediction>(model);
+                var predictionEngine = mlContext.Model.CreatePredictionEngine<DocumentClassificationModel, DocumentClassificationPrediction>(model);
                 _predictionEngines["classification"] = predictionEngine as PredictionEngine<object, object>;
             }
             else
@@ -217,13 +217,13 @@ public class MLModelService : IMLModelService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error loading classification model");
+            logger.LogError(ex, "Error loading classification model");
         }
     }
 
     private async Task TrainClassificationModelAsync()
     {
-        _logger.LogInformation("Training new document classification model");
+        logger.LogInformation("Training new document classification model");
 
         // Sample training data (in production, load from database or files)
         var trainingData = new[]
@@ -235,24 +235,24 @@ public class MLModelService : IMLModelService, IDisposable
             new DocumentClassificationModel { DocumentContent = "Human resources policy manual", Category = "HR" }
         };
 
-        var dataView = _mlContext.Data.LoadFromEnumerable(trainingData);
+        var dataView = mlContext.Data.LoadFromEnumerable(trainingData);
 
-        var pipeline = _mlContext.Transforms.Conversion.MapValueToKey("Label", "Category")
-            .Append(_mlContext.Transforms.Text.FeaturizeText("Features", "DocumentContent"))
-            .Append(_mlContext.MulticlassClassification.Trainers.SdcaMaximumEntropy("Label", "Features"))
-            .Append(_mlContext.Transforms.Conversion.MapKeyToValue("PredictedLabel"));
+        var pipeline = mlContext.Transforms.Conversion.MapValueToKey("Label", "Category")
+            .Append(mlContext.Transforms.Text.FeaturizeText("Features", "DocumentContent"))
+            .Append(mlContext.MulticlassClassification.Trainers.SdcaMaximumEntropy("Label", "Features"))
+            .Append(mlContext.Transforms.Conversion.MapKeyToValue("PredictedLabel"));
 
         var model = pipeline.Fit(dataView);
         
         // Save model
         Directory.CreateDirectory("models");
-        _mlContext.Model.Save(model, dataView.Schema, "models/classification_model.zip");
+        mlContext.Model.Save(model, dataView.Schema, "models/classification_model.zip");
         
         _models["classification"] = model;
-        var predictionEngine = _mlContext.Model.CreatePredictionEngine<DocumentClassificationModel, DocumentClassificationPrediction>(model);
+        var predictionEngine = mlContext.Model.CreatePredictionEngine<DocumentClassificationModel, DocumentClassificationPrediction>(model);
         _predictionEngines["classification"] = predictionEngine as PredictionEngine<object, object>;
 
-        _logger.LogInformation("Document classification model trained and saved");
+        logger.LogInformation("Document classification model trained and saved");
     }
 
     private async Task LoadSentimentModelAsync()
@@ -261,10 +261,10 @@ public class MLModelService : IMLModelService, IDisposable
         {
             if (File.Exists("models/sentiment_model.zip"))
             {
-                var model = _mlContext.Model.Load("models/sentiment_model.zip", out _);
+                var model = mlContext.Model.Load("models/sentiment_model.zip", out _);
                 _models["sentiment"] = model;
                 
-                var predictionEngine = _mlContext.Model.CreatePredictionEngine<DocumentSentimentModel, SentimentPrediction>(model);
+                var predictionEngine = mlContext.Model.CreatePredictionEngine<DocumentSentimentModel, SentimentPrediction>(model);
                 _predictionEngines["sentiment"] = predictionEngine as PredictionEngine<object, object>;
             }
             else
@@ -274,13 +274,13 @@ public class MLModelService : IMLModelService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error loading sentiment model");
+            logger.LogError(ex, "Error loading sentiment model");
         }
     }
 
     private async Task TrainSentimentModelAsync()
     {
-        _logger.LogInformation("Training new sentiment analysis model");
+        logger.LogInformation("Training new sentiment analysis model");
 
         var trainingData = new[]
         {
@@ -291,38 +291,38 @@ public class MLModelService : IMLModelService, IDisposable
             new DocumentSentimentModel { Text = "Comprehensive and thorough documentation", IsPositive = true }
         };
 
-        var dataView = _mlContext.Data.LoadFromEnumerable(trainingData);
+        var dataView = mlContext.Data.LoadFromEnumerable(trainingData);
 
-        var pipeline = _mlContext.Transforms.Text.FeaturizeText("Features", "Text")
-            .Append(_mlContext.BinaryClassification.Trainers.SdcaLogisticRegression("Label", "Features"));
+        var pipeline = mlContext.Transforms.Text.FeaturizeText("Features", "Text")
+            .Append(mlContext.BinaryClassification.Trainers.SdcaLogisticRegression("Label", "Features"));
 
         var model = pipeline.Fit(dataView);
         
         Directory.CreateDirectory("models");
-        _mlContext.Model.Save(model, dataView.Schema, "models/sentiment_model.zip");
+        mlContext.Model.Save(model, dataView.Schema, "models/sentiment_model.zip");
         
         _models["sentiment"] = model;
-        var predictionEngine = _mlContext.Model.CreatePredictionEngine<DocumentSentimentModel, SentimentPrediction>(model);
+        var predictionEngine = mlContext.Model.CreatePredictionEngine<DocumentSentimentModel, SentimentPrediction>(model);
         _predictionEngines["sentiment"] = predictionEngine as PredictionEngine<object, object>;
 
-        _logger.LogInformation("Sentiment analysis model trained and saved");
+        logger.LogInformation("Sentiment analysis model trained and saved");
     }
 
     private async Task LoadSimilarityModelAsync()
     {
         // For text similarity, we'll use a simpler approach with TF-IDF
-        _logger.LogInformation("Setting up text similarity pipeline");
+        logger.LogInformation("Setting up text similarity pipeline");
         
         // Create a simple pipeline for text similarity
-        var pipeline = _mlContext.Transforms.Text.NormalizeText("NormalizedText1", "Text1")
-            .Append(_mlContext.Transforms.Text.NormalizeText("NormalizedText2", "Text2"))
-            .Append(_mlContext.Transforms.Text.TokenizeIntoWords("Tokens1", "NormalizedText1"))
-            .Append(_mlContext.Transforms.Text.TokenizeIntoWords("Tokens2", "NormalizedText2"))
-            .Append(_mlContext.Transforms.Text.ProduceNgrams("Features1", "Tokens1"))
-            .Append(_mlContext.Transforms.Text.ProduceNgrams("Features2", "Tokens2"));
+        var pipeline = mlContext.Transforms.Text.NormalizeText("NormalizedText1", "Text1")
+            .Append(mlContext.Transforms.Text.NormalizeText("NormalizedText2", "Text2"))
+            .Append(mlContext.Transforms.Text.TokenizeIntoWords("Tokens1", "NormalizedText1"))
+            .Append(mlContext.Transforms.Text.TokenizeIntoWords("Tokens2", "NormalizedText2"))
+            .Append(mlContext.Transforms.Text.ProduceNgrams("Features1", "Tokens1"))
+            .Append(mlContext.Transforms.Text.ProduceNgrams("Features2", "Tokens2"));
 
         // For similarity calculation, we'll use cosine similarity
-        _models["similarity"] = pipeline.Fit(_mlContext.Data.LoadFromEnumerable(new[]
+        _models["similarity"] = pipeline.Fit(mlContext.Data.LoadFromEnumerable(new[]
         {
             new TextSimilarityModel { Text1 = "sample", Text2 = "sample", Similarity = 1.0f }
         }));
@@ -330,16 +330,16 @@ public class MLModelService : IMLModelService, IDisposable
 
     private async Task LoadSummarizationModelAsync()
     {
-        _logger.LogInformation("Setting up document summarization pipeline");
+        logger.LogInformation("Setting up document summarization pipeline");
         
         // Simple extractive summarization based on sentence importance
-        var pipeline = _mlContext.Transforms.Text.NormalizeText("NormalizedContent", "Content")
-            .Append(_mlContext.Transforms.Text.TokenizeIntoWords("Tokens", "NormalizedContent"))
-            .Append(_mlContext.Transforms.Text.RemoveDefaultStopWords("Tokens"))
-            .Append(_mlContext.Transforms.Text.ProduceNgrams("Features", "Tokens"))
-            .Append(_mlContext.Transforms.NormalizeLpNorm("NormalizedFeatures", "Features"));
+        var pipeline = mlContext.Transforms.Text.NormalizeText("NormalizedContent", "Content")
+            .Append(mlContext.Transforms.Text.TokenizeIntoWords("Tokens", "NormalizedContent"))
+            .Append(mlContext.Transforms.Text.RemoveDefaultStopWords("Tokens"))
+            .Append(mlContext.Transforms.Text.ProduceNgrams("Features", "Tokens"))
+            .Append(mlContext.Transforms.NormalizeLpNorm("NormalizedFeatures", "Features"));
 
-        _models["summarization"] = pipeline.Fit(_mlContext.Data.LoadFromEnumerable(new[]
+        _models["summarization"] = pipeline.Fit(mlContext.Data.LoadFromEnumerable(new[]
         {
             new DocumentFeatures { Content = "sample content", WordCount = 2 }
         }));
@@ -347,14 +347,14 @@ public class MLModelService : IMLModelService, IDisposable
 
     private async Task LoadEntityExtractionModelAsync()
     {
-        _logger.LogInformation("Setting up named entity recognition pipeline");
+        logger.LogInformation("Setting up named entity recognition pipeline");
         
         // Simple rule-based entity extraction
-        var pipeline = _mlContext.Transforms.Text.NormalizeText("NormalizedText", "Text")
-            .Append(_mlContext.Transforms.Text.TokenizeIntoWords("Tokens", "NormalizedText"))
-            .Append(_mlContext.Transforms.Text.ProduceNgrams("Features", "Tokens"));
+        var pipeline = mlContext.Transforms.Text.NormalizeText("NormalizedText", "Text")
+            .Append(mlContext.Transforms.Text.TokenizeIntoWords("Tokens", "NormalizedText"))
+            .Append(mlContext.Transforms.Text.ProduceNgrams("Features", "Tokens"));
 
-        _models["entities"] = pipeline.Fit(_mlContext.Data.LoadFromEnumerable(new[]
+        _models["entities"] = pipeline.Fit(mlContext.Data.LoadFromEnumerable(new[]
         {
             new NamedEntityModel { Text = "sample text", Entities = "[]" }
         }));
@@ -362,17 +362,17 @@ public class MLModelService : IMLModelService, IDisposable
 
     public async Task<DocumentClassificationPrediction> ClassifyDocumentAsync(string content)
     {
-        if (!_models.ContainsKey("classification"))
+        if (!models.ContainsKey("classification"))
         {
             throw new InvalidOperationException("Classification model not loaded");
         }
 
         var input = new DocumentClassificationModel { DocumentContent = content };
-        var predictionEngine = _mlContext.Model.CreatePredictionEngine<DocumentClassificationModel, DocumentClassificationPrediction>(_models["classification"]);
+        var predictionEngine = mlContext.Model.CreatePredictionEngine<DocumentClassificationModel, DocumentClassificationPrediction>(_models["classification"]);
         
         var prediction = predictionEngine.Predict(input);
         
-        _logger.LogDebug("Document classified as: {Category} with probability: {Probability}", 
+        logger.LogDebug("Document classified as: {Category} with probability: {Probability}", 
             prediction.Category, prediction.Probability);
 
         return prediction;
@@ -380,17 +380,17 @@ public class MLModelService : IMLModelService, IDisposable
 
     public async Task<SentimentPrediction> AnalyzeSentimentAsync(string text)
     {
-        if (!_models.ContainsKey("sentiment"))
+        if (!models.ContainsKey("sentiment"))
         {
             throw new InvalidOperationException("Sentiment model not loaded");
         }
 
         var input = new DocumentSentimentModel { Text = text };
-        var predictionEngine = _mlContext.Model.CreatePredictionEngine<DocumentSentimentModel, SentimentPrediction>(_models["sentiment"]);
+        var predictionEngine = mlContext.Model.CreatePredictionEngine<DocumentSentimentModel, SentimentPrediction>(_models["sentiment"]);
         
         var prediction = predictionEngine.Predict(input);
         
-        _logger.LogDebug("Sentiment analyzed: {IsPositive} with probability: {Probability}", 
+        logger.LogDebug("Sentiment analyzed: {IsPositive} with probability: {Probability}", 
             prediction.IsPositive, prediction.Probability);
 
         return prediction;
@@ -422,7 +422,7 @@ public class MLModelService : IMLModelService, IDisposable
 
         var similarity = (float)(dotProduct / (magnitude1 * magnitude2));
         
-        _logger.LogDebug("Text similarity calculated: {Similarity}", similarity);
+        logger.LogDebug("Text similarity calculated: {Similarity}", similarity);
 
         return similarity;
     }
@@ -468,7 +468,7 @@ public class MLModelService : IMLModelService, IDisposable
         var summary = string.Join(". ", topSentences.Select(s => s.Sentence));
         var avgScore = topSentences.Average(s => s.Score);
 
-        _logger.LogDebug("Document summarized: {SentenceCount} sentences reduced to {SummaryLength} characters", 
+        logger.LogDebug("Document summarized: {SentenceCount} sentences reduced to {SummaryLength} characters", 
             sentences.Length, summary.Length);
 
         return new SummarizationPrediction
@@ -528,7 +528,7 @@ public class MLModelService : IMLModelService, IDisposable
             confidences.Add(0.8f);
         }
 
-        _logger.LogDebug("Extracted {EntityCount} entities from text", entities.Count);
+        logger.LogDebug("Extracted {EntityCount} entities from text", entities.Count);
 
         return new EntityPrediction
         {
@@ -602,7 +602,7 @@ public class MLModelService : IMLModelService, IDisposable
             }
         }
 
-        _logger.LogDebug("Extracted {PhraseCount} key phrases from text", phrases.Count);
+        logger.LogDebug("Extracted {PhraseCount} key phrases from text", phrases.Count);
 
         return phrases.Distinct().Take(5).ToArray();
     }
@@ -632,7 +632,7 @@ public class MLModelService : IMLModelService, IDisposable
         // Normalize to 0-1 scale
         var normalizedScore = Math.Max(0f, Math.Min(1f, score / 100f));
 
-        _logger.LogDebug("Readability score calculated: {Score}", normalizedScore);
+        logger.LogDebug("Readability score calculated: {Score}", normalizedScore);
 
         return normalizedScore;
     }
@@ -664,12 +664,12 @@ public class MLModelService : IMLModelService, IDisposable
 
     public void Dispose()
     {
-        _modelLock?.Dispose();
-        foreach (var engine in _predictionEngines.Values)
+        modelLock?.Dispose();
+        foreach (var engine in predictionEngines.Values)
         {
             engine?.Dispose();
         }
-        _mlContext?.Dispose();
+        mlContext?.Dispose();
     }
 }
 ```

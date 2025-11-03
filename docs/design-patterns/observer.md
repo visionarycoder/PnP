@@ -29,56 +29,56 @@ public interface ISubject<T>
 // Concrete Subject - Stock Price Monitor
 public class StockPrice : ISubject<StockPrice>
 {
-    private readonly List<IObserver<StockPrice>> _observers = new();
-    private string _symbol;
-    private decimal _price;
-    private DateTime _lastUpdated;
+    private readonly List<IObserver<StockPrice>> observers = new();
+    private string symbol;
+    private decimal price;
+    private DateTime lastUpdated;
     
     public string Symbol 
     { 
-        get => _symbol; 
+        get => symbol; 
         set 
         { 
-            _symbol = value; 
+            symbol = value; 
             NotifyObservers(); 
         } 
     }
     
     public decimal Price 
     { 
-        get => _price; 
+        get => price; 
         set 
         { 
-            var previousPrice = _price;
-            _price = value; 
-            _lastUpdated = DateTime.Now;
-            PriceChange = _price - previousPrice;
+            var previousPrice = price;
+            price = value; 
+            lastUpdated = DateTime.Now;
+            PriceChange = price - previousPrice;
             NotifyObservers(); 
         } 
     }
     
     public decimal PriceChange { get; private set; }
-    public DateTime LastUpdated => _lastUpdated;
+    public DateTime LastUpdated => lastUpdated;
     
     public StockPrice(string symbol, decimal initialPrice)
     {
-        _symbol = symbol;
-        _price = initialPrice;
-        _lastUpdated = DateTime.Now;
+        this.symbol = symbol;
+        this.price = initialPrice;
+        this.lastUpdated = DateTime.Now;
     }
     
     public void Subscribe(IObserver<StockPrice> observer)
     {
-        if (!_observers.Contains(observer))
+        if (!observers.Contains(observer))
         {
-            _observers.Add(observer);
+            observers.Add(observer);
             Console.WriteLine($"{observer.Name} subscribed to {Symbol} stock updates");
         }
     }
     
     public void Unsubscribe(IObserver<StockPrice> observer)
     {
-        if (_observers.Remove(observer))
+        if (observers.Remove(observer))
         {
             Console.WriteLine($"{observer.Name} unsubscribed from {Symbol} stock updates");
         }
@@ -86,8 +86,8 @@ public class StockPrice : ISubject<StockPrice>
     
     public void NotifyObservers()
     {
-        Console.WriteLine($"Notifying {_observers.Count} observers about {Symbol} update");
-        foreach (var observer in _observers.ToList()) // ToList to avoid modification during iteration
+        Console.WriteLine($"Notifying {observers.Count} observers about {Symbol} update");
+        foreach (var observer in observers.ToList()) // ToList to avoid modification during iteration
         {
             observer.Update(this);
         }
@@ -98,25 +98,25 @@ public class StockPrice : ISubject<StockPrice>
 public class StockTrader : IObserver<StockPrice>
 {
     public string Name { get; }
-    private readonly decimal _buyThreshold;
-    private readonly decimal _sellThreshold;
+    private readonly decimal buyThreshold;
+    private readonly decimal sellThreshold;
     
     public StockTrader(string name, decimal buyThreshold, decimal sellThreshold)
     {
         Name = name;
-        _buyThreshold = buyThreshold;
-        _sellThreshold = sellThreshold;
+        buyThreshold = buyThreshold;
+        sellThreshold = sellThreshold;
     }
     
     public void Update(StockPrice stock)
     {
         Console.WriteLine($"[{Name}] Stock {stock.Symbol} updated: ${stock.Price:F2} (Change: {stock.PriceChange:+0.00;-0.00;0})");
         
-        if (stock.Price <= _buyThreshold)
+        if (stock.Price <= buyThreshold)
         {
             Console.WriteLine($"[{Name}] 📈 BUY signal for {stock.Symbol} at ${stock.Price:F2}");
         }
-        else if (stock.Price >= _sellThreshold)
+        else if (stock.Price >= sellThreshold)
         {
             Console.WriteLine($"[{Name}] 📉 SELL signal for {stock.Symbol} at ${stock.Price:F2}");
         }
@@ -126,7 +126,7 @@ public class StockTrader : IObserver<StockPrice>
 public class StockAnalyst : IObserver<StockPrice>
 {
     public string Name { get; }
-    private readonly List<decimal> _priceHistory = new();
+    private readonly List<decimal> priceHistory = new();
     
     public StockAnalyst(string name)
     {
@@ -135,15 +135,15 @@ public class StockAnalyst : IObserver<StockPrice>
     
     public void Update(StockPrice stock)
     {
-        _priceHistory.Add(stock.Price);
+        priceHistory.Add(stock.Price);
         
         Console.WriteLine($"[{Name}] Analyzing {stock.Symbol}:");
         Console.WriteLine($"  Current Price: ${stock.Price:F2}");
         Console.WriteLine($"  Price Change: {stock.PriceChange:+0.00;-0.00;0}");
         
-        if (_priceHistory.Count >= 5)
+        if (priceHistory.Count >= 5)
         {
-            var recent5 = _priceHistory.TakeLast(5);
+            var recent5 = priceHistory.TakeLast(5);
             var average = recent5.Average();
             var trend = stock.Price > average ? "📈 Upward" : "📉 Downward";
             Console.WriteLine($"  5-period average: ${average:F2}, Trend: {trend}");
@@ -154,8 +154,8 @@ public class StockAnalyst : IObserver<StockPrice>
 public class StockPortfolio : IObserver<StockPrice>
 {
     public string Name { get; }
-    private readonly Dictionary<string, int> _holdings = new();
-    private decimal _totalValue;
+    private readonly Dictionary<string, int> holdings = new();
+    private decimal totalValue;
     
     public StockPortfolio(string name)
     {
@@ -164,12 +164,12 @@ public class StockPortfolio : IObserver<StockPrice>
     
     public void AddHolding(string symbol, int shares)
     {
-        _holdings[symbol] = _holdings.GetValueOrDefault(symbol) + shares;
+        _holdings[symbol] = holdings.GetValueOrDefault(symbol) + shares;
     }
     
     public void Update(StockPrice stock)
     {
-        if (_holdings.TryGetValue(stock.Symbol, out var shares))
+        if (holdings.TryGetValue(stock.Symbol, out var shares))
         {
             var holdingValue = shares * stock.Price;
             var previousValue = shares * (stock.Price - stock.PriceChange);
@@ -204,18 +204,18 @@ public class NewsService
 public class NewsSubscriber
 {
     public string Name { get; }
-    private readonly List<string> _keywords;
+    private readonly List<string> keywords;
     
     public NewsSubscriber(string name, params string[] keywords)
     {
         Name = name;
-        _keywords = keywords.ToList();
+        keywords = keywords.ToList();
     }
     
     public void OnNewsPublished(string headline, string content)
     {
         // Check if news contains any of our keywords
-        var isRelevant = _keywords.Any(keyword => 
+        var isRelevant = keywords.Any(keyword => 
             headline.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
             content.Contains(keyword, StringComparison.OrdinalIgnoreCase));
             
@@ -233,34 +233,34 @@ public class NewsSubscriber
 // Generic Observable class for any type
 public class Observable<T> : ISubject<T>
 {
-    private readonly List<IObserver<T>> _observers = new();
-    private T _value;
+    private readonly List<IObserver<T>> observers = new();
+    private T value;
     
     public T Value
     {
-        get => _value;
+        get => value;
         set
         {
-            _value = value;
+            value = value;
             NotifyObservers();
         }
     }
     
     public void Subscribe(IObserver<T> observer)
     {
-        _observers.Add(observer);
+        observers.Add(observer);
     }
     
     public void Unsubscribe(IObserver<T> observer)
     {
-        _observers.Remove(observer);
+        observers.Remove(observer);
     }
     
     public void NotifyObservers()
     {
-        foreach (var observer in _observers.ToList())
+        foreach (var observer in observers.ToList())
         {
-            observer.Update(_value);
+            observer.Update(value);
         }
     }
 }
@@ -269,17 +269,17 @@ public class Observable<T> : ISubject<T>
 public class GenericObserver<T> : IObserver<T>
 {
     public string Name { get; }
-    private readonly Action<T> _onUpdate;
+    private readonly Action<T> onUpdate;
     
     public GenericObserver(string name, Action<T> onUpdate)
     {
         Name = name;
-        _onUpdate = onUpdate;
+        onUpdate = onUpdate;
     }
     
     public void Update(T data)
     {
-        _onUpdate(data);
+        onUpdate(data);
     }
 }
 ```
@@ -389,7 +389,7 @@ class Program
 - Supports broadcast communication (one-to-many relationship)
 - Dynamic subscription/unsubscription of observers
 - C# events provide built-in observer pattern support
-- Generic Observable&lt;T&gt; class can be used for any data type
+- Generic Observable\<T\> class can be used for any data type
 - Thread-safe considerations needed for multi-threaded environments
 - Can lead to memory leaks if observers aren't properly unsubscribed
 - Performance impact with many observers (consider async notifications for heavy processing)

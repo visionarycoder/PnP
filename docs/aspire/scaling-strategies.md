@@ -1,8 +1,9 @@
-# .NET Aspire Scaling Strategies
+# Enterprise Scaling Strategies with .NET Aspire
 
-**Description**: Auto-scaling and load balancing patterns for .NET Aspire applications, including container orchestration, service scaling policies, resource management, and performance optimization strategies.
+**Description**: Advanced enterprise-grade auto-scaling and load balancing patterns for .NET Aspire applications including predictive scaling with ML analytics, cross-region load distribution, cost optimization with intelligent resource allocation, and enterprise compliance with governance frameworks.
 
-**Language/Technology**: C#, .NET Aspire, .NET 9.0, Docker, Kubernetes
+**Language/Technology**: C#, .NET 9.0, .NET Aspire, Azure Container Apps, AKS, KEDA, Prometheus
+**Enterprise Features**: Predictive scaling, cost optimization, cross-region distribution, compliance governance, intelligent resource allocation, and comprehensive performance analytics
 
 **Code**:
 
@@ -24,6 +25,10 @@
 ```csharp
 namespace DocumentProcessor.Aspire.Scaling;
 
+/// <summary>
+/// Defines scaling policy contract for .NET Aspire service orchestration
+/// Implements proper service discovery and scaling decision patterns
+/// </summary>
 public interface IScalingPolicy
 {
     Task<ScalingDecision> EvaluateAsync(ScalingContext context, CancellationToken cancellationToken = default);
@@ -59,29 +64,26 @@ public record ScalingContext
 ### Base Scaling Service
 
 ```csharp
-public abstract class BaseScalingService : IScalingService
+/// <summary>
+/// Base scaling service implementing Aspire cloud-native scaling patterns
+/// Uses structured logging with correlation identifiers and OpenTelemetry
+/// </summary>
+public abstract class BaseScalingService(
+    ILogger logger, 
+    IMetricsCollector metricsCollector,
+    TimeSpan evaluationInterval) : IScalingService
 {
-    protected readonly ILogger Logger;
-    protected readonly IMetricsCollector MetricsCollector;
-    private readonly Timer _evaluationTimer;
-    private readonly SemaphoreSlim _scalingSemaphore = new(1, 1);
-
-    protected BaseScalingService(
-        ILogger logger, 
-        IMetricsCollector metricsCollector,
-        TimeSpan evaluationInterval)
-    {
-        Logger = logger;
-        MetricsCollector = metricsCollector;
-        _evaluationTimer = new Timer(EvaluateScaling, null, TimeSpan.Zero, evaluationInterval);
-    }
+    protected readonly ILogger Logger = logger;
+    protected readonly IMetricsCollector MetricsCollector = metricsCollector;
+    private readonly Timer evaluationTimer = new(EvaluateScaling, null, TimeSpan.Zero, evaluationInterval);
+    private readonly SemaphoreSlim scalingSemaphore = new(1, 1);
 
     public abstract Task<ScalingResult> ScaleServiceAsync(string serviceName, int targetInstances, CancellationToken cancellationToken = default);
     public abstract Task<ServiceScalingInfo> GetServiceInfoAsync(string serviceName, CancellationToken cancellationToken = default);
     
     protected virtual async void EvaluateScaling(object? state)
     {
-        if (!await _scalingSemaphore.WaitAsync(100))
+        if (!await scalingSemaphore.WaitAsync(100))
             return;
 
         try
@@ -94,7 +96,7 @@ public abstract class BaseScalingService : IScalingService
         }
         finally
         {
-            _scalingSemaphore.Release();
+scalingSemaphore.Release();
         }
     }
 
@@ -107,21 +109,19 @@ public abstract class BaseScalingService : IScalingService
 ### Docker Compose Scaling
 
 ```csharp
-public class DockerComposeScalingService : BaseScalingService
+/// <summary>
+/// Docker Compose scaling service for Aspire local development containers
+/// Implements proper containerization strategies and resource management
+/// </summary>
+public class DockerComposeScalingService(
+    IDockerClient dockerClient,
+    DockerComposeConfig config,
+    ILogger<DockerComposeScalingService> logger,
+    IMetricsCollector metricsCollector) 
+    : BaseScalingService(logger, metricsCollector, TimeSpan.FromSeconds(30))
 {
-    private readonly IDockerClient _dockerClient;
-    private readonly DockerComposeConfig _config;
-
-    public DockerComposeScalingService(
-        IDockerClient dockerClient,
-        DockerComposeConfig config,
-        ILogger<DockerComposeScalingService> logger,
-        IMetricsCollector metricsCollector) 
-        : base(logger, metricsCollector, TimeSpan.FromSeconds(30))
-    {
-        _dockerClient = dockerClient;
-        _config = config;
-    }
+    private readonly IDockerClient dockerClient = dockerClient;
+    private readonly DockerComposeConfig config = config;
 
     public override async Task<ScalingResult> ScaleServiceAsync(
         string serviceName, 
@@ -158,7 +158,7 @@ public class DockerComposeScalingService : BaseScalingService
                 serviceName, currentInstances, targetInstances);
 
             // Scale using docker-compose up --scale
-            var scaleCommand = $"docker-compose -f {_config.ComposeFilePath} up -d --scale {serviceName}={targetInstances}";
+            var scaleCommand = $"docker-compose -f {config.ComposeFilePath} up -d --scale {serviceName}={targetInstances}";
             
             var processResult = await ExecuteCommandAsync(scaleCommand, cancellationToken);
             if (!processResult.Success)
@@ -205,12 +205,19 @@ public class DockerComposeScalingService : BaseScalingService
         }
     }
 
+    /// <summary>
+    /// Gets current scaling information for a Docker Compose service
+    /// Implements proper telemetry and structured logging for Aspire observability
+    /// </summary>
     public override async Task<ServiceScalingInfo> GetServiceInfoAsync(string serviceName, CancellationToken cancellationToken = default)
     {
+        using var activity = Activity.Current?.Source.StartActivity("DockerCompose.GetServiceInfo");
+        activity?.SetTag("service.name", serviceName);
+        
         try
         {
             // Get container information using Docker API
-            var containers = await _dockerClient.Containers.ListContainersAsync(
+            var containers = await dockerClient.Containers.ListContainersAsync(
                 new ContainersListParameters
                 {
                     All = true,
@@ -224,58 +231,82 @@ public class DockerComposeScalingService : BaseScalingService
                 }, cancellationToken);
 
             var runningContainers = containers.Count(c => c.State == "running");
+            var serviceConfig = config.Services.GetValueOrDefault(serviceName);
             
-            return new ServiceScalingInfo
+            var scalingInfo = new ServiceScalingInfo
             {
                 ServiceName = serviceName,
                 CurrentInstances = runningContainers,
-                MinInstances = _config.Services.GetValueOrDefault(serviceName)?.MinInstances ?? 1,
-                MaxInstances = _config.Services.GetValueOrDefault(serviceName)?.MaxInstances ?? 10,
+                MinInstances = serviceConfig?.MinInstances ?? 1,
+                MaxInstances = serviceConfig?.MaxInstances ?? 10,
                 Status = DetermineScalingStatus(containers),
                 LastScalingAction = DateTime.UtcNow // This should be tracked persistently
             };
+
+            logger.LogDebug("Retrieved Docker service info: {ServiceName} - {CurrentInstances} instances",
+                serviceName, runningContainers);
+            
+            activity?.SetTag("scaling.current_instances", runningContainers);
+            activity?.SetTag("scaling.status", scalingInfo.Status.ToString());
+            
+            return scalingInfo;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to get service info for {ServiceName}", serviceName);
+            logger.LogError(ex, "Failed to get Docker service info for {ServiceName}", serviceName);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
             throw;
         }
     }
 
+    /// <summary>
+    /// Performs Docker Compose scaling evaluation with proper Aspire telemetry
+    /// </summary>
     protected override async Task PerformScalingEvaluationAsync()
     {
-        foreach (var serviceConfig in _config.Services)
+        using var activity = Activity.Current?.Source.StartActivity("DockerCompose.ScalingEvaluation");
+        activity?.SetTag("service.count", config.Services.Count);
+        
+        foreach (var serviceConfig in config.Services)
         {
+            using var serviceActivity = Activity.Current?.Source.StartActivity("DockerCompose.EvaluateService");
+            
             try
             {
                 var serviceName = serviceConfig.Key;
-                var config = serviceConfig.Value;
+                var serviceSettings = serviceConfig.Value;
+                
+                serviceActivity?.SetTag("service.name", serviceName);
                 
                 // Get current metrics
-                var metrics = await MetricsCollector.GetServiceMetricsAsync(serviceName);
+                var metrics = await metricsCollector.GetServiceMetricsAsync(serviceName);
                 
                 // Create scaling context
                 var context = new ScalingContext
                 {
                     ServiceName = serviceName,
                     CurrentInstances = (await GetServiceInfoAsync(serviceName)).CurrentInstances,
-                    MinInstances = config.MinInstances,
-                    MaxInstances = config.MaxInstances,
+                    MinInstances = serviceSettings.MinInstances,
+                    MaxInstances = serviceSettings.MaxInstances,
                     Metrics = metrics,
-                    CooldownPeriod = _config.CooldownPeriod
+                    CooldownPeriod = serviceSettings.CooldownPeriod
                 };
 
                 // Evaluate scaling policies
-                foreach (var policyName in config.ScalingPolicies)
+                foreach (var policyName in serviceSettings.ScalingPolicies)
                 {
-                    if (_config.Policies.TryGetValue(policyName, out var policy))
+                    if (serviceSettings.Policies.TryGetValue(policyName, out var policy))
                     {
                         var decision = await policy.EvaluateAsync(context);
                         
                         if (decision.ShouldScale && decision.TargetInstances != context.CurrentInstances)
                         {
-                            Logger.LogInformation("Scaling decision: {ServiceName} should scale to {TargetInstances}. Reason: {Reason}",
+                            logger.LogInformation("Docker scaling decision: {ServiceName} should scale to {TargetInstances}. Reason: {Reason}",
                                 serviceName, decision.TargetInstances, decision.Reason);
+                            
+                            serviceActivity?.SetTag("scaling.decision", "scale");
+                            serviceActivity?.SetTag("scaling.target_instances", decision.TargetInstances);
+                            serviceActivity?.SetTag("scaling.reason", decision.Reason);
                                 
                             await ScaleServiceAsync(serviceName, decision.TargetInstances);
                             break; // Only execute first scaling decision
@@ -285,7 +316,8 @@ public class DockerComposeScalingService : BaseScalingService
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error evaluating scaling for service {ServiceName}", serviceConfig.Key);
+                logger.LogError(ex, "Error evaluating Docker scaling for service {ServiceName}", serviceConfig.Key);
+                serviceActivity?.SetStatus(ActivityStatusCode.Error, ex.Message);
             }
         }
     }
@@ -377,25 +409,25 @@ public class DockerComposeScalingService : BaseScalingService
 ### Kubernetes Scaling
 
 ```csharp
-public class KubernetesScalingService : BaseScalingService
+/// <summary>
+/// Kubernetes scaling service for Aspire cloud-native deployment
+/// Implements horizontal pod autoscaler (HPA) integration and resource management
+/// </summary>
+public class KubernetesScalingService(
+    IKubernetes kubernetesClient,
+    string namespaceName,
+    KubernetesScalingConfig config,
+    ILogger<KubernetesScalingService> logger,
+    IMetricsCollector metricsCollector) 
+    : BaseScalingService(logger, metricsCollector, TimeSpan.FromSeconds(45))
 {
-    private readonly IKubernetes _kubernetesClient;
-    private readonly string _namespace;
-    private readonly KubernetesScalingConfig _config;
+    private readonly IKubernetes kubernetesClient = kubernetesClient;
+    private readonly string @namespace = namespaceName;
+    private readonly KubernetesScalingConfig config = config;
 
-    public KubernetesScalingService(
-        IKubernetes kubernetesClient,
-        string namespaceName,
-        KubernetesScalingConfig config,
-        ILogger<KubernetesScalingService> logger,
-        IMetricsCollector metricsCollector) 
-        : base(logger, metricsCollector, TimeSpan.FromSeconds(45))
-    {
-        _kubernetesClient = kubernetesClient;
-        _namespace = namespaceName;
-        _config = config;
-    }
-
+    /// <summary>
+    /// Scales a Kubernetes service with proper Aspire telemetry and error handling
+    /// </summary>
     public override async Task<ScalingResult> ScaleServiceAsync(
         string serviceName, 
         int targetInstances, 
@@ -404,7 +436,7 @@ public class KubernetesScalingService : BaseScalingService
         using var activity = Activity.Current?.Source.StartActivity("Kubernetes.ScaleService");
         activity?.SetTag("service.name", serviceName);
         activity?.SetTag("target.instances", targetInstances);
-        activity?.SetTag("kubernetes.namespace", _namespace);
+        activity?.SetTag("kubernetes.namespace", @namespace);
 
         var startTime = DateTime.UtcNow;
 
@@ -432,21 +464,21 @@ public class KubernetesScalingService : BaseScalingService
                 serviceName, currentInstances, targetInstances);
 
             // Scale using Kubernetes Deployment
-            var deployment = await _kubernetesClient.AppsV1.ReadNamespacedDeploymentAsync(
-                serviceName, _namespace, cancellationToken: cancellationToken);
+            var deployment = await kubernetesClient.AppsV1.ReadNamespacedDeploymentAsync(
+                serviceName, namespace, cancellationToken: cancellationToken);
 
             if (deployment == null)
             {
-                throw new InvalidOperationException($"Deployment {serviceName} not found in namespace {_namespace}");
+                throw new InvalidOperationException($"Deployment {serviceName} not found in namespace namespace");
             }
 
             // Update replica count
             deployment.Spec.Replicas = targetInstances;
             
-            var patchedDeployment = await _kubernetesClient.AppsV1.PatchNamespacedDeploymentAsync(
+            var patchedDeployment = await kubernetesClient.AppsV1.PatchNamespacedDeploymentAsync(
                 new V1Patch(JsonSerializer.Serialize(new { spec = new { replicas = targetInstances } }), V1Patch.PatchType.MergePatch),
                 serviceName,
-                _namespace,
+namespace,
                 cancellationToken: cancellationToken);
 
             // Wait for rollout to complete
@@ -469,7 +501,7 @@ public class KubernetesScalingService : BaseScalingService
                 Metadata = new Dictionary<string, object>
                 {
                     ["scaling_method"] = "kubernetes",
-                    ["namespace"] = _namespace,
+                    ["namespace"] =namespace,
                     ["deployment_generation"] = patchedDeployment.Metadata.Generation ?? 0
                 }
             };
@@ -494,8 +526,8 @@ public class KubernetesScalingService : BaseScalingService
         try
         {
             // Get deployment information
-            var deployment = await _kubernetesClient.AppsV1.ReadNamespacedDeploymentAsync(
-                serviceName, _namespace, cancellationToken: cancellationToken);
+            var deployment = await kubernetesClient.AppsV1.ReadNamespacedDeploymentAsync(
+                serviceName, namespace, cancellationToken: cancellationToken);
 
             if (deployment == null)
             {
@@ -512,8 +544,8 @@ public class KubernetesScalingService : BaseScalingService
             {
                 ServiceName = serviceName,
                 CurrentInstances = (int)readyReplicas,
-                MinInstances = _config.Services.GetValueOrDefault(serviceName)?.MinInstances ?? 1,
-                MaxInstances = _config.Services.GetValueOrDefault(serviceName)?.MaxInstances ?? 10,
+                MinInstances =config.Services.GetValueOrDefault(serviceName)?.MinInstances ?? 1,
+                MaxInstances =config.Services.GetValueOrDefault(serviceName)?.MaxInstances ?? 10,
                 Status = status,
                 LastScalingAction = deployment.Metadata.CreationTimestamp?.DateTime ?? DateTime.UtcNow
             };
@@ -530,19 +562,18 @@ public class KubernetesScalingService : BaseScalingService
         try
         {
             // Get all deployments in namespace
-            var deployments = await _kubernetesClient.AppsV1.ListNamespacedDeploymentAsync(
-                _namespace, labelSelector: _config.LabelSelector);
+            var deployments = await kubernetesClient.AppsV1.ListNamespacedDeploymentAsync(namespace, labelSelector: config.LabelSelector);
 
             foreach (var deployment in deployments.Items)
             {
                 var serviceName = deployment.Metadata.Name;
                 
-                if (!_config.Services.ContainsKey(serviceName))
+                if (!config.Services.ContainsKey(serviceName))
                     continue;
 
                 try
                 {
-                    var config = _config.Services[serviceName];
+                    var config =config.Services[serviceName];
                     
                     // Get current metrics from Kubernetes metrics API or Prometheus
                     var metrics = await GetKubernetesMetricsAsync(serviceName);
@@ -554,7 +585,7 @@ public class KubernetesScalingService : BaseScalingService
                         MinInstances = config.MinInstances,
                         MaxInstances = config.MaxInstances,
                         Metrics = metrics,
-                        CooldownPeriod = _config.CooldownPeriod
+                        CooldownPeriod =config.CooldownPeriod
                     };
 
                     // Evaluate HPA if enabled
@@ -592,8 +623,8 @@ public class KubernetesScalingService : BaseScalingService
         {
             try
             {
-                var deployment = await _kubernetesClient.AppsV1.ReadNamespacedDeploymentAsync(
-                    deploymentName, _namespace, cancellationToken: cancellationToken);
+                var deployment = await kubernetesClient.AppsV1.ReadNamespacedDeploymentAsync(
+                    deploymentName, namespace, cancellationToken: cancellationToken);
 
                 var readyReplicas = deployment.Status.ReadyReplicas ?? 0;
                 var updatedReplicas = deployment.Status.UpdatedReplicas ?? 0;
@@ -674,8 +705,8 @@ public class KubernetesScalingService : BaseScalingService
         try
         {
             // Check if HPA exists
-            var hpa = await _kubernetesClient.AutoscalingV2.ReadNamespacedHorizontalPodAutoscalerAsync(
-                serviceName, _namespace);
+            var hpa = await kubernetesClient.AutoscalingV2.ReadNamespacedHorizontalPodAutoscalerAsync(
+                serviceName, namespace);
 
             if (hpa != null)
             {
@@ -687,7 +718,7 @@ public class KubernetesScalingService : BaseScalingService
         {
             Logger.LogDebug("No HPA found for {ServiceName}, using custom scaling policies", serviceName);
             // Fall back to custom scaling
-            var config = _config.Services[serviceName];
+            var config =config.Services[serviceName];
             await EvaluateCustomScalingPoliciesAsync(serviceName, context, config.ScalingPolicies);
         }
     }
@@ -696,7 +727,7 @@ public class KubernetesScalingService : BaseScalingService
     {
         foreach (var policyName in policyNames)
         {
-            if (_config.Policies.TryGetValue(policyName, out var policy))
+            if (config.Policies.TryGetValue(policyName, out var policy))
             {
                 var decision = await policy.EvaluateAsync(context);
                 
@@ -782,8 +813,8 @@ public record LoadBalancingContext
 ```csharp
 public class RoundRobinLoadBalancer : ILoadBalancingStrategy
 {
-    private int _currentIndex;
-    private readonly object _lock = new();
+    private int currentIndex;
+    private readonly object lock = new();
 
     public string StrategyName => "RoundRobin";
 
@@ -795,10 +826,10 @@ public class RoundRobinLoadBalancer : ILoadBalancingStrategy
         if (availableEndpoints.Count == 0)
             return Task.FromResult<ServiceEndpoint?>(null);
 
-        lock (_lock)
+        lock (lock)
         {
-            var endpoint = availableEndpoints[_currentIndex % availableEndpoints.Count];
-            _currentIndex = (_currentIndex + 1) % availableEndpoints.Count;
+            var endpoint = availableEndpoints[currentIndex % availableEndpoints.Count];
+currentIndex = (currentIndex + 1) % availableEndpoints.Count;
             return Task.FromResult<ServiceEndpoint?>(endpoint);
         }
     }
@@ -986,12 +1017,12 @@ public interface ILoadBalancerService
 
 public class AspireLoadBalancerService : ILoadBalancerService
 {
-    private readonly IServiceDiscovery _serviceDiscovery;
-    private readonly IHealthCheckService _healthCheck;
-    private readonly ILogger<AspireLoadBalancerService> _logger;
-    private readonly IMetricsCollector _metrics;
-    private readonly ConcurrentDictionary<string, LoadBalancerState> _serviceStates = new();
-    private readonly Timer _healthCheckTimer;
+    private readonly IServiceDiscovery serviceDiscovery;
+    private readonly IHealthCheckService healthCheck;
+    private readonly ILogger<AspireLoadBalancerService> logger;
+    private readonly IMetricsCollector metrics;
+    private readonly ConcurrentDictionary<string, LoadBalancerState> serviceStates = new();
+    private readonly Timer healthCheckTimer;
 
     public AspireLoadBalancerService(
         IServiceDiscovery serviceDiscovery,
@@ -999,12 +1030,11 @@ public class AspireLoadBalancerService : ILoadBalancerService
         ILogger<AspireLoadBalancerService> logger,
         IMetricsCollector metrics)
     {
-        _serviceDiscovery = serviceDiscovery;
-        _healthCheck = healthCheck;
-        _logger = logger;
-        _metrics = metrics;
-        
-        _healthCheckTimer = new Timer(async _ => await PerformHealthChecksAsync(), 
+serviceDiscovery = serviceDiscovery;
+healthCheck = healthCheck;
+logger = logger;
+metrics = metrics;
+healthCheckTimer = new Timer(async _ => await PerformHealthChecksAsync(), 
             null, TimeSpan.Zero, TimeSpan.FromSeconds(30));
     }
 
@@ -1021,7 +1051,7 @@ public class AspireLoadBalancerService : ILoadBalancerService
 
         if (!healthyEndpoints.Any())
         {
-            _logger.LogWarning("No healthy endpoints available for service {ServiceName}", serviceName);
+logger.LogWarning("No healthy endpoints available for service {ServiceName}", serviceName);
             throw new InvalidOperationException($"No healthy endpoints available for service {serviceName}");
         }
 
@@ -1038,28 +1068,27 @@ public class AspireLoadBalancerService : ILoadBalancerService
 
         // Update connection count
         Interlocked.Increment(ref selectedEndpoint.ActiveConnections);
-        
-        _logger.LogDebug("Selected endpoint {EndpointId} for service {ServiceName} using {Strategy}",
+logger.LogDebug("Selected endpoint {EndpointId} for service {ServiceName} using {Strategy}",
             selectedEndpoint.Id, serviceName, strategy);
 
-        await _metrics.RecordLoadBalancingDecisionAsync(serviceName, selectedEndpoint.Id, strategy.ToString());
+        await metrics.RecordLoadBalancingDecisionAsync(serviceName, selectedEndpoint.Id, strategy.ToString());
 
         return selectedEndpoint;
     }
 
     public async Task<IEnumerable<ServiceEndpoint>> GetHealthyEndpointsAsync(string serviceName)
     {
-        if (!_serviceStates.TryGetValue(serviceName, out var state))
+        if (!serviceStates.TryGetValue(serviceName, out var state))
         {
             // Initialize service state if not exists
-            var endpoints = await _serviceDiscovery.GetServiceEndpointsAsync(serviceName);
+            var endpoints = await serviceDiscovery.GetServiceEndpointsAsync(serviceName);
             state = new LoadBalancerState
             {
                 ServiceName = serviceName,
                 Endpoints = new ConcurrentDictionary<string, ServiceEndpoint>(
                     endpoints.ToDictionary(e => e.Id, e => e))
             };
-            _serviceStates.TryAdd(serviceName, state);
+serviceStates.TryAdd(serviceName, state);
         }
 
         return state.Endpoints.Values.Where(e => e.Health != HealthStatus.Unhealthy);
@@ -1067,7 +1096,7 @@ public class AspireLoadBalancerService : ILoadBalancerService
 
     private ServiceEndpoint SelectRoundRobin(string serviceName, List<ServiceEndpoint> endpoints)
     {
-        var state = _serviceStates.GetOrAdd(serviceName, _ => new LoadBalancerState { ServiceName = serviceName });
+        var state =serviceStates.GetOrAdd(serviceName, _ => new LoadBalancerState { ServiceName = serviceName });
         var index = (int)(Interlocked.Increment(ref state.RoundRobinIndex) % endpoints.Count);
         return endpoints[index];
     }
@@ -1118,7 +1147,7 @@ public class AspireLoadBalancerService : ILoadBalancerService
 
     private async Task PerformHealthChecksAsync()
     {
-        var tasks = _serviceStates.Values.SelectMany(state => 
+        var tasks =serviceStates.Values.SelectMany(state => 
             state.Endpoints.Values.Select(endpoint => CheckEndpointHealthAsync(endpoint)));
         
         await Task.WhenAll(tasks);
@@ -1128,7 +1157,7 @@ public class AspireLoadBalancerService : ILoadBalancerService
     {
         try
         {
-            var healthResult = await _healthCheck.CheckHealthAsync(endpoint.Uri);
+            var healthResult = await healthCheck.CheckHealthAsync(endpoint.Uri);
             var previousHealth = endpoint.Health;
             
             endpoint.Health = healthResult.Status;
@@ -1137,13 +1166,13 @@ public class AspireLoadBalancerService : ILoadBalancerService
 
             if (previousHealth != healthResult.Status)
             {
-                _logger.LogInformation("Endpoint {EndpointId} health changed from {PreviousHealth} to {CurrentHealth}",
+logger.LogInformation("Endpoint {EndpointId} health changed from {PreviousHealth} to {CurrentHealth}",
                     endpoint.Id, previousHealth, healthResult.Status);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Health check failed for endpoint {EndpointId}", endpoint.Id);
+logger.LogError(ex, "Health check failed for endpoint {EndpointId}", endpoint.Id);
             endpoint.Health = HealthStatus.Unhealthy;
             endpoint.HealthScore = 0.0;
         }
@@ -1211,48 +1240,48 @@ public class HealthCheckResult
 ```csharp
 public class CircuitBreakerLoadBalancer : ILoadBalancerService
 {
-    private readonly ILoadBalancerService _innerLoadBalancer;
-    private readonly ConcurrentDictionary<string, CircuitBreakerState> _circuitStates = new();
-    private readonly CircuitBreakerOptions _options;
-    private readonly ILogger<CircuitBreakerLoadBalancer> _logger;
+    private readonly ILoadBalancerService innerLoadBalancer;
+    private readonly ConcurrentDictionary<string, CircuitBreakerState> circuitStates = new();
+    private readonly CircuitBreakerOptions options;
+    private readonly ILogger<CircuitBreakerLoadBalancer> logger;
 
     public CircuitBreakerLoadBalancer(
         ILoadBalancerService innerLoadBalancer,
         CircuitBreakerOptions options,
         ILogger<CircuitBreakerLoadBalancer> logger)
     {
-        _innerLoadBalancer = innerLoadBalancer;
-        _options = options;
-        _logger = logger;
+innerLoadBalancer = innerLoadBalancer;
+options = options;
+logger = logger;
     }
 
     public async Task<ServiceEndpoint> SelectEndpointAsync(string serviceName, LoadBalancingStrategy strategy = LoadBalancingStrategy.RoundRobin)
     {
-        var circuitState = _circuitStates.GetOrAdd(serviceName, _ => new CircuitBreakerState());
+        var circuitState =circuitStates.GetOrAdd(serviceName, _ => new CircuitBreakerState());
         
         if (circuitState.State == CircuitState.Open)
         {
-            if (DateTime.UtcNow - circuitState.LastFailureTime < _options.OpenTimeout)
+            if (DateTime.UtcNow - circuitState.LastFailureTime < options.OpenTimeout)
             {
-                _logger.LogWarning("Circuit breaker is OPEN for service {ServiceName}", serviceName);
+logger.LogWarning("Circuit breaker is OPEN for service {ServiceName}", serviceName);
                 throw new CircuitBreakerOpenException($"Circuit breaker is open for service {serviceName}");
             }
             
             // Try to transition to half-open
             circuitState.State = CircuitState.HalfOpen;
-            _logger.LogInformation("Circuit breaker transitioning to HALF-OPEN for service {ServiceName}", serviceName);
+logger.LogInformation("Circuit breaker transitioning to HALF-OPEN for service {ServiceName}", serviceName);
         }
 
         try
         {
-            var endpoint = await _innerLoadBalancer.SelectEndpointAsync(serviceName, strategy);
+            var endpoint = await innerLoadBalancer.SelectEndpointAsync(serviceName, strategy);
             
             if (circuitState.State == CircuitState.HalfOpen)
             {
                 // Success in half-open state - close the circuit
                 circuitState.State = CircuitState.Closed;
                 circuitState.FailureCount = 0;
-                _logger.LogInformation("Circuit breaker CLOSED for service {ServiceName}", serviceName);
+logger.LogInformation("Circuit breaker CLOSED for service {ServiceName}", serviceName);
             }
             
             return endpoint;
@@ -1269,26 +1298,26 @@ public class CircuitBreakerLoadBalancer : ILoadBalancerService
         circuitState.FailureCount++;
         circuitState.LastFailureTime = DateTime.UtcNow;
 
-        if (circuitState.FailureCount >= _options.FailureThreshold)
+        if (circuitState.FailureCount >=options.FailureThreshold)
         {
             circuitState.State = CircuitState.Open;
-            _logger.LogError(exception, "Circuit breaker OPENED for service {ServiceName} after {FailureCount} failures",
+logger.LogError(exception, "Circuit breaker OPENED for service {ServiceName} after {FailureCount} failures",
                 serviceName, circuitState.FailureCount);
         }
     }
 
     // Implement other ILoadBalancerService methods by delegating to inner service
     public Task<IEnumerable<ServiceEndpoint>> GetHealthyEndpointsAsync(string serviceName) =>
-        _innerLoadBalancer.GetHealthyEndpointsAsync(serviceName);
+innerLoadBalancer.GetHealthyEndpointsAsync(serviceName);
 
     public Task RegisterEndpointAsync(ServiceEndpoint endpoint) =>
-        _innerLoadBalancer.RegisterEndpointAsync(endpoint);
+innerLoadBalancer.RegisterEndpointAsync(endpoint);
 
     public Task UnregisterEndpointAsync(string endpointId) =>
-        _innerLoadBalancer.UnregisterEndpointAsync(endpointId);
+innerLoadBalancer.UnregisterEndpointAsync(endpointId);
 
     public Task UpdateEndpointHealthAsync(string endpointId, HealthStatus health, Dictionary<string, double> metrics) =>
-        _innerLoadBalancer.UpdateEndpointHealthAsync(endpointId, health, metrics);
+innerLoadBalancer.UpdateEndpointHealthAsync(endpointId, health, metrics);
 }
 
 public class CircuitBreakerState
@@ -1322,21 +1351,21 @@ public class CircuitBreakerOpenException : Exception
 ```csharp
 public class ServiceMeshLoadBalancer : ILoadBalancerService
 {
-    private readonly IServiceMeshClient _meshClient;
-    private readonly ILogger<ServiceMeshLoadBalancer> _logger;
+    private readonly IServiceMeshClient meshClient;
+    private readonly ILogger<ServiceMeshLoadBalancer> logger;
 
     public ServiceMeshLoadBalancer(
         IServiceMeshClient meshClient,
         ILogger<ServiceMeshLoadBalancer> logger)
     {
-        _meshClient = meshClient;
-        _logger = logger;
+meshClient = meshClient;
+logger = logger;
     }
 
     public async Task<ServiceEndpoint> SelectEndpointAsync(string serviceName, LoadBalancingStrategy strategy = LoadBalancingStrategy.RoundRobin)
     {
         // Delegate to service mesh (Istio, Linkerd, Consul Connect)
-        var meshEndpoint = await _meshClient.GetServiceEndpointAsync(serviceName, new LoadBalancingPolicy
+        var meshEndpoint = await meshClient.GetServiceEndpointAsync(serviceName, new LoadBalancingPolicy
         {
             Strategy = strategy,
             EnableCircuitBreaker = true,
@@ -1370,7 +1399,7 @@ public class ServiceMeshLoadBalancer : ILoadBalancerService
     // Other methods delegate to service mesh
     public async Task<IEnumerable<ServiceEndpoint>> GetHealthyEndpointsAsync(string serviceName)
     {
-        var meshEndpoints = await _meshClient.GetAllServiceEndpointsAsync(serviceName);
+        var meshEndpoints = await meshClient.GetAllServiceEndpointsAsync(serviceName);
         return meshEndpoints
             .Where(e => e.HealthStatus == "healthy")
             .Select(e => new ServiceEndpoint
@@ -1384,13 +1413,13 @@ public class ServiceMeshLoadBalancer : ILoadBalancerService
     }
 
     public Task RegisterEndpointAsync(ServiceEndpoint endpoint) =>
-        _meshClient.RegisterServiceAsync(endpoint.ServiceName, endpoint.Uri.ToString(), endpoint.Weight);
+meshClient.RegisterServiceAsync(endpoint.ServiceName, endpoint.Uri.ToString(), endpoint.Weight);
 
     public Task UnregisterEndpointAsync(string endpointId) =>
-        _meshClient.DeregisterServiceAsync(endpointId);
+meshClient.DeregisterServiceAsync(endpointId);
 
     public Task UpdateEndpointHealthAsync(string endpointId, HealthStatus health, Dictionary<string, double> metrics) =>
-        _meshClient.UpdateHealthStatusAsync(endpointId, health.ToString().ToLowerInvariant(), metrics);
+meshClient.UpdateHealthStatusAsync(endpointId, health.ToString().ToLowerInvariant(), metrics);
 }
 ```
 
@@ -1501,28 +1530,28 @@ public static class LoadBalancingServiceExtensions
 // Basic load balancing
 public class DocumentProcessingController : ControllerBase
 {
-    private readonly ILoadBalancerService _loadBalancer;
-    private readonly HttpClient _httpClient;
+    private readonly ILoadBalancerService loadBalancer;
+    private readonly HttpClient httpClient;
 
     public DocumentProcessingController(
         ILoadBalancerService loadBalancer,
         HttpClient httpClient)
     {
-        _loadBalancer = loadBalancer;
-        _httpClient = httpClient;
+loadBalancer = loadBalancer;
+httpClient = httpClient;
     }
 
     [HttpPost("process")]
     public async Task<IActionResult> ProcessDocument([FromBody] DocumentRequest request)
     {
         // Select best endpoint for document processing service
-        var endpoint = await _loadBalancer.SelectEndpointAsync(
+        var endpoint = await loadBalancer.SelectEndpointAsync(
             "document-processing", 
             LoadBalancingStrategy.LeastConnections);
 
         try
         {
-            var response = await _httpClient.PostAsJsonAsync(
+            var response = await httpClient.PostAsJsonAsync(
                 new Uri(endpoint.Uri, "api/process"), 
                 request);
 
@@ -1587,11 +1616,11 @@ public interface IResourceMetricsCollector
 
 public class AspireResourceMetricsCollector : IResourceMetricsCollector, IDisposable
 {
-    private readonly IServiceDiscovery _serviceDiscovery;
-    private readonly ILogger<AspireResourceMetricsCollector> _logger;
-    private readonly HttpClient _httpClient;
-    private readonly Timer? _collectionTimer;
-    private readonly ConcurrentDictionary<string, ResourceMetrics> _latestMetrics = new();
+    private readonly IServiceDiscovery serviceDiscovery;
+    private readonly ILogger<AspireResourceMetricsCollector> logger;
+    private readonly HttpClient httpClient;
+    private readonly Timer? collectionTimer;
+    private readonly ConcurrentDictionary<string, ResourceMetrics> latestMetrics = new();
     
     public event EventHandler<MetricsCollectedEventArgs>? MetricsCollected;
 
@@ -1600,9 +1629,9 @@ public class AspireResourceMetricsCollector : IResourceMetricsCollector, IDispos
         ILogger<AspireResourceMetricsCollector> logger,
         HttpClient httpClient)
     {
-        _serviceDiscovery = serviceDiscovery;
-        _logger = logger;
-        _httpClient = httpClient;
+serviceDiscovery = serviceDiscovery;
+logger = logger;
+httpClient = httpClient;
     }
 
     public async Task<ResourceMetrics> GetResourceMetricsAsync(string serviceName, CancellationToken cancellationToken = default)
@@ -1612,7 +1641,7 @@ public class AspireResourceMetricsCollector : IResourceMetricsCollector, IDispos
 
         try
         {
-            var endpoints = await _serviceDiscovery.GetServiceEndpointsAsync(serviceName);
+            var endpoints = await serviceDiscovery.GetServiceEndpointsAsync(serviceName);
             var metricsData = new List<ServiceInstanceMetrics>();
 
             foreach (var endpoint in endpoints)
@@ -1624,19 +1653,19 @@ public class AspireResourceMetricsCollector : IResourceMetricsCollector, IDispos
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to collect metrics from endpoint {EndpointId}", endpoint.Id);
+logger.LogWarning(ex, "Failed to collect metrics from endpoint {EndpointId}", endpoint.Id);
                 }
             }
 
             var aggregatedMetrics = AggregateMetrics(serviceName, metricsData);
-            _latestMetrics.AddOrUpdate(serviceName, aggregatedMetrics, (_, _) => aggregatedMetrics);
+latestMetrics.AddOrUpdate(serviceName, aggregatedMetrics, (_, _) => aggregatedMetrics);
 
             return aggregatedMetrics;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to collect resource metrics for service {ServiceName}", serviceName);
-            return _latestMetrics.GetValueOrDefault(serviceName) ?? CreateEmptyMetrics(serviceName);
+logger.LogError(ex, "Failed to collect resource metrics for service {ServiceName}", serviceName);
+            return latestMetrics.GetValueOrDefault(serviceName) ?? CreateEmptyMetrics(serviceName);
         }
     }
 
@@ -1649,12 +1678,12 @@ public class AspireResourceMetricsCollector : IResourceMetricsCollector, IDispos
         try
         {
             // Collect Prometheus-style metrics
-            var response = await _httpClient.GetStringAsync(metricsUri, cancellationToken);
+            var response = await httpClient.GetStringAsync(metricsUri, cancellationToken);
             var metrics = ParsePrometheusMetrics(response);
 
             // Also collect system metrics via custom endpoint
             var systemMetricsUri = new Uri(endpoint.Uri, "/api/system/metrics");
-            var systemResponse = await _httpClient.GetFromJsonAsync<SystemMetrics>(systemMetricsUri, cancellationToken);
+            var systemResponse = await httpClient.GetFromJsonAsync<SystemMetrics>(systemMetricsUri, cancellationToken);
 
             return new ServiceInstanceMetrics
             {
@@ -1677,7 +1706,7 @@ public class AspireResourceMetricsCollector : IResourceMetricsCollector, IDispos
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to collect metrics from endpoint {EndpointUri}", metricsUri);
+logger.LogWarning(ex, "Failed to collect metrics from endpoint {EndpointUri}", metricsUri);
             return CreateEmptyInstanceMetrics(endpoint.Id, endpoint.ServiceName);
         }
     }
@@ -1718,13 +1747,13 @@ public class AspireResourceMetricsCollector : IResourceMetricsCollector, IDispos
 
     public async Task StartCollectionAsync(TimeSpan interval, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Starting resource metrics collection with interval {Interval}", interval);
+logger.LogInformation("Starting resource metrics collection with interval {Interval}", interval);
         
         var timer = new Timer(async _ =>
         {
             try
             {
-                var services = await _serviceDiscovery.GetServicesAsync();
+                var services = await serviceDiscovery.GetServicesAsync();
                 var tasks = services.Select(async serviceName =>
                 {
                     try
@@ -1734,7 +1763,7 @@ public class AspireResourceMetricsCollector : IResourceMetricsCollector, IDispos
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Error collecting metrics for service {ServiceName}", serviceName);
+logger.LogError(ex, "Error collecting metrics for service {ServiceName}", serviceName);
                     }
                 });
                 
@@ -1742,7 +1771,7 @@ public class AspireResourceMetricsCollector : IResourceMetricsCollector, IDispos
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during metrics collection cycle");
+logger.LogError(ex, "Error during metrics collection cycle");
             }
         }, null, TimeSpan.Zero, interval);
     }
@@ -1777,8 +1806,8 @@ public class AspireResourceMetricsCollector : IResourceMetricsCollector, IDispos
 
     public void Dispose()
     {
-        _collectionTimer?.Dispose();
-        _httpClient?.Dispose();
+        collectionTimer?.Dispose();
+        httpClient?.Dispose();
     }
 }
 ```
@@ -1795,16 +1824,16 @@ public interface IResourceScalingPolicy
 
 public class CpuBasedScalingPolicy : IResourceScalingPolicy
 {
-    private readonly CpuScalingOptions _options;
-    private readonly ILogger<CpuBasedScalingPolicy> _logger;
+    private readonly CpuScalingOptions options;
+    private readonly ILogger<CpuBasedScalingPolicy> logger;
 
     public string PolicyName => "CPU-Based Scaling";
     public int Priority => 100;
 
     public CpuBasedScalingPolicy(CpuScalingOptions options, ILogger<CpuBasedScalingPolicy> logger)
     {
-        _options = options;
-        _logger = logger;
+options = options;
+logger = logger;
     }
 
     public async Task<ScalingDecision> EvaluateAsync(ResourceScalingContext context)
@@ -1815,7 +1844,7 @@ public class CpuBasedScalingPolicy : IResourceScalingPolicy
         await Task.CompletedTask; // Placeholder for async operations
 
         // Check if we're in cooldown period
-        if (DateTime.UtcNow - context.LastScalingAction < _options.CooldownPeriod)
+        if (DateTime.UtcNow - context.LastScalingAction < options.CooldownPeriod)
         {
             return ScalingDecision.NoAction("CPU scaling in cooldown period");
         }
@@ -1824,16 +1853,16 @@ public class CpuBasedScalingPolicy : IResourceScalingPolicy
         var maxCpu = metrics.MaxCpuUsage;
         
         // Scale up conditions
-        if (avgCpu > _options.ScaleUpThreshold || maxCpu > _options.ScaleUpMaxThreshold)
+        if (avgCpu > options.ScaleUpThreshold || maxCpu > options.ScaleUpMaxThreshold)
         {
             var targetInstances = CalculateTargetInstances(
-                currentInstances, avgCpu, _options.ScaleUpThreshold, _options.ScaleUpFactor);
+                currentInstances, avgCpu, options.ScaleUpThreshold, options.ScaleUpFactor);
                 
             targetInstances = Math.Min(targetInstances, context.MaxInstances);
             
             if (targetInstances > currentInstances)
             {
-                _logger.LogInformation("CPU-based scale up: avg={AvgCpu}%, max={MaxCpu}%, target={Target} instances",
+logger.LogInformation("CPU-based scale up: avg={AvgCpu}%, max={MaxCpu}%, target={Target} instances",
                     avgCpu, maxCpu, targetInstances);
                     
                 return ScalingDecision.ScaleUp(targetInstances, 
@@ -1842,16 +1871,16 @@ public class CpuBasedScalingPolicy : IResourceScalingPolicy
         }
         
         // Scale down conditions
-        if (avgCpu < _options.ScaleDownThreshold && maxCpu < _options.ScaleDownMaxThreshold)
+        if (avgCpu < options.ScaleDownThreshold && maxCpu < options.ScaleDownMaxThreshold)
         {
             var targetInstances = CalculateTargetInstances(
-                currentInstances, avgCpu, _options.ScaleDownThreshold, _options.ScaleDownFactor);
+                currentInstances, avgCpu, options.ScaleDownThreshold, options.ScaleDownFactor);
                 
             targetInstances = Math.Max(targetInstances, context.MinInstances);
             
             if (targetInstances < currentInstances)
             {
-                _logger.LogInformation("CPU-based scale down: avg={AvgCpu}%, max={MaxCpu}%, target={Target} instances",
+logger.LogInformation("CPU-based scale down: avg={AvgCpu}%, max={MaxCpu}%, target={Target} instances",
                     avgCpu, maxCpu, targetInstances);
                     
                 return ScalingDecision.ScaleDown(targetInstances,
@@ -1882,16 +1911,16 @@ public class CpuBasedScalingPolicy : IResourceScalingPolicy
 
 public class MemoryBasedScalingPolicy : IResourceScalingPolicy
 {
-    private readonly MemoryScalingOptions _options;
-    private readonly ILogger<MemoryBasedScalingPolicy> _logger;
+    private readonly MemoryScalingOptions options;
+    private readonly ILogger<MemoryBasedScalingPolicy> logger;
 
     public string PolicyName => "Memory-Based Scaling";
     public int Priority => 90;
 
     public MemoryBasedScalingPolicy(MemoryScalingOptions options, ILogger<MemoryBasedScalingPolicy> logger)
     {
-        _options = options;
-        _logger = logger;
+options = options;
+logger = logger;
     }
 
     public async Task<ScalingDecision> EvaluateAsync(ResourceScalingContext context)
@@ -1901,7 +1930,7 @@ public class MemoryBasedScalingPolicy : IResourceScalingPolicy
 
         await Task.CompletedTask;
 
-        if (DateTime.UtcNow - context.LastScalingAction < _options.CooldownPeriod)
+        if (DateTime.UtcNow - context.LastScalingAction < options.CooldownPeriod)
         {
             return ScalingDecision.NoAction("Memory scaling in cooldown period");
         }
@@ -1910,15 +1939,15 @@ public class MemoryBasedScalingPolicy : IResourceScalingPolicy
         var maxMemory = metrics.MaxMemoryUsage;
 
         // Scale up conditions (memory pressure)
-        if (avgMemory > _options.ScaleUpThreshold || maxMemory > _options.ScaleUpMaxThreshold)
+        if (avgMemory > options.ScaleUpThreshold || maxMemory > options.ScaleUpMaxThreshold)
         {
             var targetInstances = Math.Min(
-                currentInstances + _options.ScaleUpStep,
+                currentInstances + options.ScaleUpStep,
                 context.MaxInstances);
 
             if (targetInstances > currentInstances)
             {
-                _logger.LogInformation("Memory-based scale up: avg={AvgMemory}%, max={MaxMemory}%, target={Target} instances",
+logger.LogInformation("Memory-based scale up: avg={AvgMemory}%, max={MaxMemory}%, target={Target} instances",
                     avgMemory, maxMemory, targetInstances);
 
                 return ScalingDecision.ScaleUp(targetInstances,
@@ -1927,15 +1956,15 @@ public class MemoryBasedScalingPolicy : IResourceScalingPolicy
         }
 
         // Scale down conditions
-        if (avgMemory < _options.ScaleDownThreshold && maxMemory < _options.ScaleDownMaxThreshold)
+        if (avgMemory < options.ScaleDownThreshold && maxMemory < options.ScaleDownMaxThreshold)
         {
             var targetInstances = Math.Max(
-                currentInstances - _options.ScaleDownStep,
+                currentInstances - options.ScaleDownStep,
                 context.MinInstances);
 
             if (targetInstances < currentInstances)
             {
-                _logger.LogInformation("Memory-based scale down: avg={AvgMemory}%, max={MaxMemory}%, target={Target} instances",
+logger.LogInformation("Memory-based scale down: avg={AvgMemory}%, max={MaxMemory}%, target={Target} instances",
                     avgMemory, maxMemory, targetInstances);
 
                 return ScalingDecision.ScaleDown(targetInstances,
@@ -1949,16 +1978,16 @@ public class MemoryBasedScalingPolicy : IResourceScalingPolicy
 
 public class RequestRateScalingPolicy : IResourceScalingPolicy
 {
-    private readonly RequestRateScalingOptions _options;
-    private readonly ILogger<RequestRateScalingPolicy> _logger;
+    private readonly RequestRateScalingOptions options;
+    private readonly ILogger<RequestRateScalingPolicy> logger;
 
     public string PolicyName => "Request Rate Scaling";
     public int Priority => 80;
 
     public RequestRateScalingPolicy(RequestRateScalingOptions options, ILogger<RequestRateScalingPolicy> logger)
     {
-        _options = options;
-        _logger = logger;
+options = options;
+logger = logger;
     }
 
     public async Task<ScalingDecision> EvaluateAsync(ResourceScalingContext context)
@@ -1968,7 +1997,7 @@ public class RequestRateScalingPolicy : IResourceScalingPolicy
 
         await Task.CompletedTask;
 
-        if (DateTime.UtcNow - context.LastScalingAction < _options.CooldownPeriod)
+        if (DateTime.UtcNow - context.LastScalingAction < options.CooldownPeriod)
         {
             return ScalingDecision.NoAction("Request rate scaling in cooldown period");
         }
@@ -1977,14 +2006,14 @@ public class RequestRateScalingPolicy : IResourceScalingPolicy
         var avgRpsPerInstance = currentInstances > 0 ? totalRps / currentInstances : 0;
 
         // Scale up conditions
-        if (avgRpsPerInstance > _options.MaxRequestsPerInstance)
+        if (avgRpsPerInstance > options.MaxRequestsPerInstance)
         {
-            var targetInstances = (int)Math.Ceiling(totalRps / _options.TargetRequestsPerInstance);
+            var targetInstances = (int)Math.Ceiling(totalRps / options.TargetRequestsPerInstance);
             targetInstances = Math.Min(targetInstances, context.MaxInstances);
 
             if (targetInstances > currentInstances)
             {
-                _logger.LogInformation("Request rate scale up: {TotalRps} RPS, {AvgRps} per instance, target={Target} instances",
+logger.LogInformation("Request rate scale up: {TotalRps} RPS, {AvgRps} per instance, target={Target} instances",
                     totalRps, avgRpsPerInstance, targetInstances);
 
                 return ScalingDecision.ScaleUp(targetInstances,
@@ -1993,15 +2022,15 @@ public class RequestRateScalingPolicy : IResourceScalingPolicy
         }
 
         // Scale down conditions
-        if (avgRpsPerInstance < _options.MinRequestsPerInstance && currentInstances > context.MinInstances)
+        if (avgRpsPerInstance < options.MinRequestsPerInstance && currentInstances > context.MinInstances)
         {
             var targetInstances = Math.Max(
-                (int)Math.Ceiling(totalRps / _options.TargetRequestsPerInstance),
+                (int)Math.Ceiling(totalRps / options.TargetRequestsPerInstance),
                 context.MinInstances);
 
             if (targetInstances < currentInstances)
             {
-                _logger.LogInformation("Request rate scale down: {TotalRps} RPS, {AvgRps} per instance, target={Target} instances",
+logger.LogInformation("Request rate scale down: {TotalRps} RPS, {AvgRps} per instance, target={Target} instances",
                     totalRps, avgRpsPerInstance, targetInstances);
 
                 return ScalingDecision.ScaleDown(targetInstances,
@@ -2015,9 +2044,9 @@ public class RequestRateScalingPolicy : IResourceScalingPolicy
 
 public class CompositeScalingPolicy : IResourceScalingPolicy
 {
-    private readonly List<IResourceScalingPolicy> _policies;
-    private readonly CompositeScalingOptions _options;
-    private readonly ILogger<CompositeScalingPolicy> _logger;
+    private readonly List<IResourceScalingPolicy> policies;
+    private readonly CompositeScalingOptions options;
+    private readonly ILogger<CompositeScalingPolicy> logger;
 
     public string PolicyName => "Composite Scaling";
     public int Priority => 200;
@@ -2027,16 +2056,16 @@ public class CompositeScalingPolicy : IResourceScalingPolicy
         CompositeScalingOptions options,
         ILogger<CompositeScalingPolicy> logger)
     {
-        _policies = policies.Where(p => p != this).OrderByDescending(p => p.Priority).ToList();
-        _options = options;
-        _logger = logger;
+policies = policies.Where(p => p != this).OrderByDescending(p => p.Priority).ToList();
+options = options;
+logger = logger;
     }
 
     public async Task<ScalingDecision> EvaluateAsync(ResourceScalingContext context)
     {
         var decisions = new List<PolicyDecision>();
 
-        foreach (var policy in _policies)
+        foreach (var policy in policies)
         {
             try
             {
@@ -2050,11 +2079,11 @@ public class CompositeScalingPolicy : IResourceScalingPolicy
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error evaluating scaling policy {PolicyName}", policy.PolicyName);
+logger.LogError(ex, "Error evaluating scaling policy {PolicyName}", policy.PolicyName);
             }
         }
 
-        return _options.DecisionStrategy switch
+        return options.DecisionStrategy switch
         {
             CompositeDecisionStrategy.HighestPriority => decisions
                 .Where(d => d.Decision.ShouldScale)
@@ -2078,9 +2107,9 @@ public class CompositeScalingPolicy : IResourceScalingPolicy
     {
         var scalingDecisions = decisions.Where(d => d.Decision.ShouldScale).ToList();
         
-        if (scalingDecisions.Count < _options.MinimumConsensus)
+        if (scalingDecisions.Count < options.MinimumConsensus)
         {
-            return ScalingDecision.NoAction($"Consensus not reached ({scalingDecisions.Count}/{_options.MinimumConsensus} required)");
+            return ScalingDecision.NoAction($"Consensus not reached ({scalingDecisions.Count}/{options.MinimumConsensus} required)");
         }
 
         var scaleUpCount = scalingDecisions.Count(d => d.Decision.TargetInstances > context.CurrentInstances);
@@ -2401,14 +2430,14 @@ public interface IOrleansClusterScalingService
 
 public class AspireOrleansClusterScalingService : IOrleansClusterScalingService, IDisposable
 {
-    private readonly IClusterClient _clusterClient;
-    private readonly IOrleansHostingService _hostingService;
-    private readonly ILogger<AspireOrleansClusterScalingService> _logger;
-    private readonly IMetricsCollector _metrics;
-    private readonly OrleansScalingConfiguration _config;
-    private readonly ConcurrentDictionary<string, SiloInfo> _activeSilos = new();
-    private readonly SemaphoreSlim _scalingLock = new(1, 1);
-    private Timer? _monitoringTimer;
+    private readonly IClusterClient clusterClient;
+    private readonly IOrleansHostingService hostingService;
+    private readonly ILogger<AspireOrleansClusterScalingService> logger;
+    private readonly IMetricsCollector metrics;
+    private readonly OrleansScalingConfiguration config;
+    private readonly ConcurrentDictionary<string, SiloInfo> activeSilos = new();
+    private readonly SemaphoreSlim scalingLock = new(1, 1);
+    private Timer? monitoringTimer;
 
     public event EventHandler<SiloStatusChangedEventArgs>? SiloStatusChanged;
 
@@ -2419,11 +2448,11 @@ public class AspireOrleansClusterScalingService : IOrleansClusterScalingService,
         ILogger<AspireOrleansClusterScalingService> logger,
         IMetricsCollector metrics)
     {
-        _clusterClient = clusterClient;
-        _hostingService = hostingService;
-        _config = config.Value;
-        _logger = logger;
-        _metrics = metrics;
+clusterClient = clusterClient;
+hostingService = hostingService;
+config = config.Value;
+logger = logger;
+metrics = metrics;
         
         InitializeMonitoring();
     }
@@ -2441,14 +2470,14 @@ public class AspireOrleansClusterScalingService : IOrleansClusterScalingService,
 
         try
         {
-            await _scalingLock.WaitAsync(cancellationToken);
+            await scalingLock.WaitAsync(cancellationToken);
             
             var currentSilos = await GetActiveSilosAsync(clusterName, cancellationToken);
             var currentCount = currentSilos.Count();
 
             if (currentCount == targetSilos)
             {
-                _logger.LogInformation("Orleans cluster {ClusterName} already at target size: {SiloCount}", 
+logger.LogInformation("Orleans cluster {ClusterName} already at target size: {SiloCount}", 
                     clusterName, targetSilos);
                 
                 return new OrleansScalingResult
@@ -2477,14 +2506,14 @@ public class AspireOrleansClusterScalingService : IOrleansClusterScalingService,
             var duration = DateTime.UtcNow - startTime;
             result.ScalingDuration = duration;
 
-            await _metrics.RecordOrleansScalingEventAsync(clusterName, currentCount, targetSilos, duration);
+            await metrics.RecordOrleansScalingEventAsync(clusterName, currentCount, targetSilos, duration);
 
             return result;
         }
         catch (Exception ex)
         {
             var duration = DateTime.UtcNow - startTime;
-            _logger.LogError(ex, "Failed to scale Orleans cluster {ClusterName} to {TargetSilos}", clusterName, targetSilos);
+logger.LogError(ex, "Failed to scale Orleans cluster {ClusterName} to {TargetSilos}", clusterName, targetSilos);
             
             return new OrleansScalingResult
             {
@@ -2496,7 +2525,7 @@ public class AspireOrleansClusterScalingService : IOrleansClusterScalingService,
         }
         finally
         {
-            _scalingLock.Release();
+scalingLock.Release();
         }
     }
 
@@ -2506,7 +2535,7 @@ public class AspireOrleansClusterScalingService : IOrleansClusterScalingService,
         IEnumerable<SiloInfo> currentSilos,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Scaling up Orleans cluster {ClusterName} by {SiloCount} silos", clusterName, silosToAdd);
+logger.LogInformation("Scaling up Orleans cluster {ClusterName} by {SiloCount} silos", clusterName, silosToAdd);
 
         var addedSilos = new List<SiloInfo>();
 
@@ -2518,14 +2547,14 @@ public class AspireOrleansClusterScalingService : IOrleansClusterScalingService,
                 await StartSiloAsync(newSilo, cancellationToken);
                 
                 // Wait for silo to join cluster and become active
-                await WaitForSiloActive(newSilo.Id, _config.SiloStartupTimeout, cancellationToken);
+                await WaitForSiloActive(newSilo.Id, config.SiloStartupTimeout, cancellationToken);
                 
                 addedSilos.Add(newSilo);
-                _logger.LogInformation("Successfully added silo {SiloId} to cluster {ClusterName}", newSilo.Id, clusterName);
+logger.LogInformation("Successfully added silo {SiloId} to cluster {ClusterName}", newSilo.Id, clusterName);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to add silo {Index} to cluster {ClusterName}", i + 1, clusterName);
+logger.LogError(ex, "Failed to add silo {Index} to cluster {ClusterName}", i + 1, clusterName);
                 
                 // If we fail to add a silo, continue with partial success
                 break;
@@ -2533,7 +2562,7 @@ public class AspireOrleansClusterScalingService : IOrleansClusterScalingService,
         }
 
         // Wait for cluster stabilization
-        await WaitForClusterStabilization(clusterName, _config.ClusterStabilizationTimeout, cancellationToken);
+        await WaitForClusterStabilization(clusterName, config.ClusterStabilizationTimeout, cancellationToken);
 
         var finalSilos = await GetActiveSilosAsync(clusterName, cancellationToken);
 
@@ -2554,7 +2583,7 @@ public class AspireOrleansClusterScalingService : IOrleansClusterScalingService,
         IEnumerable<SiloInfo> currentSilos,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Scaling down Orleans cluster {ClusterName} by {SiloCount} silos", clusterName, silosToRemove);
+logger.LogInformation("Scaling down Orleans cluster {ClusterName} by {SiloCount} silos", clusterName, silosToRemove);
 
         var removedSilos = new List<SiloInfo>();
         var silosToDecommission = SelectSilosForDecommission(currentSilos, silosToRemove);
@@ -2564,19 +2593,19 @@ public class AspireOrleansClusterScalingService : IOrleansClusterScalingService,
             try
             {
                 // Graceful decommission with grain migration
-                await DecommissionSiloGracefullyAsync(silo, _config.GracefulShutdownTimeout, cancellationToken);
+                await DecommissionSiloGracefullyAsync(silo, config.GracefulShutdownTimeout, cancellationToken);
                 
                 removedSilos.Add(silo);
-                _logger.LogInformation("Successfully removed silo {SiloId} from cluster {ClusterName}", silo.Id, clusterName);
+logger.LogInformation("Successfully removed silo {SiloId} from cluster {ClusterName}", silo.Id, clusterName);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to remove silo {SiloId} from cluster {ClusterName}", silo.Id, clusterName);
+logger.LogError(ex, "Failed to remove silo {SiloId} from cluster {ClusterName}", silo.Id, clusterName);
             }
         }
 
         // Wait for cluster stabilization after removals
-        await WaitForClusterStabilization(clusterName, _config.ClusterStabilizationTimeout, cancellationToken);
+        await WaitForClusterStabilization(clusterName, config.ClusterStabilizationTimeout, cancellationToken);
 
         var finalSilos = await GetActiveSilosAsync(clusterName, cancellationToken);
 
@@ -2607,7 +2636,7 @@ public class AspireOrleansClusterScalingService : IOrleansClusterScalingService,
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to collect metrics from silo {SiloId}", silo.Id);
+logger.LogWarning(ex, "Failed to collect metrics from silo {SiloId}", silo.Id);
                 }
             }
 
@@ -2629,7 +2658,7 @@ public class AspireOrleansClusterScalingService : IOrleansClusterScalingService,
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get cluster metrics for {ClusterName}", clusterName);
+logger.LogError(ex, "Failed to get cluster metrics for {ClusterName}", clusterName);
             throw;
         }
     }
@@ -2638,7 +2667,7 @@ public class AspireOrleansClusterScalingService : IOrleansClusterScalingService,
     {
         try
         {
-            var managementGrain = _clusterClient.GetGrain<IManagementGrain>(0);
+            var managementGrain =clusterClient.GetGrain<IManagementGrain>(0);
             var hosts = await managementGrain.GetHosts();
             
             return hosts
@@ -2656,7 +2685,7 @@ public class AspireOrleansClusterScalingService : IOrleansClusterScalingService,
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get active silos for cluster {ClusterName}", clusterName);
+logger.LogError(ex, "Failed to get active silos for cluster {ClusterName}", clusterName);
             return Enumerable.Empty<SiloInfo>();
         }
     }
@@ -2668,7 +2697,7 @@ public class AspireOrleansClusterScalingService : IOrleansClusterScalingService,
         {
             ClusterName = clusterName,
             SiloName = siloId,
-            // Configuration would be loaded from _config
+            // Configuration would be loaded from config
         };
 
         var silo = new SiloInfo
@@ -2684,13 +2713,13 @@ public class AspireOrleansClusterScalingService : IOrleansClusterScalingService,
 
     private async Task StartSiloAsync(SiloInfo silo, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Starting Orleans silo {SiloId}", silo.Id);
+logger.LogInformation("Starting Orleans silo {SiloId}", silo.Id);
         
         // This would integrate with your hosting infrastructure (Kubernetes, Docker, etc.)
-        await _hostingService.StartOrleansHostAsync(silo.Id, silo.ClusterName, cancellationToken);
+        await hostingService.StartOrleansHostAsync(silo.Id, silo.ClusterName, cancellationToken);
         
         silo.Status = SiloStatus.Starting;
-        _activeSilos.TryAdd(silo.Id, silo);
+activeSilos.TryAdd(silo.Id, silo);
         
         SiloStatusChanged?.Invoke(this, new SiloStatusChangedEventArgs(silo, SiloStatus.Created, SiloStatus.Starting));
     }
@@ -2719,29 +2748,28 @@ public class AspireOrleansClusterScalingService : IOrleansClusterScalingService,
 
     private async Task DecommissionSiloGracefullyAsync(SiloInfo silo, TimeSpan gracePeriod, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Gracefully decommissioning silo {SiloId}", silo.Id);
+logger.LogInformation("Gracefully decommissioning silo {SiloId}", silo.Id);
         
         try
         {
             // Request graceful shutdown through management grain
-            var managementGrain = _clusterClient.GetGrain<IManagementGrain>(0);
+            var managementGrain =clusterClient.GetGrain<IManagementGrain>(0);
             
             // This would trigger grain migration and graceful shutdown
-            await _hostingService.StopOrleansHostAsync(silo.Id, gracePeriod, cancellationToken);
+            await hostingService.StopOrleansHostAsync(silo.Id, gracePeriod, cancellationToken);
             
             silo.Status = SiloStatus.Stopping;
             SiloStatusChanged?.Invoke(this, new SiloStatusChangedEventArgs(silo, SiloStatus.Active, SiloStatus.Stopping));
             
             // Wait for silo to be removed from cluster
             await WaitForSiloRemoval(silo.Id, gracePeriod, cancellationToken);
-            
-            _activeSilos.TryRemove(silo.Id, out _);
+activeSilos.TryRemove(silo.Id, out _);
             silo.Status = SiloStatus.Dead;
             SiloStatusChanged?.Invoke(this, new SiloStatusChangedEventArgs(silo, SiloStatus.Stopping, SiloStatus.Dead));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to gracefully decommission silo {SiloId}", silo.Id);
+logger.LogError(ex, "Failed to gracefully decommission silo {SiloId}", silo.Id);
             throw;
         }
     }
@@ -2777,7 +2805,7 @@ public class AspireOrleansClusterScalingService : IOrleansClusterScalingService,
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to collect metrics from silo {SiloId}", silo.Id);
+logger.LogWarning(ex, "Failed to collect metrics from silo {SiloId}", silo.Id);
             return new SiloMetrics { SiloId = silo.Id, Timestamp = DateTime.UtcNow };
         }
     }
@@ -2808,8 +2836,8 @@ public class AspireOrleansClusterScalingService : IOrleansClusterScalingService,
 
     public void Dispose()
     {
-        _monitoringTimer?.Dispose();
-        _scalingLock?.Dispose();
+        monitoringTimer?.Dispose();
+        scalingLock?.Dispose();
     }
 }
 ```
@@ -2819,9 +2847,9 @@ public class AspireOrleansClusterScalingService : IOrleansClusterScalingService,
 ```csharp
 public class OrleansGrainActivationScalingPolicy : IResourceScalingPolicy
 {
-    private readonly OrleansGrainScalingOptions _options;
-    private readonly IOrleansClusterScalingService _orlenasScaling;
-    private readonly ILogger<OrleansGrainActivationScalingPolicy> _logger;
+    private readonly OrleansGrainScalingOptions options;
+    private readonly IOrleansClusterScalingService orlenasScaling;
+    private readonly ILogger<OrleansGrainActivationScalingPolicy> logger;
 
     public string PolicyName => "Orleans Grain Activation Scaling";
     public int Priority => 120;
@@ -2831,16 +2859,16 @@ public class OrleansGrainActivationScalingPolicy : IResourceScalingPolicy
         IOrleansClusterScalingService orleansScaling,
         ILogger<OrleansGrainActivationScalingPolicy> logger)
     {
-        _options = options;
-        _orlenasScaling = orleansScaling;
-        _logger = logger;
+options = options;
+orlenasScaling = orleansScaling;
+logger = logger;
     }
 
     public async Task<ScalingDecision> EvaluateAsync(ResourceScalingContext context)
     {
-        var clusterMetrics = await _orlenasScaling.GetClusterMetricsAsync(context.ServiceName);
+        var clusterMetrics = await orlenasScaling.GetClusterMetricsAsync(context.ServiceName);
         
-        if (DateTime.UtcNow - context.LastScalingAction < _options.CooldownPeriod)
+        if (DateTime.UtcNow - context.LastScalingAction < options.CooldownPeriod)
         {
             return ScalingDecision.NoAction("Orleans grain scaling in cooldown period");
         }
@@ -2854,19 +2882,18 @@ public class OrleansGrainActivationScalingPolicy : IResourceScalingPolicy
             : 0;
 
         // Scale up conditions
-        if (avgGrainsPerSilo > _options.MaxGrainsPerSilo || avgCallsPerSilo > _options.MaxCallsPerSilo)
+        if (avgGrainsPerSilo > options.MaxGrainsPerSilo || avgCallsPerSilo > options.MaxCallsPerSilo)
         {
             var targetSilos = CalculateTargetSilos(
                 clusterMetrics.TotalGrainActivations, 
-                avgCallsPerSilo, 
-                _options.TargetGrainsPerSilo,
-                _options.TargetCallsPerSilo);
+                avgCallsPerSilo, options.TargetGrainsPerSilo,
+options.TargetCallsPerSilo);
                 
             targetSilos = Math.Min(targetSilos, context.MaxInstances);
 
             if (targetSilos > clusterMetrics.ActiveSiloCount)
             {
-                _logger.LogInformation("Orleans scale up: {GrainsPerSilo} grains/silo, {CallsPerSilo} calls/silo, target={Target} silos",
+logger.LogInformation("Orleans scale up: {GrainsPerSilo} grains/silo, {CallsPerSilo} calls/silo, target={Target} silos",
                     avgGrainsPerSilo, avgCallsPerSilo, targetSilos);
 
                 return ScalingDecision.ScaleUp(targetSilos,
@@ -2875,19 +2902,19 @@ public class OrleansGrainActivationScalingPolicy : IResourceScalingPolicy
         }
 
         // Scale down conditions
-        if (avgGrainsPerSilo < _options.MinGrainsPerSilo && avgCallsPerSilo < _options.MinCallsPerSilo)
+        if (avgGrainsPerSilo < options.MinGrainsPerSilo && avgCallsPerSilo < options.MinCallsPerSilo)
         {
             var targetSilos = Math.Max(
                 CalculateTargetSilos(
                     clusterMetrics.TotalGrainActivations,
                     avgCallsPerSilo,
-                    _options.TargetGrainsPerSilo,
-                    _options.TargetCallsPerSilo),
+options.TargetGrainsPerSilo,
+options.TargetCallsPerSilo),
                 context.MinInstances);
 
             if (targetSilos < clusterMetrics.ActiveSiloCount)
             {
-                _logger.LogInformation("Orleans scale down: {GrainsPerSilo} grains/silo, {CallsPerSilo} calls/silo, target={Target} silos",
+logger.LogInformation("Orleans scale down: {GrainsPerSilo} grains/silo, {CallsPerSilo} calls/silo, target={Target} silos",
                     avgGrainsPerSilo, avgCallsPerSilo, targetSilos);
 
                 return ScalingDecision.ScaleDown(targetSilos,
@@ -2910,9 +2937,9 @@ public class OrleansGrainActivationScalingPolicy : IResourceScalingPolicy
 
 public class OrleansClusterHealthScalingPolicy : IResourceScalingPolicy
 {
-    private readonly OrleansHealthScalingOptions _options;
-    private readonly IOrleansClusterScalingService _orleansScaling;
-    private readonly ILogger<OrleansClusterHealthScalingPolicy> _logger;
+    private readonly OrleansHealthScalingOptions options;
+    private readonly IOrleansClusterScalingService orleansScaling;
+    private readonly ILogger<OrleansClusterHealthScalingPolicy> logger;
 
     public string PolicyName => "Orleans Cluster Health Scaling";
     public int Priority => 110;
@@ -2922,36 +2949,36 @@ public class OrleansClusterHealthScalingPolicy : IResourceScalingPolicy
         IOrleansClusterScalingService orleansScaling,
         ILogger<OrleansClusterHealthScalingPolicy> logger)
     {
-        _options = options;
-        _orleansScaling = orleansScaling;
-        _logger = logger;
+options = options;
+orleansScaling = orleansScaling;
+logger = logger;
     }
 
     public async Task<ScalingDecision> EvaluateAsync(ResourceScalingContext context)
     {
-        var clusterMetrics = await _orleansScaling.GetClusterMetricsAsync(context.ServiceName);
+        var clusterMetrics = await orleansScaling.GetClusterMetricsAsync(context.ServiceName);
         
-        if (DateTime.UtcNow - context.LastScalingAction < _options.CooldownPeriod)
+        if (DateTime.UtcNow - context.LastScalingAction < options.CooldownPeriod)
         {
             return ScalingDecision.NoAction("Orleans health scaling in cooldown period");
         }
 
         var healthScore = clusterMetrics.ClusterHealthScore;
         var unhealthySilos = clusterMetrics.SiloMetrics.Count(m => 
-            m.CpuUsage > _options.UnhealthyCpuThreshold || 
-            m.MemoryUsage > _options.UnhealthyMemoryThreshold ||
-            m.MessageQueueLength > _options.UnhealthyQueueLength);
+            m.CpuUsage > options.UnhealthyCpuThreshold || 
+            m.MemoryUsage > options.UnhealthyMemoryThreshold ||
+            m.MessageQueueLength > options.UnhealthyQueueLength);
 
         // Scale up if cluster health is poor
-        if (healthScore < _options.MinHealthScore || unhealthySilos > _options.MaxUnhealthySilos)
+        if (healthScore < options.MinHealthScore || unhealthySilos > options.MaxUnhealthySilos)
         {
             var targetSilos = Math.Min(
-                clusterMetrics.ActiveSiloCount + _options.HealthScaleUpStep,
+                clusterMetrics.ActiveSiloCount + options.HealthScaleUpStep,
                 context.MaxInstances);
 
             if (targetSilos > clusterMetrics.ActiveSiloCount)
             {
-                _logger.LogInformation("Orleans health scale up: health={Health}, unhealthy silos={UnhealthySilos}, target={Target}",
+logger.LogInformation("Orleans health scale up: health={Health}, unhealthy silos={UnhealthySilos}, target={Target}",
                     healthScore, unhealthySilos, targetSilos);
 
                 return ScalingDecision.ScaleUp(targetSilos,
@@ -2960,13 +2987,12 @@ public class OrleansClusterHealthScalingPolicy : IResourceScalingPolicy
         }
 
         // Scale down if cluster is over-provisioned and healthy
-        if (healthScore > _options.OptimalHealthScore && unhealthySilos == 0 && clusterMetrics.ActiveSiloCount > context.MinInstances)
+        if (healthScore > options.OptimalHealthScore && unhealthySilos == 0 && clusterMetrics.ActiveSiloCount > context.MinInstances)
         {
             var targetSilos = Math.Max(
-                clusterMetrics.ActiveSiloCount - _options.HealthScaleDownStep,
+                clusterMetrics.ActiveSiloCount - options.HealthScaleDownStep,
                 context.MinInstances);
-
-            _logger.LogInformation("Orleans health scale down: health={Health}, target={Target}",
+logger.LogInformation("Orleans health scale down: health={Health}, target={Target}",
                 healthScore, targetSilos);
 
             return ScalingDecision.ScaleDown(targetSilos,
@@ -3134,18 +3160,18 @@ public static class OrleansScalingExtensions
 // Example Aspire service integration
 public class OrleansAspireService : BackgroundService
 {
-    private readonly IOrleansClusterScalingService _clusterScaling;
-    private readonly IResourceScalingService _resourceScaling;
-    private readonly ILogger<OrleansAspireService> _logger;
+    private readonly IOrleansClusterScalingService clusterScaling;
+    private readonly IResourceScalingService resourceScaling;
+    private readonly ILogger<OrleansAspireService> logger;
 
     public OrleansAspireService(
         IOrleansClusterScalingService clusterScaling,
         IResourceScalingService resourceScaling,
         ILogger<OrleansAspireService> logger)
     {
-        _clusterScaling = clusterScaling;
-        _resourceScaling = resourceScaling;
-        _logger = logger;
+clusterScaling = clusterScaling;
+resourceScaling = resourceScaling;
+logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -3160,7 +3186,7 @@ public class OrleansAspireService : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in Orleans scaling evaluation");
+logger.LogError(ex, "Error in Orleans scaling evaluation");
                 await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
             }
         }
@@ -3173,16 +3199,15 @@ public class OrleansAspireService : BackgroundService
         
         foreach (var serviceName in orleansServices)
         {
-            var decision = await _resourceScaling.EvaluateScalingAsync(serviceName, cancellationToken);
+            var decision = await resourceScaling.EvaluateScalingAsync(serviceName, cancellationToken);
             
             if (decision.ShouldScale)
             {
-                var result = await _clusterScaling.ScaleClusterAsync(
+                var result = await clusterScaling.ScaleClusterAsync(
                     serviceName, 
                     decision.TargetInstances, 
                     cancellationToken);
-                    
-                _logger.LogInformation("Orleans scaling result: {Result}", result.Message);
+logger.LogInformation("Orleans scaling result: {Result}", result.Message);
             }
         }
     }
@@ -3258,68 +3283,60 @@ public interface IScalingMetricsCollector
 
 public class PrometheusScalingMetricsCollector : IScalingMetricsCollector
 {
-    private readonly IMetricFactory _metricFactory;
-    private readonly ILogger<PrometheusScalingMetricsCollector> _logger;
+    private readonly IMetricFactory metricFactory;
+    private readonly ILogger<PrometheusScalingMetricsCollector> logger;
 
     // Prometheus metrics
-    private readonly ICounter _scalingEventsCounter;
-    private readonly ICounter _scalingFailuresCounter;
-    private readonly IHistogram _scalingDurationHistogram;
-    private readonly IGauge _activeInstancesGauge;
-    private readonly IGauge _resourceUtilizationGauge;
-    private readonly ICounter _loadBalancingDecisionsCounter;
-    private readonly ICounter _policyEvaluationsCounter;
-    private readonly IGauge _orleansClusterSizeGauge;
-    private readonly IHistogram _orleansScalingDurationHistogram;
+    private readonly ICounter scalingEventsCounter;
+    private readonly ICounter scalingFailuresCounter;
+    private readonly IHistogram scalingDurationHistogram;
+    private readonly IGauge activeInstancesGauge;
+    private readonly IGauge resourceUtilizationGauge;
+    private readonly ICounter loadBalancingDecisionsCounter;
+    private readonly ICounter policyEvaluationsCounter;
+    private readonly IGauge orleansClusterSizeGauge;
+    private readonly IHistogram orleansScalingDurationHistogram;
 
     public PrometheusScalingMetricsCollector(IMetricFactory metricFactory, ILogger<PrometheusScalingMetricsCollector> logger)
     {
-        _metricFactory = metricFactory;
-        _logger = logger;
+metricFactory = metricFactory;
+logger = logger;
 
         // Initialize Prometheus metrics
-        _scalingEventsCounter = _metricFactory.CreateCounter(
+scalingEventsCounter =metricFactory.CreateCounter(
             "aspire_scaling_events_total",
             "Total number of scaling events",
-            new[] { "service_name", "direction", "orchestrator", "success" });
-
-        _scalingFailuresCounter = _metricFactory.CreateCounter(
+            new[] { "serviceName", "direction", "orchestrator", "success" });
+scalingFailuresCounter =metricFactory.CreateCounter(
             "aspire_scaling_failures_total",
             "Total number of scaling failures",
-            new[] { "service_name", "reason", "orchestrator" });
-
-        _scalingDurationHistogram = _metricFactory.CreateHistogram(
+            new[] { "serviceName", "reason", "orchestrator" });
+scalingDurationHistogram =metricFactory.CreateHistogram(
             "aspire_scaling_duration_seconds",
             "Duration of scaling operations in seconds",
-            new[] { "service_name", "direction", "orchestrator" },
+            new[] { "serviceName", "direction", "orchestrator" },
             new[] { 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0 });
-
-        _activeInstancesGauge = _metricFactory.CreateGauge(
+activeInstancesGauge =metricFactory.CreateGauge(
             "aspire_service_instances_active",
             "Number of active service instances",
-            new[] { "service_name", "orchestrator" });
-
-        _resourceUtilizationGauge = _metricFactory.CreateGauge(
+            new[] { "serviceName", "orchestrator" });
+resourceUtilizationGauge =metricFactory.CreateGauge(
             "aspire_resource_utilization_percent",
             "Resource utilization percentage",
-            new[] { "service_name", "resource_type", "metric_type" });
-
-        _loadBalancingDecisionsCounter = _metricFactory.CreateCounter(
+            new[] { "serviceName", "resource_type", "metric_type" });
+loadBalancingDecisionsCounter =metricFactory.CreateCounter(
             "aspire_load_balancing_decisions_total",
             "Total number of load balancing decisions",
-            new[] { "service_name", "endpoint_id", "strategy" });
-
-        _policyEvaluationsCounter = _metricFactory.CreateCounter(
+            new[] { "serviceName", "endpoint_id", "strategy" });
+policyEvaluationsCounter =metricFactory.CreateCounter(
             "aspire_scaling_policy_evaluations_total",
             "Total number of scaling policy evaluations",
-            new[] { "service_name", "policy_name", "decision" });
-
-        _orleansClusterSizeGauge = _metricFactory.CreateGauge(
+            new[] { "serviceName", "policy_name", "decision" });
+orleansClusterSizeGauge =metricFactory.CreateGauge(
             "aspire_orleans_cluster_silos",
             "Number of active Orleans silos in cluster",
             new[] { "cluster_name" });
-
-        _orleansScalingDurationHistogram = _metricFactory.CreateHistogram(
+orleansScalingDurationHistogram =metricFactory.CreateHistogram(
             "aspire_orleans_scaling_duration_seconds",
             "Duration of Orleans cluster scaling operations",
             new[] { "cluster_name", "direction" },
@@ -3330,33 +3347,30 @@ public class PrometheusScalingMetricsCollector : IScalingMetricsCollector
     {
         try
         {
-            _scalingEventsCounter
+scalingEventsCounter
                 .WithLabels(metrics.ServiceName, metrics.Direction.ToString(), metrics.Orchestrator, metrics.Success.ToString())
                 .Inc();
-
-            _scalingDurationHistogram
+scalingDurationHistogram
                 .WithLabels(metrics.ServiceName, metrics.Direction.ToString(), metrics.Orchestrator)
                 .Observe(metrics.Duration.TotalSeconds);
-
-            _activeInstancesGauge
+activeInstancesGauge
                 .WithLabels(metrics.ServiceName, metrics.Orchestrator)
                 .Set(metrics.CurrentInstances);
 
             if (!metrics.Success)
             {
-                _scalingFailuresCounter
+scalingFailuresCounter
                     .WithLabels(metrics.ServiceName, metrics.ErrorReason ?? "unknown", metrics.Orchestrator)
                     .Inc();
             }
-
-            _logger.LogDebug("Recorded scaling event for {ServiceName}: {Direction} to {Instances} instances in {Duration}ms",
+logger.LogDebug("Recorded scaling event for {ServiceName}: {Direction} to {Instances} instances in {Duration}ms",
                 metrics.ServiceName, metrics.Direction, metrics.CurrentInstances, metrics.Duration.TotalMilliseconds);
 
             await Task.CompletedTask;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to record scaling event metrics for {ServiceName}", metrics.ServiceName);
+logger.LogError(ex, "Failed to record scaling event metrics for {ServiceName}", metrics.ServiceName);
         }
     }
 
@@ -3364,7 +3378,7 @@ public class PrometheusScalingMetricsCollector : IScalingMetricsCollector
     {
         try
         {
-            _loadBalancingDecisionsCounter
+loadBalancingDecisionsCounter
                 .WithLabels(serviceName, endpointId, strategy)
                 .Inc();
 
@@ -3372,7 +3386,7 @@ public class PrometheusScalingMetricsCollector : IScalingMetricsCollector
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to record load balancing decision for {ServiceName}", serviceName);
+logger.LogError(ex, "Failed to record load balancing decision for {ServiceName}", serviceName);
         }
     }
 
@@ -3381,12 +3395,10 @@ public class PrometheusScalingMetricsCollector : IScalingMetricsCollector
         try
         {
             var direction = currentSilos > previousSilos ? "up" : "down";
-            
-            _orleansScalingDurationHistogram
+orleansScalingDurationHistogram
                 .WithLabels(clusterName, direction)
                 .Observe(duration.TotalSeconds);
-
-            _orleansClusterSizeGauge
+orleansClusterSizeGauge
                 .WithLabels(clusterName)
                 .Set(currentSilos);
 
@@ -3394,7 +3406,7 @@ public class PrometheusScalingMetricsCollector : IScalingMetricsCollector
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to record Orleans scaling event for cluster {ClusterName}", clusterName);
+logger.LogError(ex, "Failed to record Orleans scaling event for cluster {ClusterName}", clusterName);
         }
     }
 
@@ -3402,23 +3414,19 @@ public class PrometheusScalingMetricsCollector : IScalingMetricsCollector
     {
         try
         {
-            _resourceUtilizationGauge
+resourceUtilizationGauge
                 .WithLabels(serviceName, "cpu", "average")
                 .Set(metrics.AverageCpuUsage);
-
-            _resourceUtilizationGauge
+resourceUtilizationGauge
                 .WithLabels(serviceName, "cpu", "max")
                 .Set(metrics.MaxCpuUsage);
-
-            _resourceUtilizationGauge
+resourceUtilizationGauge
                 .WithLabels(serviceName, "memory", "average")
                 .Set(metrics.AverageMemoryUsage);
-
-            _resourceUtilizationGauge
+resourceUtilizationGauge
                 .WithLabels(serviceName, "memory", "max")
                 .Set(metrics.MaxMemoryUsage);
-
-            _resourceUtilizationGauge
+resourceUtilizationGauge
                 .WithLabels(serviceName, "requests", "total_per_second")
                 .Set(metrics.TotalRequestsPerSecond);
 
@@ -3426,7 +3434,7 @@ public class PrometheusScalingMetricsCollector : IScalingMetricsCollector
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to record resource utilization for {ServiceName}", serviceName);
+logger.LogError(ex, "Failed to record resource utilization for {ServiceName}", serviceName);
         }
     }
 
@@ -3434,7 +3442,7 @@ public class PrometheusScalingMetricsCollector : IScalingMetricsCollector
     {
         try
         {
-            _policyEvaluationsCounter
+policyEvaluationsCounter
                 .WithLabels(serviceName, policyName, decision.Direction.ToString())
                 .Inc();
 
@@ -3442,7 +3450,7 @@ public class PrometheusScalingMetricsCollector : IScalingMetricsCollector
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to record policy evaluation for {ServiceName}", serviceName);
+logger.LogError(ex, "Failed to record policy evaluation for {ServiceName}", serviceName);
         }
     }
 
@@ -3450,13 +3458,13 @@ public class PrometheusScalingMetricsCollector : IScalingMetricsCollector
     {
         try
         {
-            _scalingFailuresCounter
+scalingFailuresCounter
                 .WithLabels(serviceName, reason, "unknown")
                 .Inc();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to increment scaling failures for {ServiceName}", serviceName);
+logger.LogError(ex, "Failed to increment scaling failures for {ServiceName}", serviceName);
         }
     }
 
@@ -3464,13 +3472,13 @@ public class PrometheusScalingMetricsCollector : IScalingMetricsCollector
     {
         try
         {
-            _scalingDurationHistogram
+scalingDurationHistogram
                 .WithLabels(serviceName, "unknown", "unknown")
                 .Observe(duration.TotalSeconds);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to record scaling duration for {ServiceName}", serviceName);
+logger.LogError(ex, "Failed to record scaling duration for {ServiceName}", serviceName);
         }
     }
 
@@ -3478,13 +3486,13 @@ public class PrometheusScalingMetricsCollector : IScalingMetricsCollector
     {
         try
         {
-            _activeInstancesGauge
+activeInstancesGauge
                 .WithLabels(serviceName, "unknown")
                 .Set(instances);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to set active instances for {ServiceName}", serviceName);
+logger.LogError(ex, "Failed to set active instances for {ServiceName}", serviceName);
         }
     }
 }
@@ -3503,18 +3511,18 @@ public interface IGrafanaDashboardService
 
 public class AspireGrafanaDashboardService : IGrafanaDashboardService
 {
-    private readonly HttpClient _httpClient;
-    private readonly GrafanaConfiguration _config;
-    private readonly ILogger<AspireGrafanaDashboardService> _logger;
+    private readonly HttpClient httpClient;
+    private readonly GrafanaConfiguration config;
+    private readonly ILogger<AspireGrafanaDashboardService> logger;
 
     public AspireGrafanaDashboardService(
         HttpClient httpClient,
         IOptions<GrafanaConfiguration> config,
         ILogger<AspireGrafanaDashboardService> logger)
     {
-        _httpClient = httpClient;
-        _config = config.Value;
-        _logger = logger;
+httpClient = httpClient;
+config = config.Value;
+logger = logger;
         
         ConfigureHttpClient();
     }
@@ -3533,19 +3541,18 @@ public class AspireGrafanaDashboardService : IGrafanaDashboardService
                 message = "Created by Aspire Scaling Service"
             };
 
-            var response = await _httpClient.PostAsJsonAsync("/api/dashboards/db", request);
+            var response = await httpClient.PostAsJsonAsync("/api/dashboards/db", request);
             response.EnsureSuccessStatusCode();
 
             var result = await response.Content.ReadFromJsonAsync<GrafanaDashboardResponse>();
-            
-            _logger.LogInformation("Created Grafana scaling dashboard: {DashboardId} for organization {OrgId}",
+logger.LogInformation("Created Grafana scaling dashboard: {DashboardId} for organization {OrgId}",
                 result?.Id, organizationId);
 
             return result?.Uid ?? string.Empty;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create Grafana scaling dashboard for organization {OrgId}", organizationId);
+logger.LogError(ex, "Failed to create Grafana scaling dashboard for organization {OrgId}", organizationId);
             throw;
         }
     }
@@ -3574,7 +3581,7 @@ public class AspireGrafanaDashboardService : IGrafanaDashboardService
                     {
                         name = "service",
                         type = "query",
-                        query = "label_values(aspire_service_instances_active, service_name)",
+                        query = "label_values(aspire_service_instancesactive, servicename)",
                         refresh = 1,
                         includeAll = true,
                         multi = true
@@ -3599,7 +3606,7 @@ public class AspireGrafanaDashboardService : IGrafanaDashboardService
                 {
                     new
                     {
-                        expr = "aspire_service_instances_active{service_name=~\"$service\"}",
+                        expr = "aspire_service_instances_active{servicename=~\"$service\"}",
                         refId = "A"
                     }
                 },
@@ -3631,9 +3638,9 @@ public class AspireGrafanaDashboardService : IGrafanaDashboardService
                 {
                     new
                     {
-                        expr = "rate(aspire_scaling_events_total{service_name=~\"$service\"}[5m])",
+                        expr = "rate(aspire_scaling_events_total{servicename=~\"$service\"}[5m])",
                         refId = "A",
-                        legendFormat = "{{service_name}} - {{direction}}"
+                        legendFormat = "{{serviceName}} - {{direction}}"
                     }
                 },
                 gridPos = new { h = 8, w = 12, x = 12, y = 0 }
@@ -3649,15 +3656,15 @@ public class AspireGrafanaDashboardService : IGrafanaDashboardService
                 {
                     new
                     {
-                        expr = "aspire_resource_utilization_percent{service_name=~\"$service\", resource_type=\"cpu\", metric_type=\"average\"}",
+                        expr = "aspire_resource_utilization_percent{servicename=~\"$service\", resourcetype=\"cpu\", metrictype=\"average\"}",
                         refId = "A",
-                        legendFormat = "{{service_name}} - CPU Avg"
+                        legendFormat = "{{serviceName}} - CPU Avg"
                     },
                     new
                     {
-                        expr = "aspire_resource_utilization_percent{service_name=~\"$service\", resource_type=\"memory\", metric_type=\"average\"}",
+                        expr = "aspire_resource_utilization_percent{servicename=~\"$service\", resourcetype=\"memory\", metrictype=\"average\"}",
                         refId = "B",
-                        legendFormat = "{{service_name}} - Memory Avg"
+                        legendFormat = "{{serviceName}} - Memory Avg"
                     }
                 },
                 gridPos = new { h = 8, w = 24, x = 0, y = 8 },
@@ -3678,9 +3685,9 @@ public class AspireGrafanaDashboardService : IGrafanaDashboardService
                 {
                     new
                     {
-                        expr = "histogram_quantile(0.95, rate(aspire_scaling_duration_seconds_bucket{service_name=~\"$service\"}[5m]))",
+                        expr = "histogram_quantile(0.95, rate(aspire_scaling_duration_seconds_bucket{servicename=~\"$service\"}[5m]))",
                         refId = "A",
-                        legendFormat = "{{service_name}} - 95th percentile"
+                        legendFormat = "{{serviceName}} - 95th percentile"
                     }
                 },
                 gridPos = new { h = 8, w = 12, x = 0, y = 16 }
@@ -3707,9 +3714,9 @@ public class AspireGrafanaDashboardService : IGrafanaDashboardService
 
     private void ConfigureHttpClient()
     {
-        _httpClient.BaseAddress = new Uri(_config.BaseUrl);
-        _httpClient.DefaultRequestHeaders.Authorization = 
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _config.ApiKey);
+httpClient.BaseAddress = new Uri(config.BaseUrl);
+httpClient.DefaultRequestHeaders.Authorization = 
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", config.ApiKey);
     }
 }
 ```
@@ -3728,9 +3735,9 @@ public interface IScalingAlertService
 
 public class PrometheusAlertService : IScalingAlertService
 {
-    private readonly HttpClient _httpClient;
-    private readonly AlertManagerConfiguration _config;
-    private readonly ILogger<PrometheusAlertService> _logger;
+    private readonly HttpClient httpClient;
+    private readonly AlertManagerConfiguration config;
+    private readonly ILogger<PrometheusAlertService> logger;
 
     public event EventHandler<ScalingAlertTriggeredEventArgs>? AlertTriggered;
 
@@ -3739,9 +3746,9 @@ public class PrometheusAlertService : IScalingAlertService
         IOptions<AlertManagerConfiguration> config,
         ILogger<PrometheusAlertService> logger)
     {
-        _httpClient = httpClient;
-        _config = config.Value;
-        _logger = logger;
+httpClient = httpClient;
+config = config.Value;
+logger = logger;
     }
 
     public async Task CreateScalingAlertsAsync(string serviceName, ScalingAlertConfiguration alertConfig)
@@ -3754,13 +3761,12 @@ public class PrometheusAlertService : IScalingAlertService
             {
                 await CreateAlertRuleAsync(rule);
             }
-
-            _logger.LogInformation("Created {Count} scaling alerts for service {ServiceName}", 
+logger.LogInformation("Created {Count} scaling alerts for service {ServiceName}", 
                 alertRules.Count(), serviceName);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create scaling alerts for service {ServiceName}", serviceName);
+logger.LogError(ex, "Failed to create scaling alerts for service {ServiceName}", serviceName);
             throw;
         }
     }
@@ -3775,7 +3781,7 @@ public class PrometheusAlertService : IScalingAlertService
             rules.Add(new AlertRule
             {
                 Alert = $"HighResourceUtilization_{serviceName}",
-                Expr = $"aspire_resource_utilization_percent{{service_name=\"{serviceName}\", metric_type=\"average\"}} > {config.HighResourceThreshold}",
+                Expr = $"aspire_resource_utilization_percent{{servicename=\"{serviceName}\", metrictype=\"average\"}} > {config.HighResourceThreshold}",
                 For = config.AlertDuration,
                 Labels = new Dictionary<string, string>
                 {
@@ -3797,7 +3803,7 @@ public class PrometheusAlertService : IScalingAlertService
             rules.Add(new AlertRule
             {
                 Alert = $"ScalingFailure_{serviceName}",
-                Expr = $"increase(aspire_scaling_failures_total{{service_name=\"{serviceName}\"}}[5m]) > {config.ScalingFailureThreshold}",
+                Expr = $"increase(aspire_scaling_failures_total{{servicename=\"{serviceName}\"}}[5m]) > {config.ScalingFailureThreshold}",
                 For = "1m",
                 Labels = new Dictionary<string, string>
                 {
@@ -3819,7 +3825,7 @@ public class PrometheusAlertService : IScalingAlertService
             rules.Add(new AlertRule
             {
                 Alert = $"LongScalingDuration_{serviceName}",
-                Expr = $"histogram_quantile(0.95, rate(aspire_scaling_duration_seconds_bucket{{service_name=\"{serviceName}\"}}[5m])) > {config.MaxScalingDuration.TotalSeconds}",
+                Expr = $"histogram_quantile(0.95, rate(aspire_scaling_duration_seconds_bucket{{servicename=\"{serviceName}\"}}[5m])) > {config.MaxScalingDuration.TotalSeconds}",
                 For = config.AlertDuration,
                 Labels = new Dictionary<string, string>
                 {
@@ -3841,7 +3847,7 @@ public class PrometheusAlertService : IScalingAlertService
             rules.Add(new AlertRule
             {
                 Alert = $"OrleansClusterUnhealthy_{serviceName}",
-                Expr = $"aspire_orleans_cluster_silos{{cluster_name=\"{serviceName}\"}} < {config.MinOrleansClusterSize}",
+                Expr = $"aspire_orleans_cluster_silos{{clustername=\"{serviceName}\"}} < {config.MinOrleansClusterSize}",
                 For = "2m",
                 Labels = new Dictionary<string, string>
                 {
@@ -3865,7 +3871,7 @@ public class PrometheusAlertService : IScalingAlertService
         try
         {
             var filter = string.IsNullOrEmpty(serviceName) ? "" : $"?filter=service=\"{serviceName}\"";
-            var response = await _httpClient.GetAsync($"/api/v1/alerts{filter}");
+            var response = await httpClient.GetAsync($"/api/v1/alerts{filter}");
             response.EnsureSuccessStatusCode();
 
             var alertResponse = await response.Content.ReadFromJsonAsync<AlertManagerResponse>();
@@ -3885,7 +3891,7 @@ public class PrometheusAlertService : IScalingAlertService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get active alerts for service {ServiceName}", serviceName);
+logger.LogError(ex, "Failed to get active alerts for service {ServiceName}", serviceName);
             return Enumerable.Empty<ActiveAlert>();
         }
     }
@@ -4018,11 +4024,11 @@ public static class MonitoringServiceExtensions
 
 public class ScalingMonitoringService : BackgroundService
 {
-    private readonly IScalingMetricsCollector _metricsCollector;
-    private readonly IGrafanaDashboardService _grafanaService;
-    private readonly IScalingAlertService _alertService;
-    private readonly ILogger<ScalingMonitoringService> _logger;
-    private readonly MonitoringConfiguration _config;
+    private readonly IScalingMetricsCollector metricsCollector;
+    private readonly IGrafanaDashboardService grafanaService;
+    private readonly IScalingAlertService alertService;
+    private readonly ILogger<ScalingMonitoringService> logger;
+    private readonly MonitoringConfiguration config;
 
     public ScalingMonitoringService(
         IScalingMetricsCollector metricsCollector,
@@ -4031,22 +4037,21 @@ public class ScalingMonitoringService : BackgroundService
         IOptions<MonitoringConfiguration> config,
         ILogger<ScalingMonitoringService> logger)
     {
-        _metricsCollector = metricsCollector;
-        _grafanaService = grafanaService;
-        _alertService = alertService;
-        _config = config.Value;
-        _logger = logger;
+metricsCollector = metricsCollector;
+grafanaService = grafanaService;
+alertService = alertService;
+config = config.Value;
+logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!_config.EnableMetricsCollection)
+        if (!config.EnableMetricsCollection)
         {
-            _logger.LogInformation("Metrics collection is disabled");
+logger.LogInformation("Metrics collection is disabled");
             return;
         }
-
-        _logger.LogInformation("Starting scaling monitoring service");
+logger.LogInformation("Starting scaling monitoring service");
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -4057,7 +4062,7 @@ public class ScalingMonitoringService : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in scaling monitoring service");
+logger.LogError(ex, "Error in scaling monitoring service");
                 await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
             }
         }
@@ -4065,11 +4070,11 @@ public class ScalingMonitoringService : BackgroundService
 
     private async Task MonitorActiveAlertsAsync(CancellationToken cancellationToken)
     {
-        var activeAlerts = await _alertService.GetActiveAlertsAsync();
+        var activeAlerts = await alertService.GetActiveAlertsAsync();
         
         foreach (var alert in activeAlerts.Where(a => a.Status == "firing"))
         {
-            _logger.LogWarning("Active scaling alert: {AlertName} for service {ServiceName} - {Summary}",
+logger.LogWarning("Active scaling alert: {AlertName} for service {ServiceName} - {Summary}",
                 alert.AlertName, alert.ServiceName, alert.Summary);
         }
     }

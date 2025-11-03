@@ -1,8 +1,8 @@
-# Orleans Grain Fundamentals
+# Enterprise Orleans Grain Architecture
 
-**Description**: Essential Orleans grain patterns covering basic grain concepts, lifecycle management, interfaces, and foundational development patterns for virtual actor systems.
+**Description**: Production-grade Orleans grain patterns featuring advanced lifecycle management, intelligent resource optimization, enterprise monitoring, fault-tolerant communication, and cloud-native scalability for mission-critical distributed systems.
 
-**Language/Technology**: C#, Orleans, .NET 9.0
+**Language/Technology**: C# (.NET 9.0), Orleans 8.0+, Azure Service Fabric, Kubernetes
 
 **Code**:
 

@@ -20,13 +20,13 @@ public interface IImage
 // Real subject - expensive to create
 public class HighResolutionImage : IImage
 {
-    private readonly string _filename;
-    private byte[] _imageData;
-    private int _width, _height;
+    private readonly string filename;
+    private byte[] imageData;
+    private int width, height;
     
     public HighResolutionImage(string filename)
     {
-        _filename = filename;
+        filename = filename;
         LoadImage(); // Expensive operation
     }
     
@@ -35,9 +35,9 @@ public class HighResolutionImage : IImage
         Console.WriteLine($"Loading high-resolution image: {_filename}");
         // Simulate expensive loading operation
         Thread.Sleep(2000);
-        _imageData = new byte[10_000_000]; // 10MB image
-        _width = 4096;
-        _height = 2160;
+        imageData = new byte[10_000_000]; // 10MB image
+        width = 4096;
+        height = 2160;
         Console.WriteLine("Image loaded into memory");
     }
     
@@ -48,40 +48,40 @@ public class HighResolutionImage : IImage
     
     public void Resize(int width, int height)
     {
-        _width = width;
-        _height = height;
+        width = width;
+        height = height;
         Console.WriteLine($"Image resized to {_width}x{_height}");
     }
     
     public string GetMetadata()
     {
-        return $"File: {_filename}, Size: {_width}x{_height}, Data: {_imageData.Length} bytes";
+        return $"File: {_filename}, Size: {_width}x{_height}, Data: {imageData.Length} bytes";
     }
 }
 
 // Virtual Proxy - delays creation until needed
 public class ImageProxy : IImage
 {
-    private readonly string _filename;
-    private HighResolutionImage? _realImage;
-    private readonly object _lock = new();
+    private readonly string filename;
+    private HighResolutionImage? realImage;
+    private readonly object lock = new();
     
     public ImageProxy(string filename)
     {
-        _filename = filename;
+        filename = filename;
         Console.WriteLine($"Image proxy created for: {_filename}");
     }
     
     private HighResolutionImage GetRealImage()
     {
-        if (_realImage == null)
+        if (realImage == null)
         {
-            lock (_lock)
+            lock (lock)
             {
-                _realImage ??= new HighResolutionImage(_filename);
+                realImage ??= new HighResolutionImage(filename);
             }
         }
-        return _realImage;
+        return realImage;
     }
     
     public void Display()
@@ -130,7 +130,7 @@ public interface IDocumentService
 // Real subject
 public class DocumentService : IDocumentService
 {
-    private readonly Dictionary<string, string> _documents = new()
+    private readonly Dictionary<string, string> documents = new()
     {
         ["doc1"] = "Public document content",
         ["doc2"] = "Confidential document content",
@@ -139,7 +139,7 @@ public class DocumentService : IDocumentService
     
     public Task<string> ReadDocument(string documentId)
     {
-        if (_documents.TryGetValue(documentId, out var content))
+        if (documents.TryGetValue(documentId, out var content))
         {
             Console.WriteLine($"Reading document: {documentId}");
             return Task.FromResult(content);
@@ -156,7 +156,7 @@ public class DocumentService : IDocumentService
     
     public Task DeleteDocument(string documentId)
     {
-        if (_documents.Remove(documentId))
+        if (documents.Remove(documentId))
         {
             Console.WriteLine($"Document {documentId} deleted");
         }
@@ -165,16 +165,16 @@ public class DocumentService : IDocumentService
     
     public Task<IEnumerable<string>> ListDocuments()
     {
-        return Task.FromResult(_documents.Keys.AsEnumerable());
+        return Task.FromResult(documents.Keys.AsEnumerable());
     }
 }
 
 // Protection Proxy
 public class SecureDocumentProxy : IDocumentService
 {
-    private readonly IDocumentService _documentService;
-    private readonly User _currentUser;
-    private readonly Dictionary<string, UserRole> _documentPermissions = new()
+    private readonly IDocumentService documentService;
+    private readonly User currentUser;
+    private readonly Dictionary<string, UserRole> documentPermissions = new()
     {
         ["doc1"] = UserRole.Guest,
         ["doc2"] = UserRole.User,
@@ -183,63 +183,63 @@ public class SecureDocumentProxy : IDocumentService
     
     public SecureDocumentProxy(IDocumentService documentService, User currentUser)
     {
-        _documentService = documentService;
-        _currentUser = currentUser;
+        documentService = documentService;
+        currentUser = currentUser;
     }
     
     public async Task<string> ReadDocument(string documentId)
     {
         if (!CanRead(documentId))
         {
-            throw new UnauthorizedAccessException($"User {_currentUser.Username} cannot read document {documentId}");
+            throw new UnauthorizedAccessException($"User {currentUser.Username} cannot read document {documentId}");
         }
         
-        Console.WriteLine($"Access granted for {_currentUser.Username} to read {documentId}");
-        return await _documentService.ReadDocument(documentId);
+        Console.WriteLine($"Access granted for {currentUser.Username} to read {documentId}");
+        return await documentService.ReadDocument(documentId);
     }
     
     public async Task WriteDocument(string documentId, string content)
     {
         if (!CanWrite(documentId))
         {
-            throw new UnauthorizedAccessException($"User {_currentUser.Username} cannot write document {documentId}");
+            throw new UnauthorizedAccessException($"User {currentUser.Username} cannot write document {documentId}");
         }
         
-        Console.WriteLine($"Access granted for {_currentUser.Username} to write {documentId}");
-        await _documentService.WriteDocument(documentId, content);
+        Console.WriteLine($"Access granted for {currentUser.Username} to write {documentId}");
+        await documentService.WriteDocument(documentId, content);
     }
     
     public async Task DeleteDocument(string documentId)
     {
-        if (_currentUser.Role < UserRole.Admin)
+        if (currentUser.Role < UserRole.Admin)
         {
             throw new UnauthorizedAccessException("Only admins can delete documents");
         }
         
-        Console.WriteLine($"Admin {_currentUser.Username} deleting document {documentId}");
-        await _documentService.DeleteDocument(documentId);
+        Console.WriteLine($"Admin {currentUser.Username} deleting document {documentId}");
+        await documentService.DeleteDocument(documentId);
     }
     
     public async Task<IEnumerable<string>> ListDocuments()
     {
-        var allDocuments = await _documentService.ListDocuments();
+        var allDocuments = await documentService.ListDocuments();
         var accessibleDocuments = allDocuments.Where(CanRead);
         
-        Console.WriteLine($"Filtered documents for user role: {_currentUser.Role}");
+        Console.WriteLine($"Filtered documents for user role: {currentUser.Role}");
         return accessibleDocuments;
     }
     
     private bool CanRead(string documentId)
     {
-        if (!_documentPermissions.TryGetValue(documentId, out var requiredRole))
+        if (!documentPermissions.TryGetValue(documentId, out var requiredRole))
             return false;
             
-        return _currentUser.Role >= requiredRole;
+        return currentUser.Role >= requiredRole;
     }
     
     private bool CanWrite(string documentId)
     {
-        return _currentUser.Role >= UserRole.User && CanRead(documentId);
+        return currentUser.Role >= UserRole.User && CanRead(documentId);
     }
 }
 ```
@@ -258,7 +258,7 @@ public interface IDataService
 // Real subject - expensive remote service
 public class RemoteDataService : IDataService
 {
-    private readonly Dictionary<string, object> _remoteData = new()
+    private readonly Dictionary<string, object> remoteData = new()
     {
         ["user:1"] = new { Id = 1, Name = "John Doe", Email = "john@example.com" },
         ["user:2"] = new { Id = 2, Name = "Jane Smith", Email = "jane@example.com" },
@@ -271,7 +271,7 @@ public class RemoteDataService : IDataService
         // Simulate network latency
         await Task.Delay(500);
         
-        if (_remoteData.TryGetValue(key, out var data))
+        if (remoteData.TryGetValue(key, out var data))
         {
             return (T)data;
         }
@@ -290,34 +290,34 @@ public class RemoteDataService : IDataService
     {
         Console.WriteLine($"Deleting remote data for key: {key}");
         await Task.Delay(100);
-        return _remoteData.Remove(key);
+        return remoteData.Remove(key);
     }
     
     public async Task<IEnumerable<string>> Search(string pattern)
     {
         Console.WriteLine($"Searching remote data with pattern: {pattern}");
         await Task.Delay(800);
-        return _remoteData.Keys.Where(k => k.Contains(pattern, StringComparison.OrdinalIgnoreCase));
+        return remoteData.Keys.Where(k => k.Contains(pattern, StringComparison.OrdinalIgnoreCase));
     }
 }
 
 // Caching Proxy
 public class CachingDataProxy : IDataService
 {
-    private readonly IDataService _dataService;
-    private readonly Dictionary<string, CacheEntry> _cache = new();
-    private readonly object _lock = new();
+    private readonly IDataService dataService;
+    private readonly Dictionary<string, CacheEntry> cache = new();
+    private readonly object lock = new();
     
     public CachingDataProxy(IDataService dataService)
     {
-        _dataService = dataService;
+        dataService = dataService;
     }
     
     public async Task<T> GetData<T>(string key) where T : class
     {
-        lock (_lock)
+        lock (lock)
         {
-            if (_cache.TryGetValue(key, out var cacheEntry) && !cacheEntry.IsExpired)
+            if (cache.TryGetValue(key, out var cacheEntry) && !cacheEntry.IsExpired)
             {
                 Console.WriteLine($"Cache hit for key: {key}");
                 return (T)cacheEntry.Data;
@@ -325,9 +325,9 @@ public class CachingDataProxy : IDataService
         }
         
         Console.WriteLine($"Cache miss for key: {key}");
-        var data = await _dataService.GetData<T>(key);
+        var data = await dataService.GetData<T>(key);
         
-        lock (_lock)
+        lock (lock)
         {
             _cache[key] = new CacheEntry(data, DateTime.UtcNow.AddMinutes(5));
         }
@@ -337,9 +337,9 @@ public class CachingDataProxy : IDataService
     
     public async Task SetData<T>(string key, T data, TimeSpan? expiration = null) where T : class
     {
-        await _dataService.SetData(key, data, expiration);
+        await dataService.SetData(key, data, expiration);
         
-        lock (_lock)
+        lock (lock)
         {
             var expirationTime = DateTime.UtcNow.Add(expiration ?? TimeSpan.FromMinutes(5));
             _cache[key] = new CacheEntry(data, expirationTime);
@@ -350,11 +350,11 @@ public class CachingDataProxy : IDataService
     
     public async Task<bool> DeleteData(string key)
     {
-        var result = await _dataService.DeleteData(key);
+        var result = await dataService.DeleteData(key);
         
-        lock (_lock)
+        lock (lock)
         {
-            _cache.Remove(key);
+            cache.Remove(key);
         }
         
         Console.WriteLine($"Data removed from cache for key: {key}");
@@ -366,19 +366,19 @@ public class CachingDataProxy : IDataService
         // For search operations, we might implement more sophisticated caching
         var cacheKey = $"search:{pattern}";
         
-        lock (_lock)
+        lock (lock)
         {
-            if (_cache.TryGetValue(cacheKey, out var cacheEntry) && !cacheEntry.IsExpired)
+            if (cache.TryGetValue(cacheKey, out var cacheEntry) && !cacheEntry.IsExpired)
             {
                 Console.WriteLine($"Search cache hit for pattern: {pattern}");
                 return (IEnumerable<string>)cacheEntry.Data;
             }
         }
         
-        var results = await _dataService.Search(pattern);
+        var results = await dataService.Search(pattern);
         var resultsList = results.ToList();
         
-        lock (_lock)
+        lock (lock)
         {
             _cache[cacheKey] = new CacheEntry(resultsList, DateTime.UtcNow.AddMinutes(2));
         }
@@ -388,19 +388,19 @@ public class CachingDataProxy : IDataService
     
     public void ClearCache()
     {
-        lock (_lock)
+        lock (lock)
         {
-            _cache.Clear();
+            cache.Clear();
             Console.WriteLine("Cache cleared");
         }
     }
     
     public CacheStatistics GetCacheStatistics()
     {
-        lock (_lock)
+        lock (lock)
         {
-            var totalEntries = _cache.Count;
-            var expiredEntries = _cache.Values.Count(e => e.IsExpired);
+            var totalEntries = cache.Count;
+            var expiredEntries = cache.Values.Count(e => e.IsExpired);
             var activeEntries = totalEntries - expiredEntries;
             
             return new CacheStatistics
@@ -486,39 +486,39 @@ public static class ProxyFactory
 // Logging Proxy (can wrap other proxies)
 public class LoggingImageProxy : IImage
 {
-    private readonly IImage _image;
+    private readonly IImage image;
     
     public LoggingImageProxy(IImage image)
     {
-        _image = image;
+        image = image;
     }
     
     public void Display()
     {
         Console.WriteLine($"[LOG] Display() called at {DateTime.Now}");
-        _image.Display();
+        image.Display();
     }
     
     public void Resize(int width, int height)
     {
         Console.WriteLine($"[LOG] Resize({width}, {height}) called at {DateTime.Now}");
-        _image.Resize(width, height);
+        image.Resize(width, height);
     }
     
     public string GetMetadata()
     {
         Console.WriteLine($"[LOG] GetMetadata() called at {DateTime.Now}");
-        return _image.GetMetadata();
+        return image.GetMetadata();
     }
 }
 
 public class LoggingDocumentProxy : IDocumentService
 {
-    private readonly IDocumentService _service;
+    private readonly IDocumentService service;
     
     public LoggingDocumentProxy(IDocumentService service)
     {
-        _service = service;
+        service = service;
     }
     
     public async Task<string> ReadDocument(string documentId)
@@ -526,7 +526,7 @@ public class LoggingDocumentProxy : IDocumentService
         Console.WriteLine($"[LOG] Reading document: {documentId} at {DateTime.Now}");
         try
         {
-            var result = await _service.ReadDocument(documentId);
+            var result = await service.ReadDocument(documentId);
             Console.WriteLine($"[LOG] Successfully read document: {documentId}");
             return result;
         }
@@ -540,21 +540,21 @@ public class LoggingDocumentProxy : IDocumentService
     public async Task WriteDocument(string documentId, string content)
     {
         Console.WriteLine($"[LOG] Writing document: {documentId} at {DateTime.Now}");
-        await _service.WriteDocument(documentId, content);
+        await service.WriteDocument(documentId, content);
         Console.WriteLine($"[LOG] Successfully wrote document: {documentId}");
     }
     
     public async Task DeleteDocument(string documentId)
     {
         Console.WriteLine($"[LOG] Deleting document: {documentId} at {DateTime.Now}");
-        await _service.DeleteDocument(documentId);
+        await service.DeleteDocument(documentId);
         Console.WriteLine($"[LOG] Successfully deleted document: {documentId}");
     }
     
     public async Task<IEnumerable<string>> ListDocuments()
     {
         Console.WriteLine($"[LOG] Listing documents at {DateTime.Now}");
-        var result = await _service.ListDocuments();
+        var result = await service.ListDocuments();
         Console.WriteLine($"[LOG] Found {result.Count()} documents");
         return result;
     }
@@ -562,11 +562,11 @@ public class LoggingDocumentProxy : IDocumentService
 
 public class LoggingDataProxy : IDataService
 {
-    private readonly IDataService _service;
+    private readonly IDataService service;
     
     public LoggingDataProxy(IDataService service)
     {
-        _service = service;
+        service = service;
     }
     
     public async Task<T> GetData<T>(string key) where T : class
@@ -575,7 +575,7 @@ public class LoggingDataProxy : IDataService
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         try
         {
-            var result = await _service.GetData<T>(key);
+            var result = await service.GetData<T>(key);
             Console.WriteLine($"[LOG] GetData completed in {stopwatch.ElapsedMilliseconds}ms");
             return result;
         }
@@ -589,14 +589,14 @@ public class LoggingDataProxy : IDataService
     public async Task SetData<T>(string key, T data, TimeSpan? expiration = null) where T : class
     {
         Console.WriteLine($"[LOG] SetData<{typeof(T).Name}>({key}) at {DateTime.Now}");
-        await _service.SetData(key, data, expiration);
+        await service.SetData(key, data, expiration);
         Console.WriteLine($"[LOG] SetData completed successfully");
     }
     
     public async Task<bool> DeleteData(string key)
     {
         Console.WriteLine($"[LOG] DeleteData({key}) at {DateTime.Now}");
-        var result = await _service.DeleteData(key);
+        var result = await service.DeleteData(key);
         Console.WriteLine($"[LOG] DeleteData result: {result}");
         return result;
     }
@@ -605,7 +605,7 @@ public class LoggingDataProxy : IDataService
     {
         Console.WriteLine($"[LOG] Search({pattern}) at {DateTime.Now}");
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        var result = await _service.Search(pattern);
+        var result = await service.Search(pattern);
         var resultList = result.ToList();
         Console.WriteLine($"[LOG] Search completed in {stopwatch.ElapsedMilliseconds}ms, found {resultList.Count} results");
         return resultList;

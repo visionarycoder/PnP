@@ -20,18 +20,18 @@ public interface IMessageSender
 // Concrete Implementations
 public class EmailSender : IMessageSender
 {
-    private readonly string _smtpServer;
-    private readonly int _port;
+    private readonly string smtpServer;
+    private readonly int port;
     
     public EmailSender(string smtpServer = "smtp.gmail.com", int port = 587)
     {
-        _smtpServer = smtpServer;
-        _port = port;
+        smtpServer = smtpServer;
+        port = port;
     }
     
     public void SendMessage(string message, string recipient)
     {
-        Console.WriteLine($"📧 Email sent via {_smtpServer}:{_port}");
+        Console.WriteLine($"📧 Email sent via {smtpServer}:{port}");
         Console.WriteLine($"   To: {recipient}");
         Console.WriteLine($"   Message: {message}");
         Console.WriteLine($"   Status: ✅ Delivered to inbox");
@@ -42,18 +42,18 @@ public class EmailSender : IMessageSender
 
 public class SmsSender : IMessageSender
 {
-    private readonly string _apiKey;
-    private readonly string _provider;
+    private readonly string apiKey;
+    private readonly string provider;
     
     public SmsSender(string provider = "Twilio", string apiKey = "API_KEY_123")
     {
-        _provider = provider;
-        _apiKey = apiKey;
+        provider = provider;
+        apiKey = apiKey;
     }
     
     public void SendMessage(string message, string recipient)
     {
-        Console.WriteLine($"📱 SMS sent via {_provider}");
+        Console.WriteLine($"📱 SMS sent via {provider}");
         Console.WriteLine($"   To: {recipient}");
         Console.WriteLine($"   Message: {message}");
         Console.WriteLine($"   Status: ✅ Delivered to mobile device");
@@ -64,18 +64,18 @@ public class SmsSender : IMessageSender
 
 public class SlackSender : IMessageSender
 {
-    private readonly string _workspace;
-    private readonly string _botToken;
+    private readonly string workspace;
+    private readonly string botToken;
     
     public SlackSender(string workspace = "MyCompany", string botToken = "xoxb-token-123")
     {
-        _workspace = workspace;
-        _botToken = botToken;
+        workspace = workspace;
+        botToken = botToken;
     }
     
     public void SendMessage(string message, string recipient)
     {
-        Console.WriteLine($"💬 Slack message sent to {_workspace}");
+        Console.WriteLine($"💬 Slack message sent to {workspace}");
         Console.WriteLine($"   Channel/User: {recipient}");
         Console.WriteLine($"   Message: {message}");
         Console.WriteLine($"   Status: ✅ Posted to Slack");
@@ -86,16 +86,16 @@ public class SlackSender : IMessageSender
 
 public class PushNotificationSender : IMessageSender
 {
-    private readonly string _platform;
+    private readonly string platform;
     
     public PushNotificationSender(string platform = "Firebase")
     {
-        _platform = platform;
+        platform = platform;
     }
     
     public void SendMessage(string message, string recipient)
     {
-        Console.WriteLine($"🔔 Push notification sent via {_platform}");
+        Console.WriteLine($"🔔 Push notification sent via {platform}");
         Console.WriteLine($"   Device ID: {recipient}");
         Console.WriteLine($"   Message: {message}");
         Console.WriteLine($"   Status: ✅ Pushed to device");
@@ -107,75 +107,75 @@ public class PushNotificationSender : IMessageSender
 // Abstraction - defines the abstraction's interface and maintains a reference to implementor
 public abstract class Message
 {
-    protected IMessageSender _messageSender;
+    protected IMessageSender messageSender;
     
     protected Message(IMessageSender messageSender)
     {
-        _messageSender = messageSender ?? throw new ArgumentNullException(nameof(messageSender));
+        messageSender = messageSender ?? throw new ArgumentNullException(nameof(messageSender));
     }
     
     public abstract void Send(string recipient);
     
     public virtual void SetSender(IMessageSender messageSender)
     {
-        _messageSender = messageSender ?? throw new ArgumentNullException(nameof(messageSender));
+        messageSender = messageSender ?? throw new ArgumentNullException(nameof(messageSender));
     }
     
-    public string GetSenderType() => _messageSender.GetSenderType();
+    public string GetSenderType() => messageSender.GetSenderType();
 }
 
 // Refined Abstractions
 public class TextMessage : Message
 {
-    private readonly string _content;
+    private readonly string content;
     
     public TextMessage(string content, IMessageSender messageSender) : base(messageSender)
     {
-        _content = content ?? throw new ArgumentNullException(nameof(content));
+        content = content ?? throw new ArgumentNullException(nameof(content));
     }
     
     public override void Send(string recipient)
     {
         Console.WriteLine($"\n📝 Sending Text Message:");
-        _messageSender.SendMessage(_content, recipient);
+        messageSender.SendMessage(content, recipient);
     }
 }
 
 public class AlertMessage : Message
 {
-    private readonly string _alertType;
-    private readonly string _content;
-    private readonly DateTime _timestamp;
+    private readonly string alertType;
+    private readonly string content;
+    private readonly DateTime timestamp;
     
     public AlertMessage(string alertType, string content, IMessageSender messageSender) : base(messageSender)
     {
-        _alertType = alertType ?? throw new ArgumentNullException(nameof(alertType));
-        _content = content ?? throw new ArgumentNullException(nameof(content));
-        _timestamp = DateTime.Now;
+        alertType = alertType ?? throw new ArgumentNullException(nameof(alertType));
+        content = content ?? throw new ArgumentNullException(nameof(content));
+        timestamp = DateTime.Now;
     }
     
     public override void Send(string recipient)
     {
-        Console.WriteLine($"\n🚨 Sending {_alertType} Alert:");
-        var alertMessage = $"[{_alertType.ToUpper()}] {_content} (Sent: {_timestamp:yyyy-MM-dd HH:mm:ss})";
-        _messageSender.SendMessage(alertMessage, recipient);
+        Console.WriteLine($"\n🚨 Sending {alertType} Alert:");
+        var alertMessage = $"[{alertType.ToUpper()}] {content} (Sent: {timestamp:yyyy-MM-dd HH:mm:ss})";
+        messageSender.SendMessage(alertMessage, recipient);
     }
 }
 
 public class RichMessage : Message
 {
-    private readonly string _title;
-    private readonly string _content;
-    private readonly string _imageUrl;
-    private readonly Dictionary<string, string> _metadata;
+    private readonly string title;
+    private readonly string content;
+    private readonly string imageUrl;
+    private readonly Dictionary<string, string> metadata;
     
     public RichMessage(string title, string content, IMessageSender messageSender, 
                       string imageUrl = null) : base(messageSender)
     {
-        _title = title ?? throw new ArgumentNullException(nameof(title));
-        _content = content ?? throw new ArgumentNullException(nameof(content));
-        _imageUrl = imageUrl;
-        _metadata = new Dictionary<string, string>();
+        title = title ?? throw new ArgumentNullException(nameof(title));
+        content = content ?? throw new ArgumentNullException(nameof(content));
+        imageUrl = imageUrl;
+        metadata = new Dictionary<string, string>();
     }
     
     public void AddMetadata(string key, string value)
@@ -186,100 +186,100 @@ public class RichMessage : Message
     public override void Send(string recipient)
     {
         Console.WriteLine($"\n🎨 Sending Rich Message:");
-        var richContent = $"Title: {_title}\nContent: {_content}";
+        var richContent = $"Title: {title}\nContent: {content}";
         
-        if (!string.IsNullOrEmpty(_imageUrl))
+        if (!string.IsNullOrEmpty(imageUrl))
         {
-            richContent += $"\nImage: {_imageUrl}";
+            richContent += $"\nImage: {imageUrl}";
         }
         
-        if (_metadata.Count > 0)
+        if (metadata.Count > 0)
         {
             richContent += "\nMetadata:";
-            foreach (var kvp in _metadata)
+            foreach (var kvp in metadata)
             {
                 richContent += $"\n  {kvp.Key}: {kvp.Value}";
             }
         }
         
-        _messageSender.SendMessage(richContent, recipient);
+        messageSender.SendMessage(richContent, recipient);
     }
 }
 
 // Advanced Bridge Pattern with Multiple Abstractions
 public abstract class NotificationChannel
 {
-    protected IMessageSender _sender;
-    protected List<string> _recipients;
+    protected IMessageSender sender;
+    protected List<string> recipients;
     
     protected NotificationChannel(IMessageSender sender)
     {
-        _sender = sender ?? throw new ArgumentNullException(nameof(sender));
-        _recipients = new List<string>();
+        sender = sender ?? throw new ArgumentNullException(nameof(sender));
+        recipients = new List<string>();
     }
     
     public virtual void AddRecipient(string recipient)
     {
-        if (!_recipients.Contains(recipient))
+        if (!recipients.Contains(recipient))
         {
-            _recipients.Add(recipient);
+            recipients.Add(recipient);
         }
     }
     
     public virtual void RemoveRecipient(string recipient)
     {
-        _recipients.Remove(recipient);
+        recipients.Remove(recipient);
     }
     
     public abstract void Broadcast(string message);
     
     public void ChangeSender(IMessageSender newSender)
     {
-        _sender = newSender ?? throw new ArgumentNullException(nameof(newSender));
-        Console.WriteLine($"📡 Channel sender changed to: {_sender.GetSenderType()}");
+        sender = newSender ?? throw new ArgumentNullException(nameof(newSender));
+        Console.WriteLine($"📡 Channel sender changed to: {sender.GetSenderType()}");
     }
 }
 
 public class EmergencyNotificationChannel : NotificationChannel
 {
-    private readonly string _emergencyPrefix;
+    private readonly string emergencyPrefix;
     
     public EmergencyNotificationChannel(IMessageSender sender, string emergencyPrefix = "[EMERGENCY]") 
         : base(sender)
     {
-        _emergencyPrefix = emergencyPrefix;
+        emergencyPrefix = emergencyPrefix;
     }
     
     public override void Broadcast(string message)
     {
-        var emergencyMessage = $"{_emergencyPrefix} {message}";
-        Console.WriteLine($"\n🆘 Emergency Broadcast to {_recipients.Count} recipients:");
+        var emergencyMessage = $"{emergencyPrefix} {message}";
+        Console.WriteLine($"\n🆘 Emergency Broadcast to {recipients.Count} recipients:");
         
-        foreach (var recipient in _recipients)
+        foreach (var recipient in recipients)
         {
-            _sender.SendMessage(emergencyMessage, recipient);
+            sender.SendMessage(emergencyMessage, recipient);
         }
     }
 }
 
 public class MarketingNotificationChannel : NotificationChannel
 {
-    private readonly string _campaignId;
+    private readonly string campaignId;
     
     public MarketingNotificationChannel(IMessageSender sender, string campaignId) 
         : base(sender)
     {
-        _campaignId = campaignId ?? "CAMPAIGN_001";
+        campaignId = campaignId ?? "CAMPAIGN_001";
     }
     
     public override void Broadcast(string message)
     {
-        var marketingMessage = $"{message}\n\nCampaign ID: {_campaignId}\nUnsubscribe: reply STOP";
-        Console.WriteLine($"\n📢 Marketing Broadcast to {_recipients.Count} recipients:");
+        var marketingMessage = $"{message}\n\nCampaign ID: {campaignId}\nUnsubscribe: reply STOP";
+        Console.WriteLine($"\n📢 Marketing Broadcast to {recipients.Count} recipients:");
         
-        foreach (var recipient in _recipients)
+        foreach (var recipient in recipients)
         {
-            _sender.SendMessage(marketingMessage, recipient);
+            sender.SendMessage(marketingMessage, recipient);
         }
     }
 }

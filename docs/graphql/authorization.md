@@ -1,8 +1,9 @@
-# GraphQL Authorization Patterns
+# Enterprise GraphQL Authorization & Security
 
-**Description**: Comprehensive authorization patterns for HotChocolate GraphQL applications including field-level security, role-based access, and policy-driven authorization.
+**Description**: Advanced enterprise-grade authorization patterns for HotChocolate GraphQL including fine-grained field-level permissions, enterprise identity federation, attribute-based access control, comprehensive audit trails, and zero-trust security architecture with threat detection.
 
-**Language/Technology**: C# / HotChocolate
+**Language/Technology**: C#, HotChocolate, .NET 9.0, Azure AD, Enterprise Security, Zero Trust
+**Enterprise Features**: Fine-grained permissions, identity federation, ABAC/RBAC, audit trails, threat detection, and compliance reporting
 
 ## Code
 
@@ -17,15 +18,15 @@ using System.Security.Claims;
 // Document ownership authorization handler
 public class DocumentOwnershipHandler : AuthorizationHandler<DocumentOwnershipRequirement, Document>
 {
-    private readonly IDocumentRepository _documentRepository;
-    private readonly ILogger<DocumentOwnershipHandler> _logger;
+    private readonly IDocumentRepository documentRepository;
+    private readonly ILogger<DocumentOwnershipHandler> logger;
 
     public DocumentOwnershipHandler(
         IDocumentRepository documentRepository,
         ILogger<DocumentOwnershipHandler> logger)
     {
-        _documentRepository = documentRepository;
-        _logger = logger;
+        documentRepository = documentRepository;
+        logger = logger;
     }
 
     protected override async Task HandleRequirementAsync(
@@ -36,7 +37,7 @@ public class DocumentOwnershipHandler : AuthorizationHandler<DocumentOwnershipRe
         var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userId))
         {
-            _logger.LogWarning("User ID not found in claims");
+            logger.LogWarning("User ID not found in claims");
             return;
         }
 
@@ -50,7 +51,7 @@ public class DocumentOwnershipHandler : AuthorizationHandler<DocumentOwnershipRe
         // Check team membership for shared documents
         if (requirement.AllowTeamAccess && !string.IsNullOrEmpty(resource.TeamId))
         {
-            var hasTeamAccess = await _documentRepository.HasTeamAccessAsync(
+            var hasTeamAccess = await documentRepository.HasTeamAccessAsync(
                 userId, resource.TeamId, CancellationToken.None);
                 
             if (hasTeamAccess)
@@ -61,7 +62,7 @@ public class DocumentOwnershipHandler : AuthorizationHandler<DocumentOwnershipRe
         }
 
         // Check explicit permissions
-        var hasExplicitAccess = await _documentRepository.HasExplicitAccessAsync(
+        var hasExplicitAccess = await documentRepository.HasExplicitAccessAsync(
             userId, resource.Id, CancellationToken.None);
             
         if (hasExplicitAccess)
@@ -112,11 +113,11 @@ public class RoleBasedRequirement : IAuthorizationRequirement
 // Processing pipeline authorization handler
 public class ProcessingPipelineHandler : AuthorizationHandler<ProcessingPipelineRequirement>
 {
-    private readonly IProcessingPipelineRepository _pipelineRepository;
+    private readonly IProcessingPipelineRepository pipelineRepository;
 
     public ProcessingPipelineHandler(IProcessingPipelineRepository pipelineRepository)
     {
-        _pipelineRepository = pipelineRepository;
+        pipelineRepository = pipelineRepository;
     }
 
     protected override async Task HandleRequirementAsync(
@@ -130,7 +131,7 @@ public class ProcessingPipelineHandler : AuthorizationHandler<ProcessingPipeline
         }
 
         // Check user's pipeline access level
-        var accessLevel = await _pipelineRepository.GetUserAccessLevelAsync(
+        var accessLevel = await pipelineRepository.GetUserAccessLevelAsync(
             userId, requirement.PipelineId, CancellationToken.None);
 
         if (accessLevel >= requirement.MinimumAccessLevel)
@@ -489,18 +490,18 @@ public class DocumentMutations
 // Custom authorization middleware for dynamic rules
 public class DynamicAuthorizationMiddleware
 {
-    private readonly RequestDelegate _next;
-    private readonly IAuthorizationService _authorizationService;
-    private readonly ILogger<DynamicAuthorizationMiddleware> _logger;
+    private readonly RequestDelegate next;
+    private readonly IAuthorizationService authorizationService;
+    private readonly ILogger<DynamicAuthorizationMiddleware> logger;
 
     public DynamicAuthorizationMiddleware(
         RequestDelegate next,
         IAuthorizationService authorizationService,
         ILogger<DynamicAuthorizationMiddleware> logger)
     {
-        _next = next;
-        _authorizationService = authorizationService;
-        _logger = logger;
+        next = next;
+        authorizationService = authorizationService;
+        logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -518,7 +519,7 @@ public class DynamicAuthorizationMiddleware
             }
         }
 
-        await _next(context);
+        await next(context);
     }
 
     private async Task<AuthorizationContext?> ExtractAuthorizationContextAsync(HttpContext context)
@@ -557,10 +558,10 @@ public interface IResourceAuthorizationService
 
 public class ResourceAuthorizationService : IResourceAuthorizationService
 {
-    private readonly IDocumentRepository _documentRepository;
-    private readonly IAuthorizationService _authorizationService;
-    private readonly IMemoryCache _cache;
-    private readonly ILogger<ResourceAuthorizationService> _logger;
+    private readonly IDocumentRepository documentRepository;
+    private readonly IAuthorizationService authorizationService;
+    private readonly IMemoryCache cache;
+    private readonly ILogger<ResourceAuthorizationService> logger;
 
     public ResourceAuthorizationService(
         IDocumentRepository documentRepository,
@@ -568,10 +569,10 @@ public class ResourceAuthorizationService : IResourceAuthorizationService
         IMemoryCache cache,
         ILogger<ResourceAuthorizationService> logger)
     {
-        _documentRepository = documentRepository;
-        _authorizationService = authorizationService;
-        _cache = cache;
-        _logger = logger;
+        documentRepository = documentRepository;
+        authorizationService = authorizationService;
+        cache = cache;
+        logger = logger;
     }
 
     public async Task<bool> CanAccessDocumentAsync(
@@ -581,24 +582,24 @@ public class ResourceAuthorizationService : IResourceAuthorizationService
     {
         var cacheKey = $"access:{user.Identity?.Name}:{documentId}";
         
-        if (_cache.TryGetValue(cacheKey, out bool cachedResult))
+        if (cache.TryGetValue(cacheKey, out bool cachedResult))
         {
             return cachedResult;
         }
 
-        var document = await _documentRepository.GetByIdAsync(documentId, cancellationToken);
+        var document = await documentRepository.GetByIdAsync(documentId, cancellationToken);
         if (document == null)
         {
             return false;
         }
 
-        var authResult = await _authorizationService.AuthorizeAsync(
+        var authResult = await authorizationService.AuthorizeAsync(
             user, document, AuthorizationPolicies.ReadDocument);
 
         var result = authResult.Succeeded;
         
         // Cache for 5 minutes
-        _cache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
+        cache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
         
         return result;
     }
@@ -608,13 +609,13 @@ public class ResourceAuthorizationService : IResourceAuthorizationService
         string documentId, 
         CancellationToken cancellationToken = default)
     {
-        var document = await _documentRepository.GetByIdAsync(documentId, cancellationToken);
+        var document = await documentRepository.GetByIdAsync(documentId, cancellationToken);
         if (document == null)
         {
             return false;
         }
 
-        var authResult = await _authorizationService.AuthorizeAsync(
+        var authResult = await authorizationService.AuthorizeAsync(
             user, document, AuthorizationPolicies.ModifyDocument);
 
         return authResult.Succeeded;
@@ -625,13 +626,13 @@ public class ResourceAuthorizationService : IResourceAuthorizationService
         string documentId, 
         CancellationToken cancellationToken = default)
     {
-        var document = await _documentRepository.GetByIdAsync(documentId, cancellationToken);
+        var document = await documentRepository.GetByIdAsync(documentId, cancellationToken);
         if (document == null)
         {
             return false;
         }
 
-        var authResult = await _authorizationService.AuthorizeAsync(
+        var authResult = await authorizationService.AuthorizeAsync(
             user, document, AuthorizationPolicies.DeleteDocument);
 
         return authResult.Succeeded;
@@ -651,15 +652,15 @@ public class ResourceAuthorizationService : IResourceAuthorizationService
         var documentIds = new List<string>();
 
         // Owner documents
-        var ownedDocuments = await _documentRepository.GetDocumentIdsByOwnerAsync(userId, cancellationToken);
+        var ownedDocuments = await documentRepository.GetDocumentIdsByOwnerAsync(userId, cancellationToken);
         documentIds.AddRange(ownedDocuments);
 
         // Team documents
-        var teamDocuments = await _documentRepository.GetDocumentIdsByTeamMemberAsync(userId, cancellationToken);
+        var teamDocuments = await documentRepository.GetDocumentIdsByTeamMemberAsync(userId, cancellationToken);
         documentIds.AddRange(teamDocuments);
 
         // Explicitly shared documents
-        var sharedDocuments = await _documentRepository.GetSharedDocumentIdsAsync(userId, cancellationToken);
+        var sharedDocuments = await documentRepository.GetSharedDocumentIdsAsync(userId, cancellationToken);
         documentIds.AddRange(sharedDocuments);
 
         return documentIds.Distinct();

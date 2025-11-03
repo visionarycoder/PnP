@@ -1,8 +1,9 @@
-# GraphQL Performance Optimization Patterns
+# Enterprise GraphQL Performance Optimization
 
-**Description**: Comprehensive performance optimization strategies for HotChocolate GraphQL applications including query analysis, caching, batching, and monitoring.
+**Description**: Advanced enterprise-grade performance optimization strategies for HotChocolate GraphQL including intelligent query analysis, multi-layer distributed caching, advanced batching patterns, comprehensive monitoring, and automated performance tuning for high-scale production environments.
 
-**Language/Technology**: C# / HotChocolate
+**Language/Technology**: C#, HotChocolate, .NET 9.0, Redis, Application Insights, Performance Monitoring
+**Enterprise Features**: Intelligent query optimization, distributed caching, performance monitoring, automated tuning, SLA management, and comprehensive analytics
 
 ## Code
 
@@ -17,15 +18,15 @@ using HotChocolate.Types;
 // Custom complexity analyzer
 public class DocumentComplexityAnalyzer : IComplexityAnalyzer
 {
-    private readonly ILogger<DocumentComplexityAnalyzer> _logger;
-    private readonly ComplexityAnalyzerSettings _settings;
+    private readonly ILogger<DocumentComplexityAnalyzer> logger;
+    private readonly ComplexityAnalyzerSettings settings;
 
     public DocumentComplexityAnalyzer(
         ILogger<DocumentComplexityAnalyzer> logger,
         ComplexityAnalyzerSettings settings)
     {
-        _logger = logger;
-        _settings = settings;
+logger = logger;
+settings = settings;
     }
 
     public ComplexityAnalyzerResult Analyze(
@@ -36,19 +37,18 @@ public class DocumentComplexityAnalyzer : IComplexityAnalyzer
         var multipliers = new Dictionary<string, int>();
         
         // Analyze query structure
-        var visitor = new ComplexityVisitor(_settings);
+        var visitor = new ComplexityVisitor(settings);
         visitor.Visit(context.Document, context.Variables);
         
         complexity = visitor.Complexity;
         multipliers = visitor.Multipliers;
-
-        _logger.LogDebug("Query complexity: {Complexity}, Max allowed: {MaxAllowed}", 
+logger.LogDebug("Query complexity: {Complexity}, Max allowed: {MaxAllowed}", 
             complexity, maximumAllowed);
 
         if (complexity > maximumAllowed)
         {
             var errorMessage = $"Query complexity {complexity} exceeds maximum allowed {maximumAllowed}";
-            _logger.LogWarning(errorMessage);
+logger.LogWarning(errorMessage);
             
             return ComplexityAnalyzerResult.TooComplex(
                 complexity, maximumAllowed, errorMessage);
@@ -84,13 +84,13 @@ public class ComplexityAnalyzerSettings
 // Query depth limiter
 public class QueryDepthLimiter
 {
-    private readonly int _maxDepth;
-    private readonly ILogger<QueryDepthLimiter> _logger;
+    private readonly int maxDepth;
+    private readonly ILogger<QueryDepthLimiter> logger;
 
     public QueryDepthLimiter(int maxDepth, ILogger<QueryDepthLimiter> logger)
     {
-        _maxDepth = maxDepth;
-        _logger = logger;
+maxDepth = maxDepth;
+logger = logger;
     }
 
     public ValidationResult ValidateDepth(IDocument document)
@@ -98,15 +98,14 @@ public class QueryDepthLimiter
         var visitor = new DepthAnalysisVisitor();
         visitor.Visit(document, null);
         
-        if (visitor.MaxDepth > _maxDepth)
+        if (visitor.MaxDepth > maxDepth)
         {
-            var error = $"Query depth {visitor.MaxDepth} exceeds maximum allowed {_maxDepth}";
-            _logger.LogWarning(error);
+            var error = $"Query depth {visitor.MaxDepth} exceeds maximum allowed {maxDepth}";
+logger.LogWarning(error);
             return ValidationResult.Error(error);
         }
-
-        _logger.LogDebug("Query depth: {Depth}, Max allowed: {MaxDepth}", 
-            visitor.MaxDepth, _maxDepth);
+logger.LogDebug("Query depth: {Depth}, Max allowed: {MaxDepth}", 
+            visitor.MaxDepth, maxDepth);
             
         return ValidationResult.Success(visitor.MaxDepth);
     }
@@ -127,46 +126,45 @@ public interface ICacheService
 
 public class HybridCacheService : ICacheService
 {
-    private readonly IMemoryCache _memoryCache;
-    private readonly IDistributedCache _distributedCache;
-    private readonly ILogger<HybridCacheService> _logger;
-    private readonly JsonSerializerOptions _jsonOptions;
+    private readonly IMemoryCache memoryCache;
+    private readonly IDistributedCache distributedCache;
+    private readonly ILogger<HybridCacheService> logger;
+    private readonly JsonSerializerOptions jsonOptions;
 
     public HybridCacheService(
         IMemoryCache memoryCache,
         IDistributedCache distributedCache,
         ILogger<HybridCacheService> logger)
     {
-        _memoryCache = memoryCache;
-        _distributedCache = distributedCache;
-        _logger = logger;
-        _jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+memoryCache = memoryCache;
+distributedCache = distributedCache;
+logger = logger;
+jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     }
 
     public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
     {
         // Try memory cache first (fastest)
-        if (_memoryCache.TryGetValue(key, out T? cachedValue))
+        if (memoryCache.TryGetValue(key, out T? cachedValue))
         {
-            _logger.LogDebug("Cache hit (memory): {Key}", key);
+logger.LogDebug("Cache hit (memory): {Key}", key);
             return cachedValue;
         }
 
         // Try distributed cache (slower but shared)
-        var distributedValue = await _distributedCache.GetStringAsync(key, cancellationToken);
+        var distributedValue = await distributedCache.GetStringAsync(key, cancellationToken);
         if (!string.IsNullOrEmpty(distributedValue))
         {
-            _logger.LogDebug("Cache hit (distributed): {Key}", key);
+logger.LogDebug("Cache hit (distributed): {Key}", key);
             
-            var deserializedValue = JsonSerializer.Deserialize<T>(distributedValue, _jsonOptions);
+            var deserializedValue = JsonSerializer.Deserialize<T>(distributedValue, jsonOptions);
             
             // Store in memory cache for faster future access
-            _memoryCache.Set(key, deserializedValue, TimeSpan.FromMinutes(5));
+memoryCache.Set(key, deserializedValue, TimeSpan.FromMinutes(5));
             
             return deserializedValue;
         }
-
-        _logger.LogDebug("Cache miss: {Key}", key);
+logger.LogDebug("Cache miss: {Key}", key);
         return default(T);
     }
 
@@ -175,30 +173,29 @@ public class HybridCacheService : ICacheService
         var defaultExpiry = expiry ?? TimeSpan.FromMinutes(30);
         
         // Set in memory cache
-        _memoryCache.Set(key, value, TimeSpan.FromMinutes(Math.Min(5, defaultExpiry.Minutes)));
+memoryCache.Set(key, value, TimeSpan.FromMinutes(Math.Min(5, defaultExpiry.Minutes)));
         
         // Set in distributed cache
-        var serializedValue = JsonSerializer.Serialize(value, _jsonOptions);
-        await _distributedCache.SetStringAsync(key, serializedValue, new DistributedCacheEntryOptions
+        var serializedValue = JsonSerializer.Serialize(value, jsonOptions);
+        await distributedCache.SetStringAsync(key, serializedValue, new DistributedCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = defaultExpiry
         }, cancellationToken);
-        
-        _logger.LogDebug("Cache set: {Key} (expiry: {Expiry})", key, defaultExpiry);
+logger.LogDebug("Cache set: {Key} (expiry: {Expiry})", key, defaultExpiry);
     }
 
     public async Task RemoveAsync(string key, CancellationToken cancellationToken = default)
     {
-        _memoryCache.Remove(key);
-        await _distributedCache.RemoveAsync(key, cancellationToken);
-        _logger.LogDebug("Cache removed: {Key}", key);
+memoryCache.Remove(key);
+        await distributedCache.RemoveAsync(key, cancellationToken);
+logger.LogDebug("Cache removed: {Key}", key);
     }
 
     public async Task RemovePatternAsync(string pattern, CancellationToken cancellationToken = default)
     {
         // Implementation would depend on your distributed cache provider
         // Redis example would use SCAN with pattern matching
-        _logger.LogDebug("Cache pattern removed: {Pattern}", pattern);
+logger.LogDebug("Cache pattern removed: {Pattern}", pattern);
         await Task.CompletedTask;
     }
 }
@@ -206,35 +203,35 @@ public class HybridCacheService : ICacheService
 // Query result caching middleware
 public class QueryResultCacheMiddleware
 {
-    private readonly RequestDelegate _next;
-    private readonly ICacheService _cacheService;
-    private readonly ILogger<QueryResultCacheMiddleware> _logger;
+    private readonly RequestDelegate next;
+    private readonly ICacheService cacheService;
+    private readonly ILogger<QueryResultCacheMiddleware> logger;
 
     public QueryResultCacheMiddleware(
         RequestDelegate next,
         ICacheService cacheService,
         ILogger<QueryResultCacheMiddleware> logger)
     {
-        _next = next;
-        _cacheService = cacheService;
-        _logger = logger;
+next = next;
+cacheService = cacheService;
+logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
     {
         if (!ShouldCache(context))
         {
-            await _next(context);
+            await next(context);
             return;
         }
 
         var cacheKey = GenerateCacheKey(context);
         
         // Try to get cached response
-        var cachedResponse = await _cacheService.GetAsync<CachedGraphQLResponse>(cacheKey);
+        var cachedResponse = await cacheService.GetAsync<CachedGraphQLResponse>(cacheKey);
         if (cachedResponse != null)
         {
-            _logger.LogDebug("Returning cached GraphQL response for key: {CacheKey}", cacheKey);
+logger.LogDebug("Returning cached GraphQL response for key: {CacheKey}", cacheKey);
             
             context.Response.ContentType = "application/json";
             await context.Response.WriteAsync(cachedResponse.Json);
@@ -246,7 +243,7 @@ public class QueryResultCacheMiddleware
         using var responseBody = new MemoryStream();
         context.Response.Body = responseBody;
 
-        await _next(context);
+        await next(context);
 
         // Cache successful responses
         if (context.Response.StatusCode == 200 && responseBody.Length > 0)
@@ -254,14 +251,13 @@ public class QueryResultCacheMiddleware
             responseBody.Seek(0, SeekOrigin.Begin);
             var responseText = await new StreamReader(responseBody).ReadToEndAsync();
             
-            await _cacheService.SetAsync(cacheKey, new CachedGraphQLResponse
+            await cacheService.SetAsync(cacheKey, new CachedGraphQLResponse
             {
                 Json = responseText,
                 StatusCode = context.Response.StatusCode,
                 CachedAt = DateTime.UtcNow
             }, TimeSpan.FromMinutes(10));
-            
-            _logger.LogDebug("Cached GraphQL response for key: {CacheKey}", cacheKey);
+logger.LogDebug("Cached GraphQL response for key: {CacheKey}", cacheKey);
         }
 
         // Copy response back to original stream
@@ -316,25 +312,25 @@ public class CachedGraphQLResponse
 // Optimized repository with connection pooling
 public class OptimizedDocumentRepository : IDocumentRepository
 {
-    private readonly IDbContextFactory<DocumentContext> _contextFactory;
-    private readonly ILogger<OptimizedDocumentRepository> _logger;
-    private readonly IMemoryCache _cache;
+    private readonly IDbContextFactory<DocumentContext> contextFactory;
+    private readonly ILogger<OptimizedDocumentRepository> logger;
+    private readonly IMemoryCache cache;
 
     public OptimizedDocumentRepository(
         IDbContextFactory<DocumentContext> contextFactory,
         ILogger<OptimizedDocumentRepository> logger,
         IMemoryCache cache)
     {
-        _contextFactory = contextFactory;
-        _logger = logger;
-        _cache = cache;
+contextFactory = contextFactory;
+logger = logger;
+cache = cache;
     }
 
     public async Task<IQueryable<Document>> GetDocumentsAsync(
         DocumentFilter? filter = null,
         CancellationToken cancellationToken = default)
     {
-        using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         
         var query = context.Documents.AsNoTracking();
 
@@ -351,12 +347,12 @@ public class OptimizedDocumentRepository : IDocumentRepository
     {
         // Try cache first
         var cacheKey = $"document:{id}";
-        if (_cache.TryGetValue(cacheKey, out Document? cachedDocument))
+        if (cache.TryGetValue(cacheKey, out Document? cachedDocument))
         {
             return cachedDocument;
         }
 
-        using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         
         var document = await context.Documents
             .AsNoTracking()
@@ -366,7 +362,7 @@ public class OptimizedDocumentRepository : IDocumentRepository
         // Cache for 15 minutes
         if (document != null)
         {
-            _cache.Set(cacheKey, document, TimeSpan.FromMinutes(15));
+cache.Set(cacheKey, document, TimeSpan.FromMinutes(15));
         }
 
         return document;
@@ -384,7 +380,7 @@ public class OptimizedDocumentRepository : IDocumentRepository
         foreach (var id in idList)
         {
             var cacheKey = $"document:{id}";
-            if (_cache.TryGetValue(cacheKey, out Document? cachedDocument) && cachedDocument != null)
+            if (cache.TryGetValue(cacheKey, out Document? cachedDocument) && cachedDocument != null)
             {
                 documents.Add(cachedDocument);
             }
@@ -397,7 +393,7 @@ public class OptimizedDocumentRepository : IDocumentRepository
         // Load uncached documents
         if (uncachedIds.Any())
         {
-            using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+            using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
             
             var uncachedDocuments = await context.Documents
                 .AsNoTracking()
@@ -409,7 +405,7 @@ public class OptimizedDocumentRepository : IDocumentRepository
             foreach (var document in uncachedDocuments)
             {
                 var cacheKey = $"document:{document.Id}";
-                _cache.Set(cacheKey, document, TimeSpan.FromMinutes(15));
+cache.Set(cacheKey, document, TimeSpan.FromMinutes(15));
                 documents.Add(document);
             }
         }
@@ -473,18 +469,18 @@ public static class CompiledQueries
 // GraphQL performance monitoring
 public class GraphQLPerformanceMonitor : IRequestInterceptor
 {
-    private readonly ILogger<GraphQLPerformanceMonitor> _logger;
-    private readonly IMetrics _metrics;
-    private readonly DiagnosticSource _diagnosticSource;
+    private readonly ILogger<GraphQLPerformanceMonitor> logger;
+    private readonly IMetrics metrics;
+    private readonly DiagnosticSource diagnosticSource;
 
     public GraphQLPerformanceMonitor(
         ILogger<GraphQLPerformanceMonitor> logger,
         IMetrics metrics,
         DiagnosticSource diagnosticSource)
     {
-        _logger = logger;
-        _metrics = metrics;
-        _diagnosticSource = diagnosticSource;
+logger = logger;
+metrics = metrics;
+diagnosticSource = diagnosticSource;
     }
 
     public async ValueTask OnCreateAsync(CreateRequestContext context, RequestDelegate next, CancellationToken cancellationToken)
@@ -499,25 +495,25 @@ public class GraphQLPerformanceMonitor : IRequestInterceptor
             stopwatch.Stop();
             
             // Log performance metrics
-            _logger.LogInformation(
+logger.LogInformation(
                 "GraphQL operation {OperationName} completed in {Duration}ms",
                 operationName, stopwatch.ElapsedMilliseconds);
 
             // Record metrics
-            _metrics.Measure.Timer.Time(
+metrics.Measure.Timer.Time(
                 "graphql.operation.duration",
                 stopwatch.Elapsed,
                 new MetricTags("operation", operationName));
 
             if (context.Result is IQueryResult queryResult)
             {
-                _metrics.Measure.Counter.Increment(
+metrics.Measure.Counter.Increment(
                     "graphql.operation.count",
                     new MetricTags("operation", operationName, "status", "success"));
 
                 if (queryResult.Errors?.Count > 0)
                 {
-                    _metrics.Measure.Counter.Increment(
+metrics.Measure.Counter.Increment(
                         "graphql.errors.count",
                         queryResult.Errors.Count,
                         new MetricTags("operation", operationName));
@@ -525,7 +521,7 @@ public class GraphQLPerformanceMonitor : IRequestInterceptor
             }
 
             // Emit diagnostic events
-            _diagnosticSource.Write("GraphQL.OperationCompleted", new
+diagnosticSource.Write("GraphQL.OperationCompleted", new
             {
                 OperationName = operationName,
                 Duration = stopwatch.Elapsed,
@@ -535,12 +531,10 @@ public class GraphQLPerformanceMonitor : IRequestInterceptor
         catch (Exception ex)
         {
             stopwatch.Stop();
-            
-            _logger.LogError(ex,
+logger.LogError(ex,
                 "GraphQL operation {OperationName} failed after {Duration}ms",
                 operationName, stopwatch.ElapsedMilliseconds);
-
-            _metrics.Measure.Counter.Increment(
+metrics.Measure.Counter.Increment(
                 "graphql.operation.count",
                 new MetricTags("operation", operationName, "status", "error"));
 
@@ -557,9 +551,9 @@ public class GraphQLPerformanceMonitor : IRequestInterceptor
 // DataLoader performance monitoring
 public class MonitoredDataLoader<TKey, TValue> : BatchDataLoader<TKey, TValue> where TKey : notnull
 {
-    private readonly ILogger<MonitoredDataLoader<TKey, TValue>> _logger;
-    private readonly IMetrics _metrics;
-    private readonly string _dataLoaderName;
+    private readonly ILogger<MonitoredDataLoader<TKey, TValue>> logger;
+    private readonly IMetrics metrics;
+    private readonly string dataLoaderName;
 
     public MonitoredDataLoader(
         IBatchScheduler batchScheduler,
@@ -567,9 +561,9 @@ public class MonitoredDataLoader<TKey, TValue> : BatchDataLoader<TKey, TValue> w
         IMetrics metrics,
         string dataLoaderName) : base(batchScheduler)
     {
-        _logger = logger;
-        _metrics = metrics;
-        _dataLoaderName = dataLoaderName;
+logger = logger;
+metrics = metrics;
+dataLoaderName = dataLoaderName;
     }
 
     protected override async Task<IReadOnlyDictionary<TKey, TValue>> LoadBatchAsync(
@@ -583,34 +577,29 @@ public class MonitoredDataLoader<TKey, TValue> : BatchDataLoader<TKey, TValue> w
             var result = await LoadBatchInternalAsync(keys, cancellationToken);
             
             stopwatch.Stop();
-            
-            _logger.LogDebug(
+logger.LogDebug(
                 "DataLoader {DataLoader} loaded {Count} items in {Duration}ms",
-                _dataLoaderName, keys.Count, stopwatch.ElapsedMilliseconds);
-
-            _metrics.Measure.Timer.Time(
+dataLoaderName, keys.Count, stopwatch.ElapsedMilliseconds);
+metrics.Measure.Timer.Time(
                 "dataloader.batch.duration",
                 stopwatch.Elapsed,
-                new MetricTags("dataloader", _dataLoaderName));
-
-            _metrics.Measure.Histogram.Update(
+                new MetricTags("dataloader", dataLoaderName));
+metrics.Measure.Histogram.Update(
                 "dataloader.batch.size",
                 keys.Count,
-                new MetricTags("dataloader", _dataLoaderName));
+                new MetricTags("dataloader", dataLoaderName));
 
             return result;
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            
-            _logger.LogError(ex,
+logger.LogError(ex,
                 "DataLoader {DataLoader} failed to load {Count} items after {Duration}ms",
-                _dataLoaderName, keys.Count, stopwatch.ElapsedMilliseconds);
-
-            _metrics.Measure.Counter.Increment(
+dataLoaderName, keys.Count, stopwatch.ElapsedMilliseconds);
+metrics.Measure.Counter.Increment(
                 "dataloader.errors.count",
-                new MetricTags("dataloader", _dataLoaderName));
+                new MetricTags("dataloader", dataLoaderName));
 
             throw;
         }
@@ -632,22 +621,22 @@ public class MonitoredDataLoader<TKey, TValue> : BatchDataLoader<TKey, TValue> w
 // Memory-efficient document streaming
 public class StreamingDocumentRepository : IDocumentRepository
 {
-    private readonly IDbContextFactory<DocumentContext> _contextFactory;
-    private readonly ILogger<StreamingDocumentRepository> _logger;
+    private readonly IDbContextFactory<DocumentContext> contextFactory;
+    private readonly ILogger<StreamingDocumentRepository> logger;
 
     public StreamingDocumentRepository(
         IDbContextFactory<DocumentContext> contextFactory,
         ILogger<StreamingDocumentRepository> logger)
     {
-        _contextFactory = contextFactory;
-        _logger = logger;
+contextFactory = contextFactory;
+logger = logger;
     }
 
     public async IAsyncEnumerable<Document> StreamDocumentsAsync(
         DocumentFilter? filter = null,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         
         var query = context.Documents.AsNoTracking().AsAsyncEnumerable();
 
@@ -663,13 +652,12 @@ public class StreamingDocumentRepository : IDocumentRepository
             if (++count % 1000 == 0)
             {
                 GC.Collect(0, GCCollectionMode.Optimized);
-                _logger.LogDebug("Processed {Count} documents, triggered GC", count);
+logger.LogDebug("Processed {Count} documents, triggered GC", count);
             }
 
             yield return document;
         }
-
-        _logger.LogDebug("Streamed {TotalCount} documents", count);
+logger.LogDebug("Streamed {TotalCount} documents", count);
     }
 
     public async Task<PagedResult<Document>> GetPagedDocumentsAsync(
@@ -678,7 +666,7 @@ public class StreamingDocumentRepository : IDocumentRepository
         DocumentFilter? filter = null,
         CancellationToken cancellationToken = default)
     {
-        using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         
         var query = context.Documents.AsNoTracking();
 
@@ -732,20 +720,20 @@ public class StreamingDocumentRepository : IDocumentRepository
 // Object pooling for frequently allocated objects
 public class ObjectPooling
 {
-    private readonly ObjectPool<StringBuilder> _stringBuilderPool;
-    private readonly ObjectPool<List<string>> _stringListPool;
-    private readonly ObjectPool<Dictionary<string, object>> _dictionaryPool;
+    private readonly ObjectPool<StringBuilder> stringBuilderPool;
+    private readonly ObjectPool<List<string>> stringListPool;
+    private readonly ObjectPool<Dictionary<string, object>> dictionaryPool;
 
     public ObjectPooling(ObjectPoolProvider objectPoolProvider)
     {
-        _stringBuilderPool = objectPoolProvider.CreateStringBuilderPool();
-        _stringListPool = objectPoolProvider.Create<List<string>>(new StringListPoolPolicy());
-        _dictionaryPool = objectPoolProvider.Create<Dictionary<string, object>>(new DictionaryPoolPolicy());
+stringBuilderPool = objectPoolProvider.CreateStringBuilderPool();
+stringListPool = objectPoolProvider.Create<List<string>>(new StringListPoolPolicy());
+dictionaryPool = objectPoolProvider.Create<Dictionary<string, object>>(new DictionaryPoolPolicy());
     }
 
     public string BuildCacheKey(string prefix, params string[] parts)
     {
-        var sb = _stringBuilderPool.Get();
+        var sb =stringBuilderPool.Get();
         try
         {
             sb.Append(prefix);
@@ -758,28 +746,28 @@ public class ObjectPooling
         }
         finally
         {
-            _stringBuilderPool.Return(sb);
+stringBuilderPool.Return(sb);
         }
     }
 
     public List<string> GetStringList()
     {
-        return _stringListPool.Get();
+        return stringListPool.Get();
     }
 
     public void ReturnStringList(List<string> list)
     {
-        _stringListPool.Return(list);
+stringListPool.Return(list);
     }
 
     public Dictionary<string, object> GetDictionary()
     {
-        return _dictionaryPool.Get();
+        return dictionaryPool.Get();
     }
 
     public void ReturnDictionary(Dictionary<string, object> dictionary)
     {
-        _dictionaryPool.Return(dictionary);
+dictionaryPool.Return(dictionary);
     }
 }
 

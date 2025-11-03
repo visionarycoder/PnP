@@ -177,9 +177,9 @@ function Get-SystemHealthReport {
 function Start-PerformanceMonitoring {
     param(
         [string[]]$Counters = @(
-            "\Processor(_Total)\% Processor Time",
+            "\Processor(Total)\% Processor Time",
             "\Memory\Available MBytes",
-            "\PhysicalDisk(_Total)\% Disk Time",
+            "\PhysicalDisk(Total)\% Disk Time",
             "\Network Interface(*)\Bytes Total/sec"
         ),
         [int]$IntervalSeconds = 5,

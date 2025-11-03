@@ -1,8 +1,8 @@
-# External Services
+# Enterprise Orleans Service Integration
 
-**Description**: Orleans external service integration patterns for APIs, message queues, and third-party service integration.
+**Description**: Production-grade Orleans external service integration with resilient communication patterns, intelligent service mesh integration, advanced circuit breakers, comprehensive monitoring, and enterprise security for mission-critical distributed systems.
 
-**Language/Technology**: C# 12, Orleans, HTTP Client
+**Language/Technology**: C# (.NET 9.0), Orleans 8.0+, Dapr, Istio, Azure API Management
 
 ## Table of Contents
 

@@ -82,58 +82,58 @@ public interface IPipelineCoordinatorGrain : IGrainWithStringKey
 // Document processing grain implementation
 public class DocumentProcessingGrain : Grain, IDocumentProcessingGrain
 {
-    private readonly ILogger<DocumentProcessingGrain> _logger;
-    private readonly IProcessingService _processingService;
-    private readonly IPersistentState<ProcessingState> _processingState;
+    private readonly ILogger<DocumentProcessingGrain> logger;
+    private readonly IProcessingService processingService;
+    private readonly IPersistentState<ProcessingState> processingState;
     
-    private IDisposable? _processingTimer;
+    private IDisposable? processingTimer;
 
     public DocumentProcessingGrain(
         ILogger<DocumentProcessingGrain> logger,
         IProcessingService processingService,
         [PersistentState("processing", "documentStorage")] IPersistentState<ProcessingState> processingState)
     {
-        _logger = logger;
-        _processingService = processingService;
-        _processingState = processingState;
+        logger = logger;
+        processingService = processingService;
+        processingState = processingState;
     }
 
     public async Task<ProcessingResult> StartProcessingAsync(ProcessingRequest request)
     {
         var documentId = this.GetPrimaryKeyString();
         
-        _logger.LogInformation("Starting processing for document {DocumentId}", documentId);
+        logger.LogInformation("Starting processing for document {DocumentId}", documentId);
 
         // Check if already processing
-        if (_processingState.State.Status == ProcessingStatus.InProgress)
+        if (processingState.State.Status == ProcessingStatus.InProgress)
         {
             throw new InvalidOperationException("Document is already being processed");
         }
 
         // Initialize processing state
-        _processingState.State.Status = ProcessingStatus.InProgress;
-        _processingState.State.StartedAt = DateTime.UtcNow;
-        _processingState.State.Request = request;
-        _processingState.State.Progress = 0;
+        processingState.State.Status = ProcessingStatus.InProgress;
+        processingState.State.StartedAt = DateTime.UtcNow;
+        processingState.State.Request = request;
+        processingState.State.Progress = 0;
         
-        await _processingState.WriteStateAsync();
+        await processingState.WriteStateAsync();
 
         // Start processing with progress tracking
         _ = Task.Run(async () =>
         {
             try
             {
-                var result = await _processingService.ProcessDocumentAsync(
+                var result = await processingService.ProcessDocumentAsync(
                     documentId, 
                     request, 
                     new Progress<ProcessingProgress>(OnProgressUpdated));
 
-                _processingState.State.Status = ProcessingStatus.Completed;
-                _processingState.State.CompletedAt = DateTime.UtcNow;
-                _processingState.State.Result = result;
-                _processingState.State.Progress = 100;
+                processingState.State.Status = ProcessingStatus.Completed;
+                processingState.State.CompletedAt = DateTime.UtcNow;
+                processingState.State.Result = result;
+                processingState.State.Progress = 100;
 
-                await _processingState.WriteStateAsync();
+                await processingState.WriteStateAsync();
                 
                 // Notify subscribers about completion
                 var streamProvider = this.GetStreamProvider("ProcessingEvents");
@@ -146,17 +146,17 @@ public class DocumentProcessingGrain : Grain, IDocumentProcessingGrain
                     Data = result
                 });
 
-                _logger.LogInformation("Processing completed for document {DocumentId}", documentId);
+                logger.LogInformation("Processing completed for document {DocumentId}", documentId);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Processing failed for document {DocumentId}", documentId);
+                logger.LogError(ex, "Processing failed for document {DocumentId}", documentId);
                 
-                _processingState.State.Status = ProcessingStatus.Failed;
-                _processingState.State.CompletedAt = DateTime.UtcNow;
-                _processingState.State.Error = ex.Message;
+                processingState.State.Status = ProcessingStatus.Failed;
+                processingState.State.CompletedAt = DateTime.UtcNow;
+                processingState.State.Error = ex.Message;
 
-                await _processingState.WriteStateAsync();
+                await processingState.WriteStateAsync();
                 
                 // Notify subscribers about failure
                 var streamProvider = this.GetStreamProvider("ProcessingEvents");
@@ -174,31 +174,31 @@ public class DocumentProcessingGrain : Grain, IDocumentProcessingGrain
         return new ProcessingResult
         {
             Status = ProcessingStatus.InProgress,
-            StartedAt = _processingState.State.StartedAt,
+            StartedAt = processingState.State.StartedAt,
             Progress = 0
         };
     }
 
     public Task<ProcessingStatus> GetStatusAsync()
     {
-        return Task.FromResult(_processingState.State.Status);
+        return Task.FromResult(processingState.State.Status);
     }
 
     public Task<ProcessingResult?> GetResultAsync()
     {
-        return Task.FromResult(_processingState.State.Result);
+        return Task.FromResult(processingState.State.Result);
     }
 
     public async Task CancelProcessingAsync()
     {
-        if (_processingState.State.Status == ProcessingStatus.InProgress)
+        if (processingState.State.Status == ProcessingStatus.InProgress)
         {
-            _processingState.State.Status = ProcessingStatus.Cancelled;
-            _processingState.State.CompletedAt = DateTime.UtcNow;
+            processingState.State.Status = ProcessingStatus.Cancelled;
+            processingState.State.CompletedAt = DateTime.UtcNow;
             
-            await _processingState.WriteStateAsync();
+            await processingState.WriteStateAsync();
             
-            _logger.LogInformation("Processing cancelled for document {DocumentId}", this.GetPrimaryKeyString());
+            logger.LogInformation("Processing cancelled for document {DocumentId}", this.GetPrimaryKeyString());
         }
     }
 
@@ -206,10 +206,10 @@ public class DocumentProcessingGrain : Grain, IDocumentProcessingGrain
     {
         var metrics = new ProcessingMetrics
         {
-            TotalProcessingTime = _processingState.State.CompletedAt - _processingState.State.StartedAt,
-            Status = _processingState.State.Status,
-            Progress = _processingState.State.Progress,
-            ProcessingSteps = _processingState.State.ProcessingSteps?.Count ?? 0
+            TotalProcessingTime = processingState.State.CompletedAt - processingState.State.StartedAt,
+            Status = processingState.State.Status,
+            Progress = processingState.State.Progress,
+            ProcessingSteps = processingState.State.ProcessingSteps?.Count ?? 0
         };
 
         return Task.FromResult(metrics);
@@ -217,16 +217,16 @@ public class DocumentProcessingGrain : Grain, IDocumentProcessingGrain
 
     private async void OnProgressUpdated(ProcessingProgress progress)
     {
-        _processingState.State.Progress = progress.Percentage;
-        _processingState.State.CurrentStep = progress.CurrentStep;
-        _processingState.State.ProcessingSteps ??= new List<ProcessingStep>();
+        processingState.State.Progress = progress.Percentage;
+        processingState.State.CurrentStep = progress.CurrentStep;
+        processingState.State.ProcessingSteps ??= new List<ProcessingStep>();
         
         if (progress.Step != null)
         {
-            _processingState.State.ProcessingSteps.Add(progress.Step);
+            processingState.State.ProcessingSteps.Add(progress.Step);
         }
 
-        await _processingState.WriteStateAsync();
+        await processingState.WriteStateAsync();
 
         // Notify real-time subscribers
         var streamProvider = this.GetStreamProvider("ProcessingEvents");
@@ -242,16 +242,16 @@ public class DocumentProcessingGrain : Grain, IDocumentProcessingGrain
 
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _logger.LogDebug("DocumentProcessingGrain activated for {DocumentId}", this.GetPrimaryKeyString());
+        logger.LogDebug("DocumentProcessingGrain activated for {DocumentId}", this.GetPrimaryKeyString());
         return base.OnActivateAsync(cancellationToken);
     }
 
     public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
-        _logger.LogDebug("DocumentProcessingGrain deactivated for {DocumentId}, reason: {Reason}", 
+        logger.LogDebug("DocumentProcessingGrain deactivated for {DocumentId}, reason: {Reason}", 
             this.GetPrimaryKeyString(), reason);
             
-        _processingTimer?.Dispose();
+        processingTimer?.Dispose();
         return base.OnDeactivateAsync(reason, cancellationToken);
     }
 }
@@ -259,18 +259,18 @@ public class DocumentProcessingGrain : Grain, IDocumentProcessingGrain
 // Document grain implementation with state management
 public class DocumentGrain : Grain, IDocumentGrain
 {
-    private readonly ILogger<DocumentGrain> _logger;
-    private readonly IDocumentRepository _documentRepository;
-    private readonly IPersistentState<DocumentState> _documentState;
+    private readonly ILogger<DocumentGrain> logger;
+    private readonly IDocumentRepository documentRepository;
+    private readonly IPersistentState<DocumentState> documentState;
 
     public DocumentGrain(
         ILogger<DocumentGrain> logger,
         IDocumentRepository documentRepository,
         [PersistentState("document", "documentStorage")] IPersistentState<DocumentState> documentState)
     {
-        _logger = logger;
-        _documentRepository = documentRepository;
-        _documentState = documentState;
+        logger = logger;
+        documentRepository = documentRepository;
+        documentState = documentState;
     }
 
     public async Task<Document> GetDocumentAsync()
@@ -278,18 +278,18 @@ public class DocumentGrain : Grain, IDocumentGrain
         var documentId = this.GetPrimaryKeyString();
         
         // Try grain state first
-        if (_documentState.State.Document != null)
+        if (documentState.State.Document != null)
         {
-            return _documentState.State.Document;
+            return documentState.State.Document;
         }
 
         // Fallback to repository
-        var document = await _documentRepository.GetByIdAsync(documentId);
+        var document = await documentRepository.GetByIdAsync(documentId);
         if (document != null)
         {
-            _documentState.State.Document = document;
-            _documentState.State.LastAccessed = DateTime.UtcNow;
-            await _documentState.WriteStateAsync();
+            documentState.State.Document = document;
+            documentState.State.LastAccessed = DateTime.UtcNow;
+            await documentState.WriteStateAsync();
         }
 
         return document ?? throw new InvalidOperationException($"Document {documentId} not found");
@@ -320,17 +320,17 @@ public class DocumentGrain : Grain, IDocumentGrain
         document.Metadata.UpdatedBy = request.UserId;
 
         // Update in repository
-        await _documentRepository.UpdateAsync(document);
+        await documentRepository.UpdateAsync(document);
 
         // Update grain state
-        _documentState.State.Document = document;
-        _documentState.State.LastModified = DateTime.UtcNow;
-        await _documentState.WriteStateAsync();
+        documentState.State.Document = document;
+        documentState.State.LastModified = DateTime.UtcNow;
+        await documentState.WriteStateAsync();
 
         // Notify collaborators
         await NotifyCollaboratorsAsync(document, "updated");
 
-        _logger.LogInformation("Document {DocumentId} updated by {UserId}", documentId, request.UserId);
+        logger.LogInformation("Document {DocumentId} updated by {UserId}", documentId, request.UserId);
 
         return document;
     }
@@ -340,15 +340,15 @@ public class DocumentGrain : Grain, IDocumentGrain
         var documentId = this.GetPrimaryKeyString();
         
         // Delete from repository
-        var deleted = await _documentRepository.DeleteAsync(documentId);
+        var deleted = await documentRepository.DeleteAsync(documentId);
         
         if (deleted)
         {
             // Clear grain state
-            _documentState.State = new DocumentState();
-            await _documentState.ClearStateAsync();
+            documentState.State = new DocumentState();
+            await documentState.ClearStateAsync();
             
-            _logger.LogInformation("Document {DocumentId} deleted", documentId);
+            logger.LogInformation("Document {DocumentId} deleted", documentId);
         }
 
         return deleted;
@@ -374,37 +374,37 @@ public class DocumentGrain : Grain, IDocumentGrain
             WordCount = CountWords(document.Content),
             CharacterCount = document.Content.Length,
             ReadingTime = CalculateReadingTime(document.Content),
-            LastAccessed = _documentState.State.LastAccessed,
-            AccessCount = _documentState.State.AccessCount,
-            CollaboratorCount = _documentState.State.Collaborators?.Count ?? 0
+            LastAccessed = documentState.State.LastAccessed,
+            AccessCount = documentState.State.AccessCount,
+            CollaboratorCount = documentState.State.Collaborators?.Count ?? 0
         };
     }
 
     public async Task AddCollaboratorAsync(string userId, CollaborationType type)
     {
-        _documentState.State.Collaborators ??= new Dictionary<string, CollaborationType>();
-        _documentState.State.Collaborators[userId] = type;
+        documentState.State.Collaborators ??= new Dictionary<string, CollaborationType>();
+        documentState.State.Collaborators[userId] = type;
         
-        await _documentState.WriteStateAsync();
+        await documentState.WriteStateAsync();
         
-        _logger.LogInformation("Added collaborator {UserId} to document {DocumentId} with type {Type}", 
+        logger.LogInformation("Added collaborator {UserId} to document {DocumentId} with type {Type}", 
             userId, this.GetPrimaryKeyString(), type);
     }
 
     public async Task RemoveCollaboratorAsync(string userId)
     {
-        if (_documentState.State.Collaborators?.Remove(userId) == true)
+        if (documentState.State.Collaborators?.Remove(userId) == true)
         {
-            await _documentState.WriteStateAsync();
+            await documentState.WriteStateAsync();
             
-            _logger.LogInformation("Removed collaborator {UserId} from document {DocumentId}", 
+            logger.LogInformation("Removed collaborator {UserId} from document {DocumentId}", 
                 userId, this.GetPrimaryKeyString());
         }
     }
 
     private async Task NotifyCollaboratorsAsync(Document document, string action)
     {
-        if (_documentState.State.Collaborators?.Any() == true)
+        if (documentState.State.Collaborators?.Any() == true)
         {
             var streamProvider = this.GetStreamProvider("CollaborationEvents");
             var stream = streamProvider.GetStream<CollaborationEvent>(Guid.Parse(document.Id));
@@ -436,47 +436,47 @@ public class DocumentGrain : Grain, IDocumentGrain
 // Analytics grain for aggregated metrics
 public class AnalyticsGrain : Grain, IAnalyticsGrain
 {
-    private readonly ILogger<AnalyticsGrain> _logger;
-    private readonly IPersistentState<AnalyticsState> _analyticsState;
-    private readonly IAnalyticsRepository _analyticsRepository;
+    private readonly ILogger<AnalyticsGrain> logger;
+    private readonly IPersistentState<AnalyticsState> analyticsState;
+    private readonly IAnalyticsRepository analyticsRepository;
 
     public AnalyticsGrain(
         ILogger<AnalyticsGrain> logger,
         [PersistentState("analytics", "analyticsStorage")] IPersistentState<AnalyticsState> analyticsState,
         IAnalyticsRepository analyticsRepository)
     {
-        _logger = logger;
-        _analyticsState = analyticsState;
-        _analyticsRepository = analyticsRepository;
+        logger = logger;
+        analyticsState = analyticsState;
+        analyticsRepository = analyticsRepository;
     }
 
     public async Task RecordEventAsync(AnalyticsEvent analyticsEvent)
     {
-        _analyticsState.State.Events ??= new List<AnalyticsEvent>();
-        _analyticsState.State.Events.Add(analyticsEvent);
+        analyticsState.State.Events ??= new List<AnalyticsEvent>();
+        analyticsState.State.Events.Add(analyticsEvent);
         
         // Keep only recent events in memory (last 1000)
-        if (_analyticsState.State.Events.Count > 1000)
+        if (analyticsState.State.Events.Count > 1000)
         {
-            var eventsToRemove = _analyticsState.State.Events.Take(100).ToList();
+            var eventsToRemove = analyticsState.State.Events.Take(100).ToList();
             foreach (var eventToRemove in eventsToRemove)
             {
-                _analyticsState.State.Events.Remove(eventToRemove);
+                analyticsState.State.Events.Remove(eventToRemove);
             }
         }
 
-        await _analyticsState.WriteStateAsync();
+        await analyticsState.WriteStateAsync();
 
         // Persist to long-term storage
-        await _analyticsRepository.SaveEventAsync(analyticsEvent);
+        await analyticsRepository.SaveEventAsync(analyticsEvent);
 
-        _logger.LogDebug("Recorded analytics event: {EventType} for {EntityId}", 
+        logger.LogDebug("Recorded analytics event: {EventType} for {EntityId}", 
             analyticsEvent.EventType, analyticsEvent.EntityId);
     }
 
     public async Task<AnalyticsReport> GenerateReportAsync(DateTime from, DateTime to)
     {
-        var events = await _analyticsRepository.GetEventsAsync(from, to);
+        var events = await analyticsRepository.GetEventsAsync(from, to);
         
         var report = new AnalyticsReport
         {
@@ -499,7 +499,7 @@ public class AnalyticsGrain : Grain, IAnalyticsGrain
 
     public async Task<UserActivityReport> GetUserActivityAsync(string userId)
     {
-        var events = await _analyticsRepository.GetUserEventsAsync(userId);
+        var events = await analyticsRepository.GetUserEventsAsync(userId);
         
         return new UserActivityReport
         {
@@ -517,7 +517,7 @@ public class AnalyticsGrain : Grain, IAnalyticsGrain
 
     public async Task<ProcessingMetrics> GetProcessingMetricsAsync()
     {
-        var events = await _analyticsRepository.GetProcessingEventsAsync();
+        var events = await analyticsRepository.GetProcessingEventsAsync();
         
         var completedJobs = events.Where(e => e.EventType == "ProcessingCompleted").ToList();
         var failedJobs = events.Where(e => e.EventType == "ProcessingFailed").ToList();
@@ -857,36 +857,36 @@ public class DocumentSubscriptionsWithOrleans
 // Stream observer for processing events
 public class ProcessingEventObserver : IAsyncObserver<ProcessingEvent>
 {
-    private readonly ILogger<ProcessingEventObserver> _logger;
-    private readonly IHubContext<ProcessingHub> _hubContext;
+    private readonly ILogger<ProcessingEventObserver> logger;
+    private readonly IHubContext<ProcessingHub> hubContext;
 
     public ProcessingEventObserver(
         ILogger<ProcessingEventObserver> logger,
         IHubContext<ProcessingHub> hubContext)
     {
-        _logger = logger;
-        _hubContext = hubContext;
+        logger = logger;
+        hubContext = hubContext;
     }
 
     public async Task OnNextAsync(ProcessingEvent item, StreamSequenceToken? token = null)
     {
-        _logger.LogDebug("Processing event received: {EventType} for {DocumentId}", 
+        logger.LogDebug("Processing event received: {EventType} for {DocumentId}", 
             item.Type, item.DocumentId);
 
         // Forward to SignalR clients
-        await _hubContext.Clients.Group($"document:{item.DocumentId}")
+        await hubContext.Clients.Group($"document:{item.DocumentId}")
             .SendAsync("ProcessingUpdate", item);
     }
 
     public Task OnCompletedAsync()
     {
-        _logger.LogDebug("Processing event stream completed");
+        logger.LogDebug("Processing event stream completed");
         return Task.CompletedTask;
     }
 
     public Task OnErrorAsync(Exception ex)
     {
-        _logger.LogError(ex, "Error in processing event stream");
+        logger.LogError(ex, "Error in processing event stream");
         return Task.CompletedTask;
     }
 }

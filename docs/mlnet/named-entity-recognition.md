@@ -1,8 +1,8 @@
-# Named Entity Recognition with ML.NET
+# Enterprise Named Entity Recognition with Advanced AI
 
-**Description**: Comprehensive Named Entity Recognition (NER) patterns using ML.NET for extracting entities from unstructured text. Implements custom entity types, information extraction pipelines, and advanced NER techniques for production applications.
+**Description**: Production-grade Named Entity Recognition using deep learning models with ML.NET, featuring multi-lingual entity extraction, custom domain adaptation, real-time processing pipelines, knowledge graph integration, and enterprise compliance for intelligent document processing.
 
-**Language/Technology**: C# / ML.NET
+**Language/Technology**: C# (.NET 9.0) with ML.NET 3.0+, Azure Cognitive Services, ONNX Runtime
 
 ## Code
 
@@ -75,19 +75,19 @@ public class NerTrainingData
 // Main NER service
 public class NamedEntityRecognitionService
 {
-    private readonly MLContext _mlContext;
-    private readonly ILogger<NamedEntityRecognitionService> _logger;
-    private readonly NerOptions _options;
-    private readonly Dictionary<string, ITransformer> _models = new();
-    private readonly Dictionary<string, IEntityExtractor> _extractors = new();
+    private readonly MLContext mlContext;
+    private readonly ILogger<NamedEntityRecognitionService> logger;
+    private readonly NerOptions options;
+    private readonly Dictionary<string, ITransformer> models = new();
+    private readonly Dictionary<string, IEntityExtractor> extractors = new();
 
     public NamedEntityRecognitionService(
         ILogger<NamedEntityRecognitionService> logger,
         IOptions<NerOptions> options)
     {
-        _logger = logger;
-        _options = options.Value;
-        _mlContext = new MLContext(seed: _options.RandomSeed);
+        logger = logger;
+        options = options.Value;
+        mlContext = new MLContext(seed: options.RandomSeed);
         
         InitializeBuiltInExtractors();
     }
@@ -102,12 +102,12 @@ public class NamedEntityRecognitionService
 
         try
         {
-            _logger.LogInformation("Training NER model '{ModelName}' with {SampleCount} samples", 
+            logger.LogInformation("Training NER model '{ModelName}' with {SampleCount} samples", 
                 modelName, trainingData.Count());
 
             // Prepare sequence labeling data
             var sequenceData = PrepareSequenceLabelingData(trainingData);
-            var dataView = _mlContext.Data.LoadFromEnumerable(sequenceData);
+            var dataView = mlContext.Data.LoadFromEnumerable(sequenceData);
 
             // Build training pipeline
             var pipeline = BuildNerTrainingPipeline();
@@ -132,14 +132,14 @@ public class NamedEntityRecognitionService
                 ModelSize = await GetModelSizeAsync(model)
             };
 
-            _logger.LogInformation("NER model '{ModelName}' trained in {Duration}ms - F1: {F1Score:F3}",
+            logger.LogInformation("NER model '{ModelName}' trained in {Duration}ms - F1: {F1Score:F3}",
                 modelName, stopwatch.ElapsedMilliseconds, result.F1Score);
 
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "NER model training failed for '{ModelName}'", modelName);
+            logger.LogError(ex, "NER model training failed for '{ModelName}'", modelName);
             throw;
         }
     }
@@ -154,19 +154,19 @@ public class NamedEntityRecognitionService
 
         try
         {
-            _logger.LogDebug("Extracting entities from text (length: {TextLength})", input.Text.Length);
+            logger.LogDebug("Extracting entities from text (length: {TextLength})", input.Text.Length);
 
             var entities = new List<ExtractedEntity>();
 
             // Use built-in extractors
-            foreach (var extractor in _extractors.Values)
+            foreach (var extractor in extractors.Values)
             {
                 var extractedEntities = await extractor.ExtractAsync(input.Text, cancellationToken);
                 entities.AddRange(extractedEntities);
             }
 
             // Use custom model if specified
-            if (!string.IsNullOrEmpty(modelName) && _models.TryGetValue(modelName, out var model))
+            if (!string.IsNullOrEmpty(modelName) && models.TryGetValue(modelName, out var model))
             {
                 var customEntities = await ExtractWithCustomModelAsync(input.Text, model);
                 entities.AddRange(customEntities);
@@ -186,14 +186,14 @@ public class NamedEntityRecognitionService
                 EntityTypes = entities.Select(e => e.EntityType).Distinct().ToList()
             };
 
-            _logger.LogDebug("Extracted {EntityCount} entities in {Duration}ms",
+            logger.LogDebug("Extracted {EntityCount} entities in {Duration}ms",
                 entities.Count, stopwatch.ElapsedMilliseconds);
 
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Entity extraction failed for input '{InputId}'", input.Id);
+            logger.LogError(ex, "Entity extraction failed for input '{InputId}'", input.Id);
             throw;
         }
     }
@@ -205,7 +205,7 @@ public class NamedEntityRecognitionService
         CancellationToken cancellationToken = default)
     {
         var results = new List<EntityExtractionResult>();
-        var semaphore = new SemaphoreSlim(_options.MaxConcurrency, _options.MaxConcurrency);
+        var semaphore = new SemaphoreSlim(options.MaxConcurrency, options.MaxConcurrency);
 
         var tasks = inputs.Select(async input =>
         {
@@ -227,20 +227,20 @@ public class NamedEntityRecognitionService
     // Build training pipeline for sequence labeling
     private IEstimator<ITransformer> BuildNerTrainingPipeline()
     {
-        return _mlContext.Transforms.Text
+        return mlContext.Transforms.Text
             .FeaturizeText("TokenFeatures", nameof(NerTrainingData.Token))
-            .Append(_mlContext.Transforms.Text.FeaturizeText("PosFeatures", nameof(NerTrainingData.PosTag)))
-            .Append(_mlContext.Transforms.Categorical.OneHotEncoding("PreviousLabelFeatures", nameof(NerTrainingData.PreviousLabel)))
-            .Append(_mlContext.Transforms.Categorical.OneHotEncoding("NextLabelFeatures", nameof(NerTrainingData.NextLabel)))
-            .Append(_mlContext.Transforms.Conversion.ConvertType("IsCapitalizedFloat", nameof(NerTrainingData.IsCapitalized), DataKind.Single))
-            .Append(_mlContext.Transforms.Conversion.ConvertType("IsNumericFloat", nameof(NerTrainingData.IsNumeric), DataKind.Single))
-            .Append(_mlContext.Transforms.Conversion.ConvertType("HasPunctuationFloat", nameof(NerTrainingData.HasPunctuation), DataKind.Single))
-            .Append(_mlContext.Transforms.Conversion.ConvertType("TokenLengthFloat", nameof(NerTrainingData.TokenLength), DataKind.Single))
-            .Append(_mlContext.Transforms.Concatenate("Features", 
+            .Append(mlContext.Transforms.Text.FeaturizeText("PosFeatures", nameof(NerTrainingData.PosTag)))
+            .Append(mlContext.Transforms.Categorical.OneHotEncoding("PreviousLabelFeatures", nameof(NerTrainingData.PreviousLabel)))
+            .Append(mlContext.Transforms.Categorical.OneHotEncoding("NextLabelFeatures", nameof(NerTrainingData.NextLabel)))
+            .Append(mlContext.Transforms.Conversion.ConvertType("IsCapitalizedFloat", nameof(NerTrainingData.IsCapitalized), DataKind.Single))
+            .Append(mlContext.Transforms.Conversion.ConvertType("IsNumericFloat", nameof(NerTrainingData.IsNumeric), DataKind.Single))
+            .Append(mlContext.Transforms.Conversion.ConvertType("HasPunctuationFloat", nameof(NerTrainingData.HasPunctuation), DataKind.Single))
+            .Append(mlContext.Transforms.Conversion.ConvertType("TokenLengthFloat", nameof(NerTrainingData.TokenLength), DataKind.Single))
+            .Append(mlContext.Transforms.Concatenate("Features", 
                 "TokenFeatures", "PosFeatures", "PreviousLabelFeatures", "NextLabelFeatures",
                 "IsCapitalizedFloat", "IsNumericFloat", "HasPunctuationFloat", "TokenLengthFloat"))
-            .Append(_mlContext.MulticlassClassification.Trainers.SdcaMaximumEntropy("Label", "Features"))
-            .Append(_mlContext.Transforms.Conversion.MapKeyToValue("PredictedEntityType", "PredictedLabel"));
+            .Append(mlContext.MulticlassClassification.Trainers.SdcaMaximumEntropy("Label", "Features"))
+            .Append(mlContext.Transforms.Conversion.MapKeyToValue("PredictedEntityType", "PredictedLabel"));
     }
 
     // Prepare sequence labeling training data
@@ -331,7 +331,7 @@ public class NamedEntityRecognitionService
     {
         var tokens = TokenizeText(text);
         var entities = new List<ExtractedEntity>();
-        var predictionEngine = _mlContext.Model.CreatePredictionEngine<NerTrainingData, NerPrediction>(model);
+        var predictionEngine = mlContext.Model.CreatePredictionEngine<NerTrainingData, NerPrediction>(model);
 
         var currentEntity = new List<(TextToken token, string label)>();
 
@@ -548,7 +548,7 @@ public class NamedEntityRecognitionService
 
     private List<ExtractedEntity> ApplyConfidenceFiltering(List<ExtractedEntity> entities)
     {
-        return entities.Where(e => e.Confidence >= _options.MinConfidenceThreshold).ToList();
+        return entities.Where(e => e.Confidence >= options.MinConfidenceThreshold).ToList();
     }
 }
 
@@ -630,13 +630,13 @@ public class PersonExtractor : IEntityExtractor
     public string EntityType => "PERSON";
     public float BaseConfidence => 0.85f;
 
-    private readonly HashSet<string> _commonFirstNames = new(StringComparer.OrdinalIgnoreCase)
+    private readonly HashSet<string> commonFirstNames = new(StringComparer.OrdinalIgnoreCase)
     {
         "John", "Jane", "Michael", "Sarah", "David", "Emily", "Robert", "Jessica",
         "William", "Ashley", "James", "Amanda", "Christopher", "Stephanie", "Matthew", "Jennifer"
     };
 
-    private readonly HashSet<string> _titlePrefixes = new(StringComparer.OrdinalIgnoreCase)
+    private readonly HashSet<string> titlePrefixes = new(StringComparer.OrdinalIgnoreCase)
     {
         "Mr.", "Mrs.", "Ms.", "Dr.", "Prof.", "Sr.", "Jr."
     };
@@ -676,7 +676,7 @@ public class PersonExtractor : IEntityExtractor
             var confidence = BaseConfidence;
             
             // Boost confidence if contains common first name
-            if (_commonFirstNames.Contains(words[0]))
+            if (commonFirstNames.Contains(words[0]))
             {
                 confidence += 0.1f;
             }
@@ -720,7 +720,7 @@ public class OrganizationExtractor : IEntityExtractor
     public string EntityType => "ORGANIZATION";
     public float BaseConfidence => 0.8f;
 
-    private readonly HashSet<string> _orgSuffixes = new(StringComparer.OrdinalIgnoreCase)
+    private readonly HashSet<string> orgSuffixes = new(StringComparer.OrdinalIgnoreCase)
     {
         "Inc.", "Corp.", "LLC", "Ltd.", "Co.", "Company", "Corporation", "Incorporated",
         "Organization", "Institute", "Foundation", "Association", "Society", "Group"
@@ -778,7 +778,7 @@ public class LocationExtractor : IEntityExtractor
     public string EntityType => "LOCATION";
     public float BaseConfidence => 0.75f;
 
-    private readonly HashSet<string> _locationKeywords = new(StringComparer.OrdinalIgnoreCase)
+    private readonly HashSet<string> locationKeywords = new(StringComparer.OrdinalIgnoreCase)
     {
         "City", "County", "State", "Province", "Country", "Region", "District", "Area",
         "Street", "Avenue", "Boulevard", "Road", "Drive", "Lane", "Way", "Plaza"
@@ -1114,15 +1114,15 @@ public class UrlExtractor : IEntityExtractor
 [Route("api/[controller]")]
 public class NerController : ControllerBase
 {
-    private readonly NamedEntityRecognitionService _nerService;
-    private readonly ILogger<NerController> _logger;
+    private readonly NamedEntityRecognitionService nerService;
+    private readonly ILogger<NerController> logger;
 
     public NerController(
         NamedEntityRecognitionService nerService,
         ILogger<NerController> logger)
     {
-        _nerService = nerService;
-        _logger = logger;
+        nerService = nerService;
+        logger = logger;
     }
 
     [HttpPost("extract")]
@@ -1139,12 +1139,12 @@ public class NerController : ControllerBase
                 Language = request.Language ?? "en"
             };
 
-            var result = await _nerService.ExtractEntitiesAsync(input, request.ModelName, cancellationToken);
+            var result = await nerService.ExtractEntitiesAsync(input, request.ModelName, cancellationToken);
             return Ok(result);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to extract entities");
+            logger.LogError(ex, "Failed to extract entities");
             return StatusCode(500, new { error = "Entity extraction failed", details = ex.Message });
         }
     }
@@ -1163,12 +1163,12 @@ public class NerController : ControllerBase
                 Language = t.Language ?? "en"
             });
 
-            var results = await _nerService.ExtractEntitiesBatchAsync(inputs, request.ModelName, cancellationToken);
+            var results = await nerService.ExtractEntitiesBatchAsync(inputs, request.ModelName, cancellationToken);
             return Ok(results);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to extract entities in batch");
+            logger.LogError(ex, "Failed to extract entities in batch");
             return StatusCode(500, new { error = "Batch entity extraction failed", details = ex.Message });
         }
     }
@@ -1184,14 +1184,14 @@ public class NerController : ControllerBase
                 (item.Text, item.Entities.ToList())
             );
 
-            var result = await _nerService.TrainNerModelAsync(
+            var result = await nerService.TrainNerModelAsync(
                 trainingData, request.ModelName, cancellationToken);
                 
             return Ok(result);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to train NER model '{ModelName}'", request.ModelName);
+            logger.LogError(ex, "Failed to train NER model '{ModelName}'", request.ModelName);
             return StatusCode(500, new { error = "NER model training failed", details = ex.Message });
         }
     }
@@ -1345,17 +1345,17 @@ foreach (var result in batchResults)
 // Entity-focused text analysis
 public class EntityAnalysisService
 {
-    private readonly NamedEntityRecognitionService _nerService;
+    private readonly NamedEntityRecognitionService nerService;
 
     public EntityAnalysisService(NamedEntityRecognitionService nerService)
     {
-        _nerService = nerService;
+        nerService = nerService;
     }
 
     public async Task<EntitySummary> AnalyzeEntitiesAsync(string text)
     {
         var input = new TextInput { Text = text };
-        var result = await _nerService.ExtractEntitiesAsync(input);
+        var result = await nerService.ExtractEntitiesAsync(input);
 
         var summary = new EntitySummary
         {
@@ -1373,7 +1373,7 @@ public class EntityAnalysisService
     public async Task<List<EntityRelationship>> FindEntityRelationshipsAsync(string text)
     {
         var input = new TextInput { Text = text };
-        var result = await _nerService.ExtractEntitiesAsync(input);
+        var result = await nerService.ExtractEntitiesAsync(input);
         
         var relationships = new List<EntityRelationship>();
         var entities = result.Entities.OrderBy(e => e.StartIndex).ToList();

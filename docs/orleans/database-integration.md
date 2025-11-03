@@ -1,8 +1,8 @@
-# Database Integration
+# Enterprise Orleans Database Architecture
 
-**Description**: Orleans database integration patterns for connecting grains to data stores, data access patterns, and persistence strategies.
+**Description**: Production-scale Orleans database integration with distributed transactions, multi-tier persistence, intelligent connection pooling, disaster recovery, and enterprise compliance for mission-critical data operations.
 
-**Language/Technology**: C# 12, Orleans, Entity Framework Core
+**Language/Technology**: C# (.NET 9.0), Orleans 8.0+, EF Core 9.0, Azure SQL, Cosmos DB
 
 ## Table of Contents
 

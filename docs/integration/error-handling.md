@@ -1,8 +1,10 @@
 # Error Handling Patterns
 
-**Description**: Comprehensive resilience and error handling patterns demonstrating circuit breakers, retry policies, bulkhead isolation, graceful degradation, and fault tolerance strategies for distributed systems.
+**Description**: Comprehensive resilience and error handling patterns demonstrating circuit breakers, retry policies, bulkhead isolation, graceful degradation, and fault tolerance strategies for distributed systems. Follows RESTful design principles and implements proper HTTP status codes with structured error responses.
 
-**Integration Pattern**: End-to-end error handling covering transient fault recovery, cascading failure prevention, system resilience, and comprehensive error monitoring with observability integration.
+**Language/Technology**: C# / .NET 8.0 / ASP.NET Core
+
+**Integration Pattern**: End-to-end error handling covering transient fault recovery, cascading failure prevention, system resilience, and comprehensive error monitoring with observability integration using structured logging and correlation IDs.
 
 ## Resilience Architecture Overview
 
@@ -46,26 +48,20 @@ using Polly;
 using Polly.CircuitBreaker;
 using Polly.Extensions.Http;
 
-public class AdvancedCircuitBreakerService
+public class AdvancedCircuitBreakerService(
+    ILogger<AdvancedCircuitBreakerService> logger,
+    IMetrics metrics,
+    IOptions<CircuitBreakerConfiguration> configuration)
 {
-    private readonly IAsyncPolicy<HttpResponseMessage> circuitBreakerPolicy;
-    private readonly ILogger<AdvancedCircuitBreakerService> logger;
-    private readonly IMetrics metrics;
-    private readonly CircuitBreakerConfiguration configuration;
+    private readonly IAsyncPolicy<HttpResponseMessage> circuitBreakerPolicy = CreateCircuitBreakerPolicy(logger, metrics, configuration.Value);
+    private readonly ILogger<AdvancedCircuitBreakerService> logger = logger;
+    private readonly IMetrics metrics = metrics;
+    private readonly CircuitBreakerConfiguration configuration = configuration.Value;
 
-    public AdvancedCircuitBreakerService(
-        ILogger<AdvancedCircuitBreakerService> logger,
-        IMetrics metrics,
-        IOptions<CircuitBreakerConfiguration> configuration)
-    {
-        this.logger = logger;
-        this.metrics = metrics;
-        this.configuration = configuration.Value;
-
-        circuitBreakerPolicy = CreateCircuitBreakerPolicy();
-    }
-
-    private IAsyncPolicy<HttpResponseMessage> CreateCircuitBreakerPolicy()
+    private static IAsyncPolicy<HttpResponseMessage> CreateCircuitBreakerPolicy(
+        ILogger logger, 
+        IMetrics metrics, 
+        CircuitBreakerConfiguration config)
     {
         return Policy
             .Handle<HttpRequestException>()
@@ -534,7 +530,7 @@ public class FeatureToggleService : IFeatureToggleService
 
     public async Task<bool> IsEnabledAsync(string featureName, string? userId = null)
     {
-        var cacheKey = $"feature_toggle:{featureName}:{userId ?? "global"}";
+        var cacheKey = $"featuretoggle:{featureName}:{userId ?? "global"}";
         
         if (cache.TryGetValue(cacheKey, out bool cachedResult))
         {

@@ -48,9 +48,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: ml_examples
-      POSTGRES_USER: ml_user
-      POSTGRES_PASSWORD: ml_pass123
+      POSTGRESDB: ml_examples
+      POSTGRESUSER: ml_user
+      POSTGRESPASSWORD: ml_pass123
     volumes:
       - ../data/postgres:/var/lib/postgresql/data
       - ../sql/init:/docker-entrypoint-initdb.d/
@@ -86,9 +86,9 @@ services:
     volumes:
       - ../data/clickhouse:/var/lib/clickhouse
     environment:
-      CLICKHOUSE_DB: ml_analytics
-      CLICKHOUSE_USER: ml_user
-      CLICKHOUSE_PASSWORD: ml_pass123
+      CLICKHOUSEDB: ml_analytics
+      CLICKHOUSEUSER: ml_user
+      CLICKHOUSEPASSWORD: ml_pass123
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8123/ping"]
@@ -167,7 +167,7 @@ CREATE TABLE IF NOT EXISTS ml_schema.document_embeddings (
     document_id VARCHAR(255) NOT NULL,
     content_hash VARCHAR(64) NOT NULL,
     embedding vector(1536), -- OpenAI embedding dimension
-    model_name VARCHAR(100) NOT NULL,
+    modelName VARCHAR(100) NOT NULL,
     chunk_index INTEGER DEFAULT 0,
     metadata JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -176,7 +176,7 @@ CREATE TABLE IF NOT EXISTS ml_schema.document_embeddings (
 -- Model artifacts tracking
 CREATE TABLE IF NOT EXISTS ml_schema.model_artifacts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    experiment_id UUID REFERENCES ml_schema.experiments(id),
+    experimentId UUID REFERENCES ml_schema.experiments(id),
     artifact_name VARCHAR(255) NOT NULL,
     artifact_type VARCHAR(100) NOT NULL, -- 'model', 'scaler', 'vectorizer'
     file_path TEXT NOT NULL,
@@ -192,10 +192,10 @@ CREATE INDEX IF NOT EXISTS idx_experiments_model_type ON ml_schema.experiments(m
 CREATE INDEX IF NOT EXISTS idx_experiments_created_at ON ml_schema.experiments(created_at);
 
 CREATE INDEX IF NOT EXISTS idx_embeddings_document_id ON ml_schema.document_embeddings(document_id);
-CREATE INDEX IF NOT EXISTS idx_embeddings_model_name ON ml_schema.document_embeddings(model_name);
+CREATE INDEX IF NOT EXISTS idx_embeddings_modelName ON ml_schema.document_embeddings(modelName);
 CREATE INDEX IF NOT EXISTS idx_embeddings_vector ON ml_schema.document_embeddings USING ivfflat (embedding vector_cosine_ops);
 
-CREATE INDEX IF NOT EXISTS idx_artifacts_experiment_id ON ml_schema.model_artifacts(experiment_id);
+CREATE INDEX IF NOT EXISTS idx_artifacts_experimentId ON ml_schema.model_artifacts(experimentId);
 CREATE INDEX IF NOT EXISTS idx_artifacts_type ON ml_schema.model_artifacts(artifact_type);
 ```
 
@@ -255,11 +255,9 @@ public class MLExperiment
     
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
-    
+
     [Column("updated_at")]
-    public DateTime UpdatedAt { get; set; }
-    
-    [Column("completed_at")]
+    public DateTime UpdatedAt { get; set; }    [Column("completed_at")]
     public DateTime? CompletedAt { get; set; }
 }
 
@@ -276,7 +274,7 @@ public class DocumentEmbedding
     
     public Vector? Embedding { get; set; }
     
-    [Column("model_name")]
+    [Column("modelName")]
     public string ModelName { get; set; } = string.Empty;
     
     [Column("chunk_index")]
@@ -680,8 +678,8 @@ public class DuckDBAnalyticsService(string databasePath = "./data/duckdb/ml_anal
             -- Create experiments performance table
             CREATE TABLE IF NOT EXISTS experiment_performance (
                 id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-                experiment_id UUID NOT NULL,
-                model_name VARCHAR NOT NULL,
+                experimentId UUID NOT NULL,
+                modelName VARCHAR NOT NULL,
                 dataset_name VARCHAR NOT NULL,
                 accuracy DOUBLE,
                 precision_score DOUBLE,
@@ -696,7 +694,7 @@ public class DuckDBAnalyticsService(string databasePath = "./data/duckdb/ml_anal
             -- Create model predictions table for batch analysis
             CREATE TABLE IF NOT EXISTS model_predictions (
                 id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-                model_name VARCHAR NOT NULL,
+                modelName VARCHAR NOT NULL,
                 input_features JSON,
                 predicted_value DOUBLE,
                 actual_value DOUBLE,
@@ -707,11 +705,11 @@ public class DuckDBAnalyticsService(string databasePath = "./data/duckdb/ml_anal
             -- Create feature importance table
             CREATE TABLE IF NOT EXISTS feature_importance (
                 id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-                experiment_id UUID NOT NULL,
+                experimentId UUID NOT NULL,
                 feature_name VARCHAR NOT NULL,
                 importance_score DOUBLE,
                 feature_type VARCHAR, -- 'numerical', 'categorical', 'text'
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
             """;
         
@@ -729,7 +727,7 @@ public class DuckDBAnalyticsService(string databasePath = "./data/duckdb/ml_anal
         
         var insertQuery = """
             INSERT INTO experiment_performance 
-            (experiment_id, model_name, dataset_name, accuracy, precision_score, recall, 
+            (experimentId, modelName, dataset_name, accuracy, precision_score, recall, 
              f1_score, training_time_seconds, inference_time_ms, memory_usage_mb)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             """;
@@ -755,22 +753,22 @@ public class DuckDBAnalyticsService(string databasePath = "./data/duckdb/ml_anal
         string modelName, 
         int lastDays = 30)
     {
-        using var connection = new DuckDBConnection(_connectionString);
+        using var connection = new DuckDBConnection(connectionString);
         await connection.OpenAsync();
         
         var query = """
             SELECT 
                 DATE_TRUNC('day', timestamp) as date,
-                model_name,
+                modelName,
                 AVG(accuracy) as avg_accuracy,
                 STDDEV(accuracy) as accuracy_stddev,
                 AVG(inference_time_ms) as avg_inference_time,
                 PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY inference_time_ms) as p95_inference_time,
                 COUNT(*) as experiment_count
             FROM experiment_performance 
-            WHERE model_name = ? 
+            WHERE modelName = ? 
               AND timestamp >= CURRENT_DATE - INTERVAL ? DAY
-            GROUP BY DATE_TRUNC('day', timestamp), model_name
+            GROUP BY DATE_TRUNC('day', timestamp), modelName
             ORDER BY date DESC;
             """;
         
@@ -786,7 +784,7 @@ public class DuckDBAnalyticsService(string databasePath = "./data/duckdb/ml_anal
             trends.Add(new ModelPerformanceTrend
             {
                 Date = reader.GetDateTime("date"),
-                ModelName = reader.GetString("model_name"),
+                ModelName = reader.GetString("modelName"),
                 AverageAccuracy = reader.IsDBNull("avg_accuracy") ? 0 : reader.GetDouble("avg_accuracy"),
                 AccuracyStdDev = reader.IsDBNull("accuracy_stddev") ? 0 : reader.GetDouble("accuracy_stddev"),
                 AverageInferenceTime = reader.IsDBNull("avg_inference_time") ? 0 : reader.GetDouble("avg_inference_time"),
@@ -802,13 +800,13 @@ public class DuckDBAnalyticsService(string databasePath = "./data/duckdb/ml_anal
     // Compare multiple models
     public async Task<List<ModelComparison>> CompareModelsAsync(string[] modelNames)
     {
-        using var connection = new DuckDBConnection(_connectionString);
+        using var connection = new DuckDBConnection(connectionString);
         await connection.OpenAsync();
         
         var modelList = string.Join("','", modelNames);
         var query = $"""
             SELECT 
-                model_name,
+                modelName,
                 COUNT(*) as total_experiments,
                 AVG(accuracy) as avg_accuracy,
                 MAX(accuracy) as best_accuracy,
@@ -817,8 +815,8 @@ public class DuckDBAnalyticsService(string databasePath = "./data/duckdb/ml_anal
                 AVG(inference_time_ms) as avg_inference_time,
                 AVG(f1_score) as avg_f1_score
             FROM experiment_performance 
-            WHERE model_name IN ('{modelList}')
-            GROUP BY model_name
+            WHERE modelName IN ('{modelList}')
+            GROUP BY modelName
             ORDER BY avg_accuracy DESC;
             """;
         
@@ -831,7 +829,7 @@ public class DuckDBAnalyticsService(string databasePath = "./data/duckdb/ml_anal
         {
             comparisons.Add(new ModelComparison
             {
-                ModelName = reader.GetString("model_name"),
+                ModelName = reader.GetString("modelName"),
                 TotalExperiments = reader.GetInt32("total_experiments"),
                 AverageAccuracy = reader.GetDouble("avg_accuracy"),
                 BestAccuracy = reader.GetDouble("best_accuracy"),
@@ -849,12 +847,12 @@ public class DuckDBAnalyticsService(string databasePath = "./data/duckdb/ml_anal
     // Batch insert predictions for analysis
     public async Task StoreBatchPredictionsAsync(List<ModelPrediction> predictions)
     {
-        using var connection = new DuckDBConnection(_connectionString);
+        using var connection = new DuckDBConnection(connectionString);
         await connection.OpenAsync();
         
         var insertQuery = """
             INSERT INTO model_predictions 
-            (model_name, input_features, predicted_value, actual_value, confidence)
+            (modelName, input_features, predicted_value, actual_value, confidence)
             VALUES (?, ?, ?, ?, ?);
             """;
         
@@ -1200,7 +1198,7 @@ docker exec -it ml_postgres psql -U ml_user -d ml_examples
 SELECT * FROM ml_schema.experiments;
 
 # Query embeddings
-SELECT document_id, model_name, created_at FROM ml_schema.document_embeddings;
+SELECT document_id, modelName, createdAt FROM ml_schema.document_embeddings;
 ```
 
 **Chroma:**
@@ -1258,11 +1256,11 @@ metadata:
   name: ml-config
   namespace: ml-platform
 data:
-  POSTGRES_DB: "ml_examples"
-  POSTGRES_USER: "ml_user"
-  CHROMA_HOST: "chroma-service"
-  CHROMA_PORT: "8000"
-  DUCKDB_PATH: "/data/analytics.duckdb"
+  POSTGRESDB: "ml_examples"
+  POSTGRESUSER: "ml_user"
+  CHROMAHOST: "chroma-service"
+  CHROMAPORT: "8000"
+  DUCKDBPATH: "/data/analytics.duckdb"
 ```
 
 **PostgreSQL with Persistent Storage:**

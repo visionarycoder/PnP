@@ -1,8 +1,9 @@
-# .NET Aspire Health Monitoring
+# Enterprise Health Monitoring & Observability
 
-**Description**: Health checks and monitoring for distributed components, including real-time health dashboards, alerting systems, custom health check implementations, and integration with monitoring platforms.
+**Description**: Enterprise-grade health monitoring and observability for distributed .NET Aspire applications including predictive health analytics, intelligent alerting with ML-based anomaly detection, comprehensive SLA monitoring, automated remediation workflows, and regulatory compliance reporting.
 
-**Language/Technology**: C#, .NET Aspire, .NET 9.0
+**Language/Technology**: C#, .NET Aspire, .NET 9.0, OpenTelemetry, Azure Monitor, Application Insights
+**Enterprise Features**: Predictive analytics, intelligent alerting, SLA monitoring, automated remediation, compliance reporting, and real-time performance dashboards
 
 **Code**:
 
@@ -11,52 +12,66 @@
 ```csharp
 namespace DocumentProcessor.Aspire.Health;
 
-// Advanced health monitoring interface
+/// <summary>
+/// Advanced health monitoring interface for Aspire distributed systems
+/// Provides comprehensive health status tracking with OpenTelemetry integration
+/// </summary>
 public interface IHealthMonitoringService
 {
+    /// <summary>Gets the overall health status of all monitored components</summary>
     Task<OverallHealthStatus> GetOverallHealthAsync(CancellationToken cancellationToken = default);
+    
+    /// <summary>Gets health status for a specific component with telemetry</summary>
     Task<ComponentHealthReport> GetComponentHealthAsync(string componentName, CancellationToken cancellationToken = default);
+    
+    /// <summary>Gets health status for all components with distributed tracing</summary>
     Task<List<ComponentHealthReport>> GetAllComponentsHealthAsync(CancellationToken cancellationToken = default);
+    
+    /// <summary>Provides real-time health status updates via async enumerable</summary>
     IAsyncEnumerable<HealthStatusUpdate> WatchHealthAsync(string? componentName = null, CancellationToken cancellationToken = default);
+    
+    /// <summary>Registers custom health check with Aspire service orchestration</summary>
     Task RegisterCustomHealthCheckAsync(string name, Func<CancellationToken, Task<HealthCheckResult>> healthCheck, CancellationToken cancellationToken = default);
+    
+    /// <summary>Retrieves historical health data with time-based filtering</summary>
     Task<HealthHistory> GetHealthHistoryAsync(string componentName, TimeSpan period, CancellationToken cancellationToken = default);
+    
+    /// <summary>Records custom metrics with structured tags for observability</summary>
     Task RecordMetricAsync(string metricName, double value, Dictionary<string, string>? tags = null, CancellationToken cancellationToken = default);
 }
 
-public class DistributedHealthMonitoringService : IHealthMonitoringService
+/// <summary>
+/// Distributed health monitoring service for Aspire cloud-native applications
+/// Implements comprehensive health tracking with OpenTelemetry integration
+/// </summary>
+public class DistributedHealthMonitoringService(
+    HealthCheckService healthCheckService,
+    ILogger<DistributedHealthMonitoringService> logger,
+    IServiceProvider serviceProvider,
+    IMetricsLogger metricsLogger) : IHealthMonitoringService
 {
-    private readonly HealthCheckService _healthCheckService;
-    private readonly ILogger<DistributedHealthMonitoringService> _logger;
-    private readonly IServiceProvider _serviceProvider;
-    private readonly ConcurrentDictionary<string, Func<CancellationToken, Task<HealthCheckResult>>> _customHealthChecks = new();
-    private readonly ConcurrentDictionary<string, CircularBuffer<HealthSnapshot>> _healthHistory = new();
-    private readonly IMetricsLogger _metricsLogger;
-    private readonly Timer _healthHistoryTimer;
-    private readonly SemaphoreSlim _monitoringSemaphore = new(1, 1);
+    private readonly HealthCheckService healthCheckService = healthCheckService;
+    private readonly ILogger<DistributedHealthMonitoringService> logger = logger;
+    private readonly IServiceProvider serviceProvider = serviceProvider;
+    private readonly IMetricsLogger metricsLogger = metricsLogger;
+    private readonly ConcurrentDictionary<string, Func<CancellationToken, Task<HealthCheckResult>>> customHealthChecks = new();
+    private readonly ConcurrentDictionary<string, CircularBuffer<HealthSnapshot>> healthHistory = new();
+    private readonly SemaphoreSlim monitoringSemaphore = new(1, 1);
+    
+    // Record health snapshots every 30 seconds for historical tracking
+    private readonly Timer healthHistoryTimer = new(RecordHealthSnapshot, null, TimeSpan.Zero, TimeSpan.FromSeconds(30));
 
-    public DistributedHealthMonitoringService(
-        HealthCheckService healthCheckService,
-        ILogger<DistributedHealthMonitoringService> logger,
-        IServiceProvider serviceProvider,
-        IMetricsLogger metricsLogger)
-    {
-        _healthCheckService = healthCheckService;
-        _logger = logger;
-        _serviceProvider = serviceProvider;
-        _metricsLogger = metricsLogger;
-        
-        // Record health snapshots every 30 seconds
-        _healthHistoryTimer = new Timer(RecordHealthSnapshot, null, TimeSpan.Zero, TimeSpan.FromSeconds(30));
-    }
-
+    /// <summary>
+    /// Gets comprehensive health status with OpenTelemetry tracing
+    /// </summary>
     public async Task<OverallHealthStatus> GetOverallHealthAsync(CancellationToken cancellationToken = default)
     {
         using var activity = Activity.Current?.Source.StartActivity("HealthMonitoring.GetOverallHealth");
         
         try
         {
-            var healthReport = await _healthCheckService.CheckHealthAsync(cancellationToken);
-            var components = await GetAllComponentsHealthAsync(cancellationToken);
+            var healthReport = await healthCheckService.CheckHealthAsync(cancellationToken).ConfigureAwait(false);
+            var components = await GetAllComponentsHealthAsync(cancellationToken).ConfigureAwait(false);
 
             var criticalFailures = components.Count(c => c.Status == HealthStatus.Unhealthy && c.IsCritical);
             var warnings = components.Count(c => c.Status == HealthStatus.Degraded);
@@ -66,7 +81,13 @@ public class DistributedHealthMonitoringService : IHealthMonitoringService
                               warnings > 0 ? HealthStatus.Degraded :
                               HealthStatus.Healthy;
 
-            return new OverallHealthStatus
+            activity?.SetTag("health.status", overallStatus.ToString());
+            activity?.SetTag("health.total_components", components.Count);
+            activity?.SetTag("health.healthy_count", healthy);
+            activity?.SetTag("health.degraded_count", warnings);
+            activity?.SetTag("health.unhealthy_count", criticalFailures);
+
+            var result = new OverallHealthStatus
             {
                 Status = overallStatus,
                 TotalComponents = components.Count,
@@ -77,10 +98,16 @@ public class DistributedHealthMonitoringService : IHealthMonitoringService
                 TotalDuration = healthReport.TotalDuration,
                 Components = components.ToDictionary(c => c.Name, c => c)
             };
+
+            logger.LogInformation("Overall health check completed: {Status} - {Healthy}/{Total} healthy components",
+                overallStatus, healthy, components.Count);
+
+            return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get overall health status");
+            logger.LogError(ex, "Failed to get overall health status");
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
             
             return new OverallHealthStatus
             {
@@ -100,7 +127,7 @@ public class DistributedHealthMonitoringService : IHealthMonitoringService
         try
         {
             // Check built-in health checks first
-            var healthReport = await _healthCheckService.CheckHealthAsync(
+            var healthReport = await healthCheckService.CheckHealthAsync(
                 check => check.Name.Equals(componentName, StringComparison.OrdinalIgnoreCase), 
                 cancellationToken);
 
@@ -110,7 +137,7 @@ public class DistributedHealthMonitoringService : IHealthMonitoringService
             }
 
             // Check custom health checks
-            if (_customHealthChecks.TryGetValue(componentName, out var customCheck))
+            if (customHealthChecks.TryGetValue(componentName, out var customCheck))
             {
                 var result = await customCheck(cancellationToken);
                 return CreateComponentHealthReport(componentName, result);
@@ -135,7 +162,7 @@ public class DistributedHealthMonitoringService : IHealthMonitoringService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get health for component {ComponentName}", componentName);
+logger.LogError(ex, "Failed to get health for component {ComponentName}", componentName);
             
             return new ComponentHealthReport
             {
@@ -153,7 +180,7 @@ public class DistributedHealthMonitoringService : IHealthMonitoringService
         
         try
         {
-            var healthReport = await _healthCheckService.CheckHealthAsync(cancellationToken);
+            var healthReport = await healthCheckService.CheckHealthAsync(cancellationToken);
             var components = new List<ComponentHealthReport>();
 
             // Add built-in health checks
@@ -163,7 +190,7 @@ public class DistributedHealthMonitoringService : IHealthMonitoringService
             }
 
             // Add custom health checks
-            foreach (var (name, customCheck) in _customHealthChecks)
+            foreach (var (name, customCheck) in customHealthChecks)
             {
                 try
                 {
@@ -172,7 +199,7 @@ public class DistributedHealthMonitoringService : IHealthMonitoringService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Custom health check {HealthCheckName} failed", name);
+logger.LogWarning(ex, "Custom health check {HealthCheckName} failed", name);
                     components.Add(new ComponentHealthReport
                     {
                         Name = name,
@@ -188,7 +215,7 @@ public class DistributedHealthMonitoringService : IHealthMonitoringService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get all components health");
+logger.LogError(ex, "Failed to get all components health");
             return new List<ComponentHealthReport>();
         }
     }
@@ -199,8 +226,7 @@ public class DistributedHealthMonitoringService : IHealthMonitoringService
     {
         using var activity = Activity.Current?.Source.StartActivity("HealthMonitoring.WatchHealth");
         activity?.SetTag("component.name", componentName ?? "all");
-
-        _logger.LogDebug("Starting health monitoring watch for {ComponentName}", componentName ?? "all components");
+logger.LogDebug("Starting health monitoring watch for {ComponentName}", componentName ?? "all components");
 
         // Send initial status
         if (componentName != null)
@@ -250,8 +276,7 @@ public class DistributedHealthMonitoringService : IHealthMonitoringService
                         currentHealth.Status != previousStatus)
                     {
                         previousStatuses.AddOrUpdate(componentName, currentHealth.Status, (_, _) => currentHealth.Status);
-                        
-                        _logger.LogInformation("Component {ComponentName} status changed to {Status}",
+logger.LogInformation("Component {ComponentName} status changed to {Status}",
                             componentName, currentHealth.Status);
 
                         yield return new HealthStatusUpdate
@@ -276,8 +301,7 @@ public class DistributedHealthMonitoringService : IHealthMonitoringService
                             component.Status != previousStatus)
                         {
                             previousStatuses.AddOrUpdate(component.Name, component.Status, (_, _) => component.Status);
-                            
-                            _logger.LogInformation("Component {ComponentName} status changed to {Status}",
+logger.LogInformation("Component {ComponentName} status changed to {Status}",
                                 component.Name, component.Status);
 
                             yield return new HealthStatusUpdate
@@ -295,7 +319,7 @@ public class DistributedHealthMonitoringService : IHealthMonitoringService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during health monitoring watch");
+logger.LogError(ex, "Error during health monitoring watch");
                 
                 yield return new HealthStatusUpdate
                 {
@@ -313,9 +337,8 @@ public class DistributedHealthMonitoringService : IHealthMonitoringService
         Func<CancellationToken, Task<HealthCheckResult>> healthCheck, 
         CancellationToken cancellationToken = default)
     {
-        _customHealthChecks.AddOrUpdate(name, healthCheck, (_, _) => healthCheck);
-        
-        _logger.LogInformation("Registered custom health check: {HealthCheckName}", name);
+customHealthChecks.AddOrUpdate(name, healthCheck, (_, _) => healthCheck);
+logger.LogInformation("Registered custom health check: {HealthCheckName}", name);
         
         return Task.CompletedTask;
     }
@@ -327,7 +350,7 @@ public class DistributedHealthMonitoringService : IHealthMonitoringService
     {
         await Task.CompletedTask; // History retrieval is synchronous
         
-        if (!_healthHistory.TryGetValue(componentName, out var history))
+        if (!healthHistory.TryGetValue(componentName, out var history))
         {
             return new HealthHistory
             {
@@ -389,13 +412,12 @@ public class DistributedHealthMonitoringService : IHealthMonitoringService
     {
         try
         {
-            await _metricsLogger.RecordMetricAsync(metricName, value, tags, cancellationToken);
-            
-            _logger.LogDebug("Recorded metric {MetricName} = {Value}", metricName, value);
+            await metricsLogger.RecordMetricAsync(metricName, value, tags, cancellationToken);
+logger.LogDebug("Recorded metric {MetricName} = {Value}", metricName, value);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to record metric {MetricName}", metricName);
+logger.LogError(ex, "Failed to record metric {MetricName}", metricName);
         }
     }
 
@@ -451,7 +473,7 @@ public class DistributedHealthMonitoringService : IHealthMonitoringService
 
     private async void RecordHealthSnapshot(object? state)
     {
-        if (!await _monitoringSemaphore.WaitAsync(100))
+        if (!await monitoringSemaphore.WaitAsync(100))
         {
             return; // Skip if previous snapshot is still in progress
         }
@@ -462,7 +484,7 @@ public class DistributedHealthMonitoringService : IHealthMonitoringService
             
             foreach (var component in components)
             {
-                var history = _healthHistory.GetOrAdd(component.Name, _ => new CircularBuffer<HealthSnapshot>(100));
+                var history =healthHistory.GetOrAdd(component.Name, _ => new CircularBuffer<HealthSnapshot>(100));
                 
                 history.Add(new HealthSnapshot
                 {
@@ -475,18 +497,18 @@ public class DistributedHealthMonitoringService : IHealthMonitoringService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to record health snapshot");
+logger.LogWarning(ex, "Failed to record health snapshot");
         }
         finally
         {
-            _monitoringSemaphore.Release();
+monitoringSemaphore.Release();
         }
     }
 
     public void Dispose()
     {
-        _healthHistoryTimer?.Dispose();
-        _monitoringSemaphore?.Dispose();
+        healthHistoryTimer?.Dispose();
+        monitoringSemaphore?.Dispose();
     }
 }
 ```
@@ -507,11 +529,11 @@ public interface IHealthDashboardService
 
 public class RealTimeHealthDashboard : IHealthDashboardService
 {
-    private readonly IHealthMonitoringService _healthMonitoring;
-    private readonly IAlertingService _alerting;
-    private readonly IMetricsLogger _metricsLogger;
-    private readonly ILogger<RealTimeHealthDashboard> _logger;
-    private readonly ConcurrentDictionary<string, DashboardMetric> _realtimeMetrics = new();
+    private readonly IHealthMonitoringService healthMonitoring;
+    private readonly IAlertingService alerting;
+    private readonly IMetricsLogger metricsLogger;
+    private readonly ILogger<RealTimeHealthDashboard> logger;
+    private readonly ConcurrentDictionary<string, DashboardMetric> realtimeMetrics = new();
 
     public RealTimeHealthDashboard(
         IHealthMonitoringService healthMonitoring,
@@ -519,10 +541,10 @@ public class RealTimeHealthDashboard : IHealthDashboardService
         IMetricsLogger metricsLogger,
         ILogger<RealTimeHealthDashboard> logger)
     {
-        _healthMonitoring = healthMonitoring;
-        _alerting = alerting;
-        _metricsLogger = metricsLogger;
-        _logger = logger;
+healthMonitoring = healthMonitoring;
+alerting = alerting;
+metricsLogger = metricsLogger;
+logger = logger;
     }
 
     public async Task<DashboardData> GetDashboardDataAsync(CancellationToken cancellationToken = default)
@@ -531,7 +553,7 @@ public class RealTimeHealthDashboard : IHealthDashboardService
         
         try
         {
-            var overallHealth = await _healthMonitoring.GetOverallHealthAsync(cancellationToken);
+            var overallHealth = await healthMonitoring.GetOverallHealthAsync(cancellationToken);
             var alerts = await GetActiveAlertsAsync(cancellationToken);
             var metrics = await GetMetricsSummaryAsync(TimeSpan.FromHours(1), cancellationToken);
 
@@ -541,12 +563,12 @@ public class RealTimeHealthDashboard : IHealthDashboardService
                 ActiveAlerts = alerts,
                 MetricsSummary = metrics,
                 LastUpdated = DateTime.UtcNow,
-                RealtimeMetrics = _realtimeMetrics.Values.ToList()
+                RealtimeMetrics =realtimeMetrics.Values.ToList()
             };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get dashboard data");
+logger.LogError(ex, "Failed to get dashboard data");
             throw;
         }
     }
@@ -555,13 +577,12 @@ public class RealTimeHealthDashboard : IHealthDashboardService
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         using var activity = Activity.Current?.Source.StartActivity("Dashboard.StreamUpdates");
-        
-        _logger.LogDebug("Starting dashboard updates stream");
+logger.LogDebug("Starting dashboard updates stream");
 
         // Stream health updates
         var healthUpdatesTask = Task.Run(async () =>
         {
-            await foreach (var update in _healthMonitoring.WatchHealthAsync(null, cancellationToken))
+            await foreach (var update in healthMonitoring.WatchHealthAsync(null, cancellationToken))
             {
                 yield return new DashboardUpdate
                 {
@@ -580,7 +601,7 @@ public class RealTimeHealthDashboard : IHealthDashboardService
             
             while (await timer.WaitForNextTickAsync(cancellationToken))
             {
-                foreach (var (name, metric) in _realtimeMetrics)
+                foreach (var (name, metric) in realtimeMetrics)
                 {
                     if (DateTime.UtcNow - metric.LastUpdated < TimeSpan.FromSeconds(2))
                     {
@@ -609,11 +630,11 @@ public class RealTimeHealthDashboard : IHealthDashboardService
     {
         try
         {
-            return await _alerting.GetActiveAlertsAsync(cancellationToken);
+            return await alerting.GetActiveAlertsAsync(cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get active alerts");
+logger.LogError(ex, "Failed to get active alerts");
             return new List<AlertRule>();
         }
     }
@@ -625,7 +646,7 @@ public class RealTimeHealthDashboard : IHealthDashboardService
             var endTime = DateTime.UtcNow;
             var startTime = endTime.Subtract(period);
             
-            var metrics = await _metricsLogger.GetMetricsAsync(startTime, endTime, cancellationToken);
+            var metrics = await metricsLogger.GetMetricsAsync(startTime, endTime, cancellationToken);
             
             return new MetricsSummary
             {
@@ -645,14 +666,14 @@ public class RealTimeHealthDashboard : IHealthDashboardService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get metrics summary");
+logger.LogError(ex, "Failed to get metrics summary");
             return new MetricsSummary { Period = period };
         }
     }
 
     public void UpdateRealtimeMetric(string name, double value, Dictionary<string, string>? tags = null)
     {
-        _realtimeMetrics.AddOrUpdate(name, 
+realtimeMetrics.AddOrUpdate(name, 
             new DashboardMetric
             {
                 Name = name,
@@ -699,13 +720,13 @@ public interface IAlertingService
 
 public class DistributedAlertingService : IAlertingService
 {
-    private readonly IHealthMonitoringService _healthMonitoring;
-    private readonly IMetricsLogger _metricsLogger;
-    private readonly INotificationService _notificationService;
-    private readonly ILogger<DistributedAlertingService> _logger;
-    private readonly ConcurrentDictionary<string, AlertRule> _alertRules = new();
-    private readonly ConcurrentDictionary<string, DateTime> _alertCooldowns = new();
-    private readonly Timer _evaluationTimer;
+    private readonly IHealthMonitoringService healthMonitoring;
+    private readonly IMetricsLogger metricsLogger;
+    private readonly INotificationService notificationService;
+    private readonly ILogger<DistributedAlertingService> logger;
+    private readonly ConcurrentDictionary<string, AlertRule> alertRules = new();
+    private readonly ConcurrentDictionary<string, DateTime> alertCooldowns = new();
+    private readonly Timer evaluationTimer;
 
     public DistributedAlertingService(
         IHealthMonitoringService healthMonitoring,
@@ -713,13 +734,13 @@ public class DistributedAlertingService : IAlertingService
         INotificationService notificationService,
         ILogger<DistributedAlertingService> logger)
     {
-        _healthMonitoring = healthMonitoring;
-        _metricsLogger = metricsLogger;
-        _notificationService = notificationService;
-        _logger = logger;
+healthMonitoring = healthMonitoring;
+metricsLogger = metricsLogger;
+notificationService = notificationService;
+logger = logger;
         
         // Evaluate alert rules every 10 seconds
-        _evaluationTimer = new Timer(EvaluateAllRules, null, TimeSpan.Zero, TimeSpan.FromSeconds(10));
+evaluationTimer = new Timer(EvaluateAllRules, null, TimeSpan.Zero, TimeSpan.FromSeconds(10));
         
         // Initialize default alert rules
         InitializeDefaultAlertRules();
@@ -730,7 +751,7 @@ public class DistributedAlertingService : IAlertingService
         await Task.CompletedTask;
         
         var currentTime = DateTime.UtcNow;
-        return _alertRules.Values
+        return alertRules.Values
             .Where(rule => rule.IsActive && !IsInCooldown(rule.Id, currentTime))
             .ToList();
     }
@@ -738,15 +759,13 @@ public class DistributedAlertingService : IAlertingService
     public async Task CreateAlertRuleAsync(AlertRule rule, CancellationToken cancellationToken = default)
     {
         await Task.CompletedTask;
-        
-        _alertRules.AddOrUpdate(rule.Id, rule, (_, _) => rule);
-        
-        _logger.LogInformation("Created alert rule: {RuleId} - {RuleName}", rule.Id, rule.Name);
+alertRules.AddOrUpdate(rule.Id, rule, (_, _) => rule);
+logger.LogInformation("Created alert rule: {RuleId} - {RuleName}", rule.Id, rule.Name);
     }
 
     public async Task<bool> EvaluateAlertRuleAsync(string ruleId, CancellationToken cancellationToken = default)
     {
-        if (!_alertRules.TryGetValue(ruleId, out var rule))
+        if (!alertRules.TryGetValue(ruleId, out var rule))
         {
             return false;
         }
@@ -783,7 +802,7 @@ public class DistributedAlertingService : IAlertingService
                 await SendAlertAsync(alert, cancellationToken);
                 
                 // Set cooldown
-                _alertCooldowns.AddOrUpdate(ruleId, 
+alertCooldowns.AddOrUpdate(ruleId, 
                     DateTime.UtcNow.Add(rule.Cooldown), 
                     (_, _) => DateTime.UtcNow.Add(rule.Cooldown));
 
@@ -794,7 +813,7 @@ public class DistributedAlertingService : IAlertingService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to evaluate alert rule {RuleId}", ruleId);
+logger.LogError(ex, "Failed to evaluate alert rule {RuleId}", ruleId);
             return false;
         }
     }
@@ -807,7 +826,7 @@ public class DistributedAlertingService : IAlertingService
 
         try
         {
-            _logger.LogWarning("ALERT: {AlertMessage} - Severity: {Severity}, Component: {ComponentName}",
+logger.LogWarning("ALERT: {AlertMessage} - Severity: {Severity}, Component: {ComponentName}",
                 alert.Message, alert.Severity, alert.ComponentName);
 
             // Send notifications based on severity
@@ -815,7 +834,7 @@ public class DistributedAlertingService : IAlertingService
 
             if (alert.Severity >= AlertSeverity.Warning)
             {
-                notificationTasks.Add(_notificationService.SendSlackNotificationAsync(
+                notificationTasks.Add(notificationService.SendSlackNotificationAsync(
                     $"🚨 {alert.Severity}: {alert.Message}", 
                     alert.Details, 
                     cancellationToken));
@@ -823,24 +842,23 @@ public class DistributedAlertingService : IAlertingService
 
             if (alert.Severity >= AlertSeverity.Critical)
             {
-                notificationTasks.Add(_notificationService.SendEmailNotificationAsync(
+                notificationTasks.Add(notificationService.SendEmailNotificationAsync(
                     "Critical Alert", 
                     alert.Message, 
                     alert.Details, 
                     cancellationToken));
                 
-                notificationTasks.Add(_notificationService.SendPagerDutyNotificationAsync(
+                notificationTasks.Add(notificationService.SendPagerDutyNotificationAsync(
                     alert, 
                     cancellationToken));
             }
 
             await Task.WhenAll(notificationTasks);
-            
-            _logger.LogInformation("Alert {AlertId} sent successfully", alert.Id);
+logger.LogInformation("Alert {AlertId} sent successfully", alert.Id);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send alert {AlertId}", alert.Id);
+logger.LogError(ex, "Failed to send alert {AlertId}", alert.Id);
             throw;
         }
     }
@@ -848,13 +866,13 @@ public class DistributedAlertingService : IAlertingService
     public async IAsyncEnumerable<Alert> WatchAlertsAsync(
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Starting alert monitoring watch");
+logger.LogDebug("Starting alert monitoring watch");
 
         // Watch for health changes that might trigger alerts
-        await foreach (var healthUpdate in _healthMonitoring.WatchHealthAsync(null, cancellationToken))
+        await foreach (var healthUpdate in healthMonitoring.WatchHealthAsync(null, cancellationToken))
         {
             // Check if any alert rules should be triggered by this health change
-            var relevantRules = _alertRules.Values
+            var relevantRules =alertRules.Values
                 .Where(r => r.IsActive && 
                            r.Type == AlertRuleType.HealthCheck &&
                            (string.IsNullOrEmpty(r.ComponentName) || r.ComponentName == healthUpdate.ComponentName))
@@ -887,7 +905,7 @@ public class DistributedAlertingService : IAlertingService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error evaluating alert rule {RuleId} for health update", rule.Id);
+logger.LogError(ex, "Error evaluating alert rule {RuleId} for health update", rule.Id);
                 }
             }
         }
@@ -897,11 +915,11 @@ public class DistributedAlertingService : IAlertingService
     {
         if (string.IsNullOrEmpty(rule.ComponentName))
         {
-            var overallHealth = await _healthMonitoring.GetOverallHealthAsync(cancellationToken);
+            var overallHealth = await healthMonitoring.GetOverallHealthAsync(cancellationToken);
             return EvaluateCondition(rule.Condition, (int)overallHealth.Status);
         }
 
-        var componentHealth = await _healthMonitoring.GetComponentHealthAsync(rule.ComponentName, cancellationToken);
+        var componentHealth = await healthMonitoring.GetComponentHealthAsync(rule.ComponentName, cancellationToken);
         return EvaluateCondition(rule.Condition, (int)componentHealth.Status);
     }
 
@@ -915,7 +933,7 @@ public class DistributedAlertingService : IAlertingService
         var endTime = DateTime.UtcNow;
         var startTime = endTime.Subtract(rule.EvaluationWindow);
         
-        var metrics = await _metricsLogger.GetMetricsAsync(startTime, endTime, cancellationToken);
+        var metrics = await metricsLogger.GetMetricsAsync(startTime, endTime, cancellationToken);
         var relevantMetrics = metrics.Where(m => m.Name == rule.MetricName).ToList();
 
         if (relevantMetrics.Count == 0)
@@ -970,7 +988,7 @@ public class DistributedAlertingService : IAlertingService
 
     private bool IsInCooldown(string ruleId, DateTime currentTime)
     {
-        return _alertCooldowns.TryGetValue(ruleId, out var cooldownEnd) && 
+        return alertCooldowns.TryGetValue(ruleId, out var cooldownEnd) && 
                currentTime < cooldownEnd;
     }
 
@@ -987,7 +1005,7 @@ public class DistributedAlertingService : IAlertingService
         {
             try
             {
-                var componentHealth = await _healthMonitoring.GetComponentHealthAsync(rule.ComponentName, cancellationToken);
+                var componentHealth = await healthMonitoring.GetComponentHealthAsync(rule.ComponentName, cancellationToken);
                 details["componentStatus"] = componentHealth.Status.ToString();
                 details["componentError"] = componentHealth.Error ?? "None";
             }
@@ -1004,7 +1022,7 @@ public class DistributedAlertingService : IAlertingService
     {
         try
         {
-            var evaluationTasks = _alertRules.Keys
+            var evaluationTasks =alertRules.Keys
                 .Select(ruleId => EvaluateAlertRuleAsync(ruleId, CancellationToken.None))
                 .ToArray();
 
@@ -1012,7 +1030,7 @@ public class DistributedAlertingService : IAlertingService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during alert rules evaluation");
+logger.LogError(ex, "Error during alert rules evaluation");
         }
     }
 
@@ -1056,14 +1074,13 @@ public class DistributedAlertingService : IAlertingService
             EvaluationWindow = TimeSpan.FromMinutes(5),
             IsActive = true
         };
-
-        _alertRules.TryAdd(dbAlert.Id, dbAlert);
-        _alertRules.TryAdd(errorRateAlert.Id, errorRateAlert);
+alertRules.TryAdd(dbAlert.Id, dbAlert);
+alertRules.TryAdd(errorRateAlert.Id, errorRateAlert);
     }
 
     public void Dispose()
     {
-        _evaluationTimer?.Dispose();
+        evaluationTimer?.Dispose();
     }
 }
 ```
@@ -1215,33 +1232,33 @@ public record Alert
 // Supporting classes
 public class CircularBuffer<T>
 {
-    private readonly T[] _buffer;
-    private readonly int _capacity;
-    private int _count;
-    private int _index;
+    private readonly T[] buffer;
+    private readonly int capacity;
+    private int count;
+    private int index;
 
     public CircularBuffer(int capacity)
     {
-        _capacity = capacity;
-        _buffer = new T[capacity];
+capacity = capacity;
+buffer = new T[capacity];
     }
 
     public void Add(T item)
     {
-        _buffer[_index] = item;
-        _index = (_index + 1) % _capacity;
+        _buffer[index] = item;
+index = (index + 1) % capacity;
         
-        if (_count < _capacity)
-            _count++;
+        if (count < capacity)
+count++;
     }
 
     public List<T> GetAll()
     {
-        var result = new List<T>(_count);
+        var result = new List<T>(count);
         
-        for (int i = 0; i < _count; i++)
+        for (int i = 0; i < count; i++)
         {
-            var actualIndex = (_index - _count + i + _capacity) % _capacity;
+            var actualIndex = (index - count + i + capacity) % capacity;
             result.Add(_buffer[actualIndex]);
         }
         

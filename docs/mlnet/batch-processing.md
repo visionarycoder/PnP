@@ -1,8 +1,9 @@
-# ML.NET Batch Processing
+# Enterprise ML Batch Processing & Scale
 
-**Description**: Large-scale document processing patterns using ML.NET for high-throughput text analysis, classification, and feature extraction in distributed environments.
+**Description**: Advanced enterprise-scale batch processing with intelligent resource allocation, distributed computation, fault tolerance, comprehensive monitoring, cost optimization, and elastic scaling for high-throughput ML workloads in production environments.
 
-**Language/Technology**: C#, ML.NET, .NET 9.0
+**Language/Technology**: C#, ML.NET, .NET 9.0, Azure Batch, Kubernetes, Distributed Computing, Cost Optimization
+**Enterprise Features**: Intelligent resource allocation, distributed computation, fault tolerance, cost optimization, elastic scaling, and comprehensive monitoring integration
 
 **Code**:
 
@@ -36,10 +37,10 @@ public class MLBatchProcessor<TInput, TOutput> : IBatchProcessor<TInput, TOutput
     where TInput : class
     where TOutput : class, new()
 {
-    private readonly MLContext _mlContext;
-    private readonly ITransformer _model;
-    private readonly ILogger<MLBatchProcessor<TInput, TOutput>> _logger;
-    private readonly BatchProcessorOptions _options;
+    private readonly MLContext mlContext;
+    private readonly ITransformer model;
+    private readonly ILogger<MLBatchProcessor<TInput, TOutput>> logger;
+    private readonly BatchProcessorOptions options;
 
     public MLBatchProcessor(
         MLContext mlContext,
@@ -47,10 +48,10 @@ public class MLBatchProcessor<TInput, TOutput> : IBatchProcessor<TInput, TOutput
         ILogger<MLBatchProcessor<TInput, TOutput>> logger,
         BatchProcessorOptions options)
     {
-        _mlContext = mlContext;
-        _model = model;
-        _logger = logger;
-        _options = options;
+        mlContext = mlContext;
+        model = model;
+        logger = logger;
+        options = options;
     }
 
     public async Task<BatchResult<TOutput>> ProcessBatchAsync(
@@ -60,18 +61,18 @@ public class MLBatchProcessor<TInput, TOutput> : IBatchProcessor<TInput, TOutput
         var stopwatch = Stopwatch.StartNew();
         var inputList = items.ToList();
         
-        _logger.LogInformation("Starting batch processing of {Count} items", inputList.Count);
+        logger.LogInformation("Starting batch processing of {Count} items", inputList.Count);
 
         try
         {
             // Load data into ML.NET DataView
-            var dataView = _mlContext.Data.LoadFromEnumerable(inputList);
+            var dataView = mlContext.Data.LoadFromEnumerable(inputList);
             
             // Apply transformations
-            var transformedData = _model.Transform(dataView);
+            var transformedData = model.Transform(dataView);
             
             // Extract results
-            var results = _mlContext.Data
+            var results = mlContext.Data
                 .CreateEnumerable<TOutput>(transformedData, reuseRowObject: false)
                 .ToList();
 
@@ -86,7 +87,7 @@ public class MLBatchProcessor<TInput, TOutput> : IBatchProcessor<TInput, TOutput
                 Success: true,
                 Errors: new List<BatchError>());
 
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Batch processing completed: {Count} items in {Duration}ms ({Throughput:F2} items/sec)",
                 results.Count, stopwatch.ElapsedMilliseconds, batchResult.ThroughputPerSecond);
 
@@ -95,7 +96,7 @@ public class MLBatchProcessor<TInput, TOutput> : IBatchProcessor<TInput, TOutput
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Batch processing failed after {Duration}ms", stopwatch.ElapsedMilliseconds);
+            logger.LogError(ex, "Batch processing failed after {Duration}ms", stopwatch.ElapsedMilliseconds);
             
             return new BatchResult<TOutput>(
                 Results: new List<TOutput>(),
@@ -126,7 +127,7 @@ public class MLBatchProcessor<TInput, TOutput> : IBatchProcessor<TInput, TOutput
                 {
                     batch.Add(item);
                     
-                    if (batch.Count >= _options.StreamBatchSize)
+                    if (batch.Count >= options.StreamBatchSize)
                     {
                         await ProcessAndWriteBatch(batch, writer, ++batchCount, cancellationToken);
                         batch.Clear();
@@ -141,7 +142,7 @@ public class MLBatchProcessor<TInput, TOutput> : IBatchProcessor<TInput, TOutput
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Stream processing failed");
+                logger.LogError(ex, "Stream processing failed");
             }
             finally
             {
@@ -164,7 +165,7 @@ public class MLBatchProcessor<TInput, TOutput> : IBatchProcessor<TInput, TOutput
         var inputList = items.ToList();
         var chunkSize = Math.Max(1, inputList.Count / maxConcurrency);
         
-        _logger.LogInformation(
+        logger.LogInformation(
             "Starting parallel batch processing: {Count} items, {Concurrency} threads, {ChunkSize} items per chunk",
             inputList.Count, maxConcurrency, chunkSize);
 
@@ -209,7 +210,7 @@ public class MLBatchProcessor<TInput, TOutput> : IBatchProcessor<TInput, TOutput
             Success: finalErrors.Count == 0,
             Errors: finalErrors);
 
-        _logger.LogInformation(
+        logger.LogInformation(
             "Parallel batch processing completed: {Count} items in {Duration}ms ({Throughput:F2} items/sec), {ErrorCount} errors",
             finalResults.Count, stopwatch.ElapsedMilliseconds, batchResult.ThroughputPerSecond, finalErrors.Count);
 
@@ -231,11 +232,11 @@ public class MLBatchProcessor<TInput, TOutput> : IBatchProcessor<TInput, TOutput
                 await writer.WriteAsync(item, cancellationToken);
             }
 
-            _logger.LogDebug("Processed stream batch {BatchNumber}: {Count} items", batchNumber, batch.Count);
+            logger.LogDebug("Processed stream batch {BatchNumber}: {Count} items", batchNumber, batch.Count);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to process stream batch {BatchNumber}", batchNumber);
+            logger.LogError(ex, "Failed to process stream batch {BatchNumber}", batchNumber);
         }
     }
 
@@ -246,12 +247,12 @@ public class MLBatchProcessor<TInput, TOutput> : IBatchProcessor<TInput, TOutput
     {
         try
         {
-            _logger.LogDebug("Processing chunk {ChunkIndex} with {Count} items", chunkIndex, chunk.Count);
+            logger.LogDebug("Processing chunk {ChunkIndex} with {Count} items", chunkIndex, chunk.Count);
             return await ProcessBatchAsync(chunk, cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to process chunk {ChunkIndex}", chunkIndex);
+            logger.LogError(ex, "Failed to process chunk {ChunkIndex}", chunkIndex);
             return new BatchResult<TOutput>(
                 Results: new List<TOutput>(),
                 InputCount: chunk.Count,
@@ -331,10 +332,10 @@ public interface IDocumentBatchProcessor
 
 public class DocumentBatchProcessor : IDocumentBatchProcessor
 {
-    private readonly IBatchProcessor<BatchDocumentInput, BatchDocumentOutput> _batchProcessor;
-    private readonly IDocumentClassifier _classifier;
-    private readonly ILogger<DocumentBatchProcessor> _logger;
-    private readonly DocumentBatchOptions _options;
+    private readonly IBatchProcessor<BatchDocumentInput, BatchDocumentOutput> batchProcessor;
+    private readonly IDocumentClassifier classifier;
+    private readonly ILogger<DocumentBatchProcessor> logger;
+    private readonly DocumentBatchOptions options;
 
     public DocumentBatchProcessor(
         IBatchProcessor<BatchDocumentInput, BatchDocumentOutput> batchProcessor,
@@ -342,17 +343,17 @@ public class DocumentBatchProcessor : IDocumentBatchProcessor
         ILogger<DocumentBatchProcessor> logger,
         IOptions<DocumentBatchOptions> options)
     {
-        _batchProcessor = batchProcessor;
-        _classifier = classifier;
-        _logger = logger;
-        _options = options.Value;
+        batchProcessor = batchProcessor;
+        classifier = classifier;
+        logger = logger;
+        options = options.Value;
     }
 
     public async Task<BatchResult<BatchDocumentOutput>> ProcessDocumentsAsync(
         IEnumerable<BatchDocumentInput> documents,
         CancellationToken cancellationToken = default)
     {
-        var documentsWithClassification = documents.Select(doc => new DocumentWithClassifier(doc, _classifier));
+        var documentsWithClassification = documents.Select(doc => new DocumentWithClassifier(doc, classifier));
         
         // Transform to ML.NET compatible format
         var mlInputs = documentsWithClassification.Select(dwc => new MLDocumentInput
@@ -363,7 +364,7 @@ public class DocumentBatchProcessor : IDocumentBatchProcessor
             Timestamp = dwc.Document.Timestamp
         });
 
-        var mlProcessor = new MLDocumentProcessor(_classifier, _logger);
+        var mlProcessor = new MLDocumentProcessor(classifier, logger);
         var result = await mlProcessor.ProcessBatchAsync(mlInputs, cancellationToken);
 
         return new BatchResult<BatchDocumentOutput>(
@@ -390,7 +391,7 @@ public class DocumentBatchProcessor : IDocumentBatchProcessor
         string outputFilePath,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Processing document file: {InputPath} -> {OutputPath}", inputFilePath, outputFilePath);
+        logger.LogInformation("Processing document file: {InputPath} -> {OutputPath}", inputFilePath, outputFilePath);
 
         var stopwatch = Stopwatch.StartNew();
         var processedCount = 0;
@@ -412,7 +413,7 @@ public class DocumentBatchProcessor : IDocumentBatchProcessor
             {
                 batch.Add(document);
                 
-                if (batch.Count >= _options.FileBatchSize)
+                if (batch.Count >= options.FileBatchSize)
                 {
                     var batchResult = await ProcessAndWriteBatch(batch, writer, categories, cancellationToken);
                     processedCount += batchResult.ProcessedCount;
@@ -442,7 +443,7 @@ public class DocumentBatchProcessor : IDocumentBatchProcessor
             CategoryDistribution: categories,
             CompletedAt: DateTime.UtcNow);
 
-        _logger.LogInformation(
+        logger.LogInformation(
             "File processing completed: {ProcessedCount} documents, {ErrorCount} errors, {Duration}ms ({Throughput:F2} docs/sec)",
             processedCount, errorCount, stopwatch.ElapsedMilliseconds, report.ThroughputPerSecond);
 
@@ -453,7 +454,7 @@ public class DocumentBatchProcessor : IDocumentBatchProcessor
         IAsyncEnumerable<BatchDocumentInput> documents,
         CancellationToken cancellationToken = default)
     {
-        return _batchProcessor.ProcessStreamAsync(documents, cancellationToken);
+        return batchProcessor.ProcessStreamAsync(documents, cancellationToken);
     }
 
     private async Task<(int ProcessedCount, int ErrorCount)> ProcessAndWriteBatch(
@@ -478,7 +479,7 @@ public class DocumentBatchProcessor : IDocumentBatchProcessor
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to process batch of {Count} documents", batch.Count);
+            logger.LogError(ex, "Failed to process batch of {Count} documents", batch.Count);
             return (0, batch.Count);
         }
     }
@@ -503,7 +504,7 @@ public class DocumentBatchProcessor : IDocumentBatchProcessor
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to parse document line: {Line}", line);
+            logger.LogWarning(ex, "Failed to parse document line: {Line}", line);
         }
         
         return false;
@@ -573,13 +574,13 @@ internal class MLDocumentOutput
 
 internal class MLDocumentProcessor : IBatchProcessor<MLDocumentInput, MLDocumentOutput>
 {
-    private readonly IDocumentClassifier _classifier;
-    private readonly ILogger _logger;
+    private readonly IDocumentClassifier classifier;
+    private readonly ILogger logger;
 
     public MLDocumentProcessor(IDocumentClassifier classifier, ILogger logger)
     {
-        _classifier = classifier;
-        _logger = logger;
+        classifier = classifier;
+        logger = logger;
     }
 
     public async Task<BatchResult<MLDocumentOutput>> ProcessBatchAsync(
@@ -595,7 +596,7 @@ internal class MLDocumentProcessor : IBatchProcessor<MLDocumentInput, MLDocument
         {
             try
             {
-                var prediction = await _classifier.ClassifyAsync(item.Text);
+                var prediction = await classifier.ClassifyAsync(item.Text);
                 results.Add(new MLDocumentOutput
                 {
                     Id = item.Id,
@@ -608,7 +609,7 @@ internal class MLDocumentProcessor : IBatchProcessor<MLDocumentInput, MLDocument
             catch (Exception ex)
             {
                 errors.Add(new BatchError($"Document {item.Id}: {ex.Message}", ex.GetType().Name));
-                _logger.LogWarning(ex, "Failed to classify document {DocumentId}", item.Id);
+                logger.LogWarning(ex, "Failed to classify document {DocumentId}", item.Id);
             }
         }
 
@@ -679,18 +680,18 @@ public interface ISentimentBatchProcessor
 
 public class SentimentBatchProcessor : ISentimentBatchProcessor
 {
-    private readonly ISentimentAnalyzer _sentimentAnalyzer;
-    private readonly IBatchProcessor<SentimentInput, SentimentOutput> _batchProcessor;
-    private readonly ILogger<SentimentBatchProcessor> _logger;
+    private readonly ISentimentAnalyzer sentimentAnalyzer;
+    private readonly IBatchProcessor<SentimentInput, SentimentOutput> batchProcessor;
+    private readonly ILogger<SentimentBatchProcessor> logger;
 
     public SentimentBatchProcessor(
         ISentimentAnalyzer sentimentAnalyzer,
         IBatchProcessor<SentimentInput, SentimentOutput> batchProcessor,
         ILogger<SentimentBatchProcessor> logger)
     {
-        _sentimentAnalyzer = sentimentAnalyzer;
-        _batchProcessor = batchProcessor;
-        _logger = logger;
+        sentimentAnalyzer = sentimentAnalyzer;
+        batchProcessor = batchProcessor;
+        logger = logger;
     }
 
     public async Task<BatchSentimentResult> ProcessSentimentBatchAsync(
@@ -703,7 +704,7 @@ public class SentimentBatchProcessor : ISentimentBatchProcessor
             Text = text
         });
 
-        var processingResult = await _batchProcessor.ProcessBatchAsync(inputs, cancellationToken);
+        var processingResult = await batchProcessor.ProcessBatchAsync(inputs, cancellationToken);
 
         var sentimentResults = processingResult.Results.Select(r => new SentimentResult
         {
@@ -845,12 +846,12 @@ public interface IBatchMetricsCollector
 
 public class BatchMetricsCollector : IBatchMetricsCollector
 {
-    private readonly ILogger<BatchMetricsCollector> _logger;
-    private readonly ConcurrentDictionary<string, List<BatchMetric>> _metrics = new();
+    private readonly ILogger<BatchMetricsCollector> logger;
+    private readonly ConcurrentDictionary<string, List<BatchMetric>> metrics = new();
 
     public BatchMetricsCollector(ILogger<BatchMetricsCollector> logger)
     {
-        _logger = logger;
+        logger = logger;
     }
 
     public void RecordBatchProcessing(string processorType, int itemCount, long durationMs, bool success)
@@ -862,7 +863,7 @@ public class BatchMetricsCollector : IBatchMetricsCollector
             ThroughputPerSecond: itemCount / (durationMs / 1000.0),
             Success: success);
 
-        _metrics.AddOrUpdate(processorType, 
+        metrics.AddOrUpdate(processorType, 
             new List<BatchMetric> { metric },
             (key, existing) =>
             {
@@ -875,13 +876,13 @@ public class BatchMetricsCollector : IBatchMetricsCollector
                 return existing;
             });
 
-        _logger.LogDebug("Recorded batch metric for {ProcessorType}: {ItemCount} items in {Duration}ms", 
+        logger.LogDebug("Recorded batch metric for {ProcessorType}: {ItemCount} items in {Duration}ms", 
             processorType, itemCount, durationMs);
     }
 
     public async Task<BatchMetrics> GetMetricsAsync(string processorType, TimeSpan period)
     {
-        if (!_metrics.TryGetValue(processorType, out var metrics))
+        if (!metrics.TryGetValue(processorType, out var metrics))
         {
             return new BatchMetrics(processorType, 0, 0, 0, 0, 100, DateTime.UtcNow);
         }
@@ -928,15 +929,15 @@ public record BatchMetrics(
 
 public class BatchProcessorHealthCheck : IHealthCheck
 {
-    private readonly IBatchMetricsCollector _metricsCollector;
-    private readonly ILogger<BatchProcessorHealthCheck> _logger;
+    private readonly IBatchMetricsCollector metricsCollector;
+    private readonly ILogger<BatchProcessorHealthCheck> logger;
 
     public BatchProcessorHealthCheck(
         IBatchMetricsCollector metricsCollector,
         ILogger<BatchProcessorHealthCheck> logger)
     {
-        _metricsCollector = metricsCollector;
-        _logger = logger;
+        metricsCollector = metricsCollector;
+        logger = logger;
     }
 
     public async Task<HealthCheckResult> CheckHealthAsync(
@@ -946,7 +947,7 @@ public class BatchProcessorHealthCheck : IHealthCheck
         try
         {
             // Check metrics for the last 5 minutes
-            var metrics = await _metricsCollector.GetMetricsAsync("document", TimeSpan.FromMinutes(5));
+            var metrics = await metricsCollector.GetMetricsAsync("document", TimeSpan.FromMinutes(5));
             
             if (metrics.SuccessRate < 90)
             {
@@ -962,7 +963,7 @@ public class BatchProcessorHealthCheck : IHealthCheck
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Health check failed");
+            logger.LogError(ex, "Health check failed");
             return HealthCheckResult.Unhealthy("Failed to check batch processor health", ex);
         }
     }

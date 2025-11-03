@@ -4,6 +4,207 @@
 **Language/Technology**: Git, Version Control  
 **Prerequisites**: Git 2.5+, existing Git repository
 
+## Getting Started - Step-by-Step Setup Guide
+
+**Understanding Worktrees**: A worktree is like having multiple copies of your repository, each checked out to different branches, but they all share the same Git history and configuration.
+
+### Step 1: Understand Your Current Setup
+
+**Code**:
+
+```bash
+# Check where you are and what you have
+pwd                          # See current directory
+git status                   # See current branch and status
+git branch -a               # See all available branches
+git worktree list           # See existing worktrees (likely just your main one)
+```
+
+**Usage**:
+
+```bash
+# Example: Starting in your main repository
+$ pwd
+D:\MyProjects\MyApp
+
+$ git status
+On branch main
+Your branch is up to date with 'origin/main'.
+
+$ git branch -a
+* main
+  feature/login
+  remotes/origin/main
+  remotes/origin/develop
+  remotes/origin/feature/login
+
+$ git worktree list
+D:\MyProjects\MyApp  abc123d [main]
+# This shows you have one worktree (your main repository)
+```
+
+### Step 2: Plan Your Worktree Structure
+
+**Recommended Structure**:
+
+```text
+MyProjects/
+├── MyApp/                  # Your original repository (main branch)
+├── MyApp-develop/         # Worktree for develop branch
+├── MyApp-feature/         # Worktree for feature work
+└── MyApp-hotfix/          # Worktree for urgent fixes
+```
+
+### Step 3: Create Your First Worktree
+
+**Code**:
+
+```bash
+# Method 1: Create worktree for existing branch
+git worktree add ../MyApp-develop develop
+
+# Method 2: Create worktree with new branch  
+git worktree add ../MyApp-feature -b feature/new-feature
+
+# Method 3: Create worktree from remote branch
+git worktree add ../MyApp-hotfix -b hotfix origin/main
+```
+
+**Usage**:
+
+```bash
+# Example: Create a worktree for the develop branch
+$ git worktree add ../MyApp-develop develop
+Preparing worktree (checking out 'develop')
+HEAD is now at def456e Added user authentication
+
+# Verify it was created
+$ git worktree list
+D:\MyProjects\MyApp          abc123d [main]
+D:\MyProjects\MyApp-develop  def456e [develop]
+
+# Check the file system
+$ ls ..
+MyApp/
+MyApp-develop/
+```
+
+### Step 4: Navigate and Work in Your New Worktree
+
+**Code**:
+
+```bash
+# Navigate to your new worktree
+cd ../MyApp-develop
+
+# Verify you're in the right place
+pwd
+git status
+git branch
+
+# Work normally - make changes, commit, push, etc.
+echo "New feature" > feature.txt
+git add feature.txt
+git commit -m "Add new feature"
+git push origin develop
+```
+
+**Usage**:
+
+```bash
+# Example: Working in your develop worktree
+$ cd ../MyApp-develop
+
+$ pwd
+D:\MyProjects\MyApp-develop
+
+$ git status  
+On branch develop
+Your branch is up to date with 'origin/develop'.
+
+$ git branch
+* develop
+  main
+
+# You can see both branches, but you're on develop
+# Changes here won't affect your main worktree
+```
+
+### Step 5: Switch Between Worktrees
+
+**Code**:
+
+```bash
+# Go back to main repository
+cd ../MyApp
+
+# Or go to any other worktree
+cd ../MyApp-feature
+
+# Quick check of all worktrees
+git worktree list
+```
+
+**Usage**:
+
+```bash
+# Example: Switching between worktrees
+$ cd ../MyApp          # Back to main
+$ git status
+On branch main
+Your branch is up to date with 'origin/main'.
+
+$ cd ../MyApp-develop  # To develop worktree  
+$ git status
+On branch develop
+Your branch is up to date with 'origin/develop'.
+
+# Each worktree maintains its own working directory state
+```
+
+### Common Beginner Mistakes and Solutions
+
+**Problem**: "I created a worktree but I can't find the folder"
+
+**Solution**:
+
+```bash
+# Always use relative paths from your current location
+pwd                           # Know where you are
+git worktree add ../MyApp-feature -b feature/test
+ls ..                        # Verify the folder was created
+
+# Or use absolute paths to be sure
+git worktree add D:\MyProjects\MyApp-feature -b feature/test
+```
+
+**Problem**: "I tried to create a worktree but got an error about the branch already existing"
+
+**Solution**:
+
+```bash
+# If branch exists, don't use -b flag
+git worktree add ../MyApp-existing existing-branch
+
+# If you want a new branch, use a different name
+git worktree add ../MyApp-new -b new-branch-name
+
+# To see what branches exist
+git branch -a
+```
+
+**Problem**: "My worktree has the wrong files/branch"
+
+**Solution**:
+
+```bash
+# Remove the problematic worktree
+git worktree remove ../MyApp-wrong
+
+# Create it again with correct branch
+git worktree add ../MyApp-correct correct-branch
+```
+
 ## Basic Worktree Operations
 
 **Code**:
@@ -155,15 +356,15 @@ mkdir -p "$BASE_DIR"
 
 # Function to add worktree with consistent naming
 add_worktree() {
-    local branch_name="$1"
-    local worktree_path="${BASE_DIR}/${branch_name//\//-}"
+    local branchName="$1"
+    local worktree_path="${BASE_DIR}/${branchName//\//-}"
     
     if [ -z "$2" ]; then
         # Existing branch
-        git worktree add "$worktree_path" "$branch_name"
+        git worktree add "$worktree_path" "$branchName"
     else
         # New branch
-        git worktree add "$worktree_path" -b "$branch_name" "$2"
+        git worktree add "$worktree_path" -b "$branchName" "$2"
     fi
     
     echo "Worktree created at: $worktree_path"
@@ -264,6 +465,191 @@ $ pwd
 - **Hotfixes**: Quick fixes without disrupting main development  
 - **Release Preparation**: Isolated environment for release testing
 - **Code Review**: Check out PR branches for local review
+
+## Troubleshooting Worktrees
+
+### Common Issues and Solutions
+
+**Issue**: "fatal: '../MyApp-feature' already exists"
+
+**Solutions**:
+
+```bash
+# Option 1: Remove existing directory first
+rm -rf ../MyApp-feature          # Linux/Mac/WSL
+rmdir /s ../MyApp-feature        # Windows CMD
+Remove-Item ../MyApp-feature -Recurse -Force  # PowerShell
+
+# Then create worktree
+git worktree add ../MyApp-feature -b feature/new
+
+# Option 2: Force overwrite (be careful!)
+git worktree add --force ../MyApp-feature -b feature/new
+
+# Option 3: Use a different name
+git worktree add ../MyApp-feature2 -b feature/new
+```
+
+**Issue**: "fatal: 'feature-branch' is already checked out"
+
+**Solutions**:
+
+```bash
+# You can't have the same branch in multiple worktrees
+# Option 1: Use different branch name
+git worktree add ../MyApp-feature2 -b feature-branch-copy feature-branch
+
+# Option 2: Check which worktree has the branch
+git worktree list | grep feature-branch
+
+# Option 3: Remove the existing worktree first
+git worktree remove ../path-to-existing-worktree
+```
+
+**Issue**: Worktree shows as "prunable" or "broken"
+
+**Solutions**:
+
+```bash
+# Check worktree status
+git worktree list --porcelain
+
+# Clean up broken references
+git worktree prune
+
+# If directory was moved manually, repair it
+cd /new/location/of/worktree
+git worktree repair
+
+# If completely broken, remove and recreate
+git worktree remove ../broken-worktree --force
+git worktree add ../MyApp-fixed -b branch-name
+```
+
+### Cleaning Up Worktrees
+
+**Code**:
+
+```bash
+# List all worktrees to see what you have
+git worktree list
+
+# Remove specific worktree (directory must be clean)
+git worktree remove ../MyApp-feature
+
+# Force remove worktree (ignores uncommitted changes)
+git worktree remove ../MyApp-feature --force
+
+# Remove worktree and delete the branch
+git worktree remove ../MyApp-feature
+git branch -d feature-branch      # Safe delete
+git branch -D feature-branch      # Force delete
+
+# Clean up any stale references
+git worktree prune
+
+# Remove all worktrees except main (advanced)
+git worktree list --porcelain | grep "^worktree" | grep -v "$(git rev-parse --show-toplevel)" | while read -r line; do
+    path=$(echo "$line" | sed 's/^worktree //')
+    echo "Removing worktree: $path"
+    git worktree remove "$path" --force
+done
+```
+
+**Usage**:
+
+```bash
+# Example: Clean up after feature completion
+$ git worktree list
+D:\MyProjects\MyApp          abc123d [main]
+D:\MyProjects\MyApp-feature  def456e [feature/user-auth]
+D:\MyProjects\MyApp-hotfix   ghi789j [hotfix/bug-123]
+
+# Feature is done, clean it up
+$ cd ../MyApp-feature
+$ git status                 # Make sure everything is committed
+$ git push origin feature/user-auth    # Push final changes
+$ cd ../MyApp               # Go back to main
+
+# Remove the worktree
+$ git worktree remove ../MyApp-feature
+$ git branch -d feature/user-auth      # Delete local branch
+
+# Verify cleanup
+$ git worktree list
+D:\MyProjects\MyApp          abc123d [main] 
+D:\MyProjects\MyApp-hotfix   ghi789j [hotfix/bug-123]
+```
+
+## Real-World Workflow Examples
+
+### Scenario 1: Feature Development Workflow
+
+**Code**:
+
+```bash
+# 1. Start new feature from main
+git worktree add ../MyApp-feature -b feature/user-dashboard origin/main
+
+# 2. Work in feature worktree
+cd ../MyApp-feature
+# ... make changes, commit, push ...
+
+# 3. Switch to main for urgent hotfix
+cd ../MyApp
+git worktree add ../MyApp-hotfix -b hotfix/critical-bug
+
+# 4. Work on hotfix
+cd ../MyApp-hotfix  
+# ... fix bug, test, commit, push ...
+
+# 5. Clean up when done
+cd ../MyApp
+git worktree remove ../MyApp-hotfix --force
+git worktree remove ../MyApp-feature --force
+```
+
+### Scenario 2: Code Review Workflow  
+
+**Code**:
+
+```bash
+# Reviewer: Check out PR branch for local testing
+git fetch origin pull/123/head:pr-123
+git worktree add ../MyApp-review pr-123
+
+# Test the changes
+cd ../MyApp-review
+npm install    # Install dependencies
+npm test      # Run tests
+npm start     # Test locally
+
+# After review, clean up
+cd ../MyApp
+git worktree remove ../MyApp-review
+git branch -d pr-123
+```
+
+### Scenario 3: Release Management Workflow
+
+**Code**:
+
+```bash
+# Create release worktree
+git worktree add ../MyApp-release -b release/v2.1 origin/develop
+
+# Lock it during release preparation
+git worktree lock ../MyApp-release --reason "Release v2.1 in progress"
+
+# Work on release
+cd ../MyApp-release
+# ... version bumps, changelog, final testing ...
+
+# After release
+cd ../MyApp
+git worktree unlock ../MyApp-release  
+git worktree remove ../MyApp-release
+```
 
 **Related Snippets**:
 

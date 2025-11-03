@@ -1,8 +1,8 @@
-# PowerShell System Administration
+# Enterprise PowerShell System Administration
 
-**Description**: Advanced PowerShell commands for system administration, user management, and Windows configuration.
+**Description**: Production-ready PowerShell automation for enterprise system administration, compliance monitoring, and infrastructure management.
 
-**Language/Technology**: PowerShell / Windows Administration
+**Language/Technology**: PowerShell 7+ / Cross-Platform Administration
 
 **Code**:
 
@@ -73,7 +73,7 @@ Stop-Process -Id 1234                          # Kill process by PID
 Start-Process -FilePath "notepad.exe"          # Start new process
 
 # Performance monitoring
-Get-Counter "\Processor(_Total)\% Processor Time" -SampleInterval 1 -MaxSamples 5
+Get-Counter "\Processor(Total)\% Processor Time" -SampleInterval 1 -MaxSamples 5
 Get-Counter "\Memory\Available MBytes"          # Memory usage
 Get-WmiObject -Class Win32_LogicalDisk | Select-Object DeviceID, @{Name="FreeSpace(GB)";Expression={[math]::Round($_.FreeSpace/1GB,2)}}
 
@@ -152,7 +152,7 @@ function Get-SystemHealth {
     Write-Host "=== System Health Check ===" -ForegroundColor Green
     
     # CPU usage
-    $cpu = Get-Counter "\Processor(_Total)\% Processor Time" -SampleInterval 1 -MaxSamples 3
+    $cpu = Get-Counter "\Processor(Total)\% Processor Time" -SampleInterval 1 -MaxSamples 3
     $avgCpu = ($cpu.CounterSamples | Measure-Object CookedValue -Average).Average
     Write-Host "Average CPU Usage: $([math]::Round($avgCpu, 2))%"
     

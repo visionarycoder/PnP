@@ -1,8 +1,9 @@
-# GraphQL DataLoader Patterns
+# Enterprise GraphQL DataLoader Optimization
 
-**Description**: Advanced DataLoader patterns for efficient data loading, N+1 query prevention, and caching strategies in HotChocolate GraphQL applications.
+**Description**: Advanced enterprise DataLoader patterns for high-performance data loading including distributed caching, intelligent batch processing, cache warming strategies, N+1 elimination, and comprehensive performance monitoring for large-scale GraphQL applications.
 
-**Language/Technology**: C# / HotChocolate
+**Language/Technology**: C#, HotChocolate, .NET 9.0, Redis, Distributed Caching, Performance Monitoring
+**Enterprise Features**: Distributed caching, intelligent batching, cache warming, performance monitoring, auto-scaling integration, and comprehensive analytics
 
 ## Code
 
@@ -267,7 +268,7 @@ public class CachedProcessingResultsDataLoader(
     ILogger<CachedProcessingResultsDataLoader> logger) 
     : BatchDataLoader<string, ProcessingResult>(batchScheduler)
 {
-    private readonly TimeSpan _cacheTtl = TimeSpan.FromMinutes(15);
+    private readonly TimeSpan cacheTtl = TimeSpan.FromMinutes(15);
 
     protected override async Task<IReadOnlyDictionary<string, ProcessingResult>> LoadBatchAsync(
         IReadOnlyList<string> keys,
@@ -306,7 +307,7 @@ public class CachedProcessingResultsDataLoader(
                 
                 // Cache with TTL
                 var cacheKey = GetCacheKey(result.Id);
-                memoryCache.Set(cacheKey, result, _cacheTtl);
+                memoryCache.Set(cacheKey, result, cacheTtl);
             }
         }
 
@@ -328,8 +329,8 @@ public class ExternalApiDataLoader(
     ILogger<ExternalApiDataLoader> logger) 
     : BatchDataLoader<string, ExternalApiResponse>(batchScheduler)
 {
-    private readonly string _apiBaseUrl = configuration.GetValue<string>("ExternalApi:BaseUrl") ?? "";
-    private readonly int _maxBatchSize = configuration.GetValue<int>("ExternalApi:MaxBatchSize", 50);
+    private readonly string apiBaseUrl = configuration.GetValue<string>("ExternalApi:BaseUrl") ?? "";
+    private readonly int maxBatchSize = configuration.GetValue<int>("ExternalApi:MaxBatchSize", 50);
 
     protected override async Task<IReadOnlyDictionary<string, ExternalApiResponse>> LoadBatchAsync(
         IReadOnlyList<string> keys,
@@ -341,7 +342,7 @@ public class ExternalApiDataLoader(
         var results = new Dictionary<string, ExternalApiResponse>();
 
         // Process in batches to respect API limits
-        var batches = keys.Chunk(_maxBatchSize);
+        var batches = keys.Chunk(maxBatchSize);
         
         foreach (var batch in batches)
         {
@@ -354,7 +355,7 @@ public class ExternalApiDataLoader(
                 };
 
                 var response = await httpClient.PostAsJsonAsync(
-                    $"{_apiBaseUrl}/batch", requestPayload, cancellationToken);
+                    $"{apiBaseUrl}/batch", requestPayload, cancellationToken);
 
                 if (response.IsSuccessStatusCode)
                 {

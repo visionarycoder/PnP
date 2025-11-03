@@ -1,15 +1,17 @@
 # Array Methods
 
-**Description**: Modern JavaScript array manipulation patterns using ES6+ methods.
+**Description**: Modern JavaScript array manipulation patterns using ES6+ methods with TypeScript type safety.
 
-**Language/Technology**: JavaScript (ES6+)
+**Language/Technology**: JavaScript (ES6+) / TypeScript
 
 **Code**:
 ```javascript
 // 1. Filter and Map - Transform and filter arrays
-const filterAndTransform = (items, predicate, transformer) => {
-  return items.filter(predicate).map(transformer);
-};
+const filterAndTransform = <T, R>(
+  items: T[], 
+  predicate: (item: T) => boolean, 
+  transformer: (item: T) => R
+): R[] => items.filter(predicate).map(transformer);
 
 // Example
 const numbers = [1, 2, 3, 4, 5, 6];
@@ -21,14 +23,17 @@ const evenSquares = filterAndTransform(
 // Result: [4, 16, 36]
 
 // 2. Reduce - Sum, group, or aggregate data
-const sum = arr => arr.reduce((acc, val) => acc + val, 0);
+const sum = (arr: number[]): number => arr.reduce((acc, val) => acc + val, 0);
 
-const groupBy = (arr, keyFn) => {
+const groupBy = <T, K extends string | number>(
+  arr: T[], 
+  keyFn: (item: T) => K
+): Record<K, T[]> => {
   return arr.reduce((groups, item) => {
     const key = keyFn(item);
-    (groups[key] = groups[key] || []).push(item);
+    (groups[key] ??= []).push(item);
     return groups;
-  }, {});
+  }, {} as Record<K, T[]>);
 };
 
 // Example
@@ -42,10 +47,13 @@ const people = [
 const byAge = groupBy(people, p => p.age);
 // Result: { 25: [{name: 'Alice', age: 25}, {name: 'Charlie', age: 25}], 30: [{name: 'Bob', age: 30}] }
 
-// 3. Find - Locate items
-const findFirst = (arr, predicate) => arr.find(predicate);
-const findAll = (arr, predicate) => arr.filter(predicate);
-const findIndex = (arr, predicate) => arr.findIndex(predicate);
+// 3. Find - Locate items using optional chaining
+const findFirst = <T>(arr: T[], predicate: (item: T) => boolean): T | undefined => 
+  arr.find(predicate);
+const findAll = <T>(arr: T[], predicate: (item: T) => boolean): T[] => 
+  arr.filter(predicate);
+const findIndex = <T>(arr: T[], predicate: (item: T) => boolean): number => 
+  arr.findIndex(predicate);
 
 // Example
 const users = [

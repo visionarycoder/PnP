@@ -78,7 +78,7 @@ public interface IComputerBuilder
 /// </summary>
 public class ComputerBuilder : IComputerBuilder
 {
-    private Computer _computer;
+    private Computer computer;
     
     public ComputerBuilder()
     {
@@ -87,80 +87,80 @@ public class ComputerBuilder : IComputerBuilder
     
     public void Reset()
     {
-        _computer = new Computer();
+        computer = new Computer();
     }
     
     public IComputerBuilder SetCPU(string cpu)
     {
-        _computer.CPU = cpu;
+        computer.CPU = cpu;
         return this;
     }
     
     public IComputerBuilder SetGPU(string gpu)
     {
-        _computer.GPU = gpu;
+        computer.GPU = gpu;
         return this;
     }
     
     public IComputerBuilder SetRAM(int ramGB)
     {
-        _computer.RAM = ramGB;
+        computer.RAM = ramGB;
         return this;
     }
     
     public IComputerBuilder SetStorage(int storageGB, string storageType = "SSD")
     {
-        _computer.Storage = storageGB;
-        _computer.StorageType = storageType;
+        computer.Storage = storageGB;
+        computer.StorageType = storageType;
         return this;
     }
     
     public IComputerBuilder SetMotherBoard(string motherBoard)
     {
-        _computer.MotherBoard = motherBoard;
+        computer.MotherBoard = motherBoard;
         return this;
     }
     
     public IComputerBuilder SetPowerSupply(string powerSupply)
     {
-        _computer.PowerSupply = powerSupply;
+        computer.PowerSupply = powerSupply;
         return this;
     }
     
     public IComputerBuilder SetCase(string computerCase)
     {
-        _computer.Case = computerCase;
+        computer.Case = computerCase;
         return this;
     }
     
     public IComputerBuilder AddAccessory(string accessory)
     {
-        _computer.Accessories.Add(accessory);
+        computer.Accessories.Add(accessory);
         return this;
     }
     
     public IComputerBuilder SetConnectivity(bool wifi = true, bool bluetooth = true)
     {
-        _computer.HasWiFi = wifi;
-        _computer.HasBluetooth = bluetooth;
+        computer.HasWiFi = wifi;
+        computer.HasBluetooth = bluetooth;
         return this;
     }
     
     public IComputerBuilder SetOperatingSystem(string os)
     {
-        _computer.OperatingSystem = os;
+        computer.OperatingSystem = os;
         return this;
     }
     
     public IComputerBuilder SetPrice(decimal price)
     {
-        _computer.Price = price;
+        computer.Price = price;
         return this;
     }
     
     public Computer Build()
     {
-        var result = _computer;
+        var result = computer;
         Reset(); // Prepare for next build
         return result;
     }
@@ -171,16 +171,16 @@ public class ComputerBuilder : IComputerBuilder
 /// </summary>
 public class ComputerDirector
 {
-    private readonly IComputerBuilder _builder;
+    private readonly IComputerBuilder builder;
     
     public ComputerDirector(IComputerBuilder builder)
     {
-        _builder = builder;
+        builder = builder;
     }
     
     public Computer BuildGamingComputer()
     {
-        return _builder
+        return builder
             .SetCPU("Intel i9-13900K")
             .SetGPU("NVIDIA RTX 4080")
             .SetRAM(32)
@@ -199,7 +199,7 @@ public class ComputerDirector
     
     public Computer BuildOfficeComputer()
     {
-        return _builder
+        return builder
             .SetCPU("Intel i5-13400")
             .SetGPU("Integrated Graphics")
             .SetRAM(16)
@@ -215,7 +215,7 @@ public class ComputerDirector
     
     public Computer BuildBudgetComputer()
     {
-        return _builder
+        return builder
             .SetCPU("AMD Ryzen 5 5600")
             .SetGPU("AMD RX 6600")
             .SetRAM(16)

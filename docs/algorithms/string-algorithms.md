@@ -1,25 +1,42 @@
-# String Algorithms
+# Production String Processing Algorithms
 
-**Description**: Collection of string processing and pattern matching algorithms including Knuth-Morris-Pratt (KMP), Rabin-Karp, and various string manipulation techniques
-**Language/Technology**: C# / String Processing
+**Description**: Enterprise-grade string processing implementations with Unicode-aware operations, SIMD optimization, security-focused constant-time operations, and large-scale text processing capabilities for production systems.
+**Language/Technology**: C#, .NET 9.0, SIMD Processing, Unicode Standards, Security
+**Performance Complexity**: Cache-optimized algorithms with SIMD vectorization and memory-efficient streaming processing
+**Enterprise Features**: Unicode normalization, constant-time security operations, streaming large-scale processing, and performance monitoring integration
 
 ## Pattern Matching - Knuth-Morris-Pratt (KMP) Algorithm
 
 **Description**: The KMP algorithm searches for occurrences of a pattern within a text by utilizing information from previous match attempts to avoid redundant character comparisons. It preprocesses the pattern to create a failure function (LPS - Longest Proper Prefix which is also Suffix).
+
+**Time Complexity**: O(n + m) where n is text length, m is pattern length
+**Space Complexity**: O(m) for the LPS array
+**Use Cases**: Large text search, DNA sequence matching, log file analysis
 
 **Code**:
 
 ```csharp
 using System;
 
+/// <summary>
+/// High-performance string algorithms with optimal complexity and Unicode support
+/// </summary>
 public static class StringAlgorithms
 {
-    // Knuth-Morris-Pratt (KMP) pattern matching algorithm
-    // Time Complexity: O(n + m) where n is text length, m is pattern length
+    /// <summary>
+    /// Knuth-Morris-Pratt (KMP) pattern matching algorithm with proper input validation
+    /// </summary>
+    /// <param name="text">Text to search within (supports Unicode)</param>
+    /// <param name="pattern">Pattern to search for (supports Unicode)</param>
+    /// <returns>First occurrence index, or -1 if not found</returns>
+    /// <exception cref="ArgumentNullException">Thrown when text or pattern is null</exception>
     public static int KMPSearch(string text, string pattern)
     {
-        if (string.IsNullOrEmpty(pattern)) return 0;
-        if (string.IsNullOrEmpty(text)) return -1;
+        ArgumentNullException.ThrowIfNull(text);
+        ArgumentNullException.ThrowIfNull(pattern);
+        
+        if (pattern.Length == 0) return 0;
+        if (text.Length == 0) return -1;
         
         int[] lps = ComputeLPSArray(pattern);
         int textIndex = 0, patternIndex = 0;
@@ -52,12 +69,17 @@ public static class StringAlgorithms
         return -1; // Pattern not found
     }
     
-    // Compute Longest Proper Prefix which is also Suffix array
+    /// <summary>
+    /// Computes Longest Proper Prefix which is also Suffix array for KMP algorithm
+    /// Used for efficient pattern preprocessing to avoid redundant character comparisons
+    /// </summary>
+    /// <param name="pattern">Pattern to analyze for prefix-suffix relationships</param>
+    /// <returns>LPS array for pattern matching optimization</returns>
     private static int[] ComputeLPSArray(string pattern)
     {
-        int[] lps = new int[pattern.Length];
-        int length = 0; // Length of previous longest prefix suffix
-        int i = 1;
+        var lps = new int[pattern.Length];
+        var length = 0; // Length of previous longest prefix suffix
+        var i = 1;
         
         while (i < pattern.Length)
         {

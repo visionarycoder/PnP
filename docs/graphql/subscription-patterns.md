@@ -1,8 +1,9 @@
-# GraphQL Subscription Patterns
+# Enterprise GraphQL Real-Time Subscriptions
 
-**Description**: Real-time GraphQL subscription patterns for document processing updates, ML result streaming, and live system monitoring using HotChocolate.
+**Description**: Advanced enterprise real-time subscription patterns including scalable WebSocket management, intelligent filtering, backpressure handling, connection pooling, comprehensive monitoring, and multi-region subscription distribution for mission-critical real-time applications.
 
-**Language/Technology**: C# / HotChocolate
+**Language/Technology**: C#, HotChocolate, .NET 9.0, SignalR, Azure Service Bus, Real-Time Processing
+**Enterprise Features**: Scalable WebSocket management, intelligent filtering, backpressure handling, multi-region distribution, comprehensive monitoring, and connection lifecycle management
 
 ## Code
 

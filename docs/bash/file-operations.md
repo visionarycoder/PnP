@@ -9,29 +9,98 @@
 
 ```bash
 #!/bin/bash
+set -euo pipefail
 
-# Create directories recursively
-mkdir -p /path/to/nested/directories
+# Safe file operations with error handling
+safe_mkdir() {
+    local target_dir="$1"
+    
+    if [[ -z "$target_dir" ]]; then
+        echo "ERROR: Directory path required" >&2
+        return 1
+    fi
+    
+    if ! mkdir -p "$target_dir"; then
+        echo "ERROR: Failed to create directory: $target_dir" >&2
+        return 1
+    fi
+    
+    echo "INFO: Created directory: $target_dir"
+}
 
-# Copy files with options
-cp -r source_directory/ destination_directory/  # Recursive copy
-cp -p file.txt backup.txt                       # Preserve permissions
-cp -u newer_file.txt existing_file.txt          # Only if newer
+# Copy with verification and backup
+safe_copy() {
+    local source="$1"
+    local destination="$2"
+    local backup_suffix=".backup.$(date +%s)"
+    
+    # Validate inputs
+    [[ -z "$source" ]] && { echo "ERROR: Source file required" >&2; return 1; }
+    [[ -z "$destination" ]] && { echo "ERROR: Destination required" >&2; return 1; }
+    [[ ! -e "$source" ]] && { echo "ERROR: Source not found: $source" >&2; return 1; }
+    
+    # Create backup if destination exists
+    if [[ -e "$destination" ]]; then
+        cp "$destination" "$destination$backup_suffix"
+        echo "INFO: Backup created: $destination$backup_suffix"
+    fi
+    
+    # Perform copy with verification
+    if cp -p "$source" "$destination"; then
+        echo "INFO: Successfully copied: $source -> $destination"
+    else
+        echo "ERROR: Copy failed: $source -> $destination" >&2
+        return 1
+    fi
+}
 
-# Move/rename files
-mv old_name.txt new_name.txt
-mv file.txt /new/location/
+# Safe removal with confirmation
+safe_remove() {
+    local target="$1"
+    local force="${2:-false}"
+    
+    [[ -z "$target" ]] && { echo "ERROR: Target path required" >&2; return 1; }
+    [[ ! -e "$target" ]] && { echo "WARNING: Target not found: $target"; return 0; }
+    
+    if [[ "$force" != "true" ]]; then
+        read -p "Remove '$target'? [y/N]: " -r response
+        [[ ! "$response" =~ ^[Yy]$ ]] && { echo "INFO: Removal cancelled"; return 0; }
+    fi
+    
+    if rm -rf "$target"; then
+        echo "INFO: Removed: $target"
+    else
+        echo "ERROR: Failed to remove: $target" >&2
+        return 1
+    fi
+}
 
-# Remove files safely
-rm -i file.txt                    # Interactive removal
-rm -rf directory/                 # Force recursive removal (dangerous!)
-find /path -name "*.tmp" -delete  # Safe alternative for patterns
-
-# File permissions
-chmod 755 script.sh               # rwxr-xr-x
-chmod +x script.sh                # Make executable
-chmod -R 644 directory/           # Recursive permission change
-chown user:group file.txt         # Change ownership
+# Set permissions securely
+set_permissions() {
+    local file="$1"
+    local permissions="$2"
+    local owner="${3:-}"
+    
+    [[ -z "$file" ]] && { echo "ERROR: File path required" >&2; return 1; }
+    [[ -z "$permissions" ]] && { echo "ERROR: Permissions required" >&2; return 1; }
+    [[ ! -e "$file" ]] && { echo "ERROR: File not found: $file" >&2; return 1; }
+    
+    if chmod "$permissions" "$file"; then
+        echo "INFO: Set permissions $permissions on $file"
+    else
+        echo "ERROR: Failed to set permissions on $file" >&2
+        return 1
+    fi
+    
+    # Change ownership if specified
+    if [[ -n "$owner" ]]; then
+        if chown "$owner" "$file"; then
+            echo "INFO: Set owner $owner on $file"
+        else
+            echo "WARNING: Failed to set owner $owner on $file" >&2
+        fi
+    fi
+}
 ```
 
 ## Find and Locate Operations
@@ -39,25 +108,109 @@ chown user:group file.txt         # Change ownership
 **Code**:
 
 ```bash
-# Find files by name
-find /path -name "*.log"
-find . -iname "*.PDF"              # Case insensitive
+# Advanced find operations with error handling
+find_files() {
+    local search_path="$1"
+    local pattern="${2:-*}"
+    local max_depth="${3:-}"
+    
+    # Validate search path
+    [[ -z "$search_path" ]] && { echo "ERROR: Search path required" >&2; return 1; }
+    [[ ! -d "$search_path" ]] && { echo "ERROR: Directory not found: $search_path" >&2; return 1; }
+    
+    local find_args=("$search_path")
+    
+    # Add max depth if specified
+    [[ -n "$max_depth" ]] && find_args+=(-maxdepth "$max_depth")
+    
+    # Add pattern matching
+    find_args+=(-name "$pattern")
+    
+    # Execute find with error handling
+    if ! find "${find_args[@]}" 2>/dev/null; then
+        echo "ERROR: Find operation failed" >&2
+        return 1
+    fi
+}
 
-# Find by size
-find /path -size +100M             # Files larger than 100MB
-find /path -size -1k               # Files smaller than 1KB
+# Find by size with human-readable output
+find_by_size() {
+    local search_path="$1"
+    local size_criteria="$2"  # e.g., "+100M", "-1k"
+    
+    [[ -z "$search_path" || -z "$size_criteria" ]] && {
+        echo "Usage: find_by_size <path> <size_criteria>" >&2
+        return 1
+    }
+    
+    find "$search_path" -type f -size "$size_criteria" -exec ls -lh {} + 2>/dev/null | 
+    sort -k5 -hr | 
+    head -20
+}
 
-# Find by modification time
-find /path -mtime -7               # Modified in last 7 days
-find /path -mtime +30              # Modified more than 30 days ago
+# Find recent files with detailed output
+find_recent() {
+    local search_path="$1"
+    local days="${2:-7}"
+    
+    [[ -z "$search_path" ]] && { echo "ERROR: Search path required" >&2; return 1; }
+    
+    echo "Files modified within last $days days in $search_path:"
+    find "$search_path" -type f -mtime -"$days" -printf "%T@ %Tc %p\n" 2>/dev/null | 
+    sort -nr | 
+    head -10 | 
+    cut -d' ' -f2-
+}
 
-# Find and execute commands
-find /path -name "*.tmp" -exec rm {} \;
-find /path -type f -exec grep -l "pattern" {} \;
-
-# Locate (requires updatedb)
-locate filename.txt
-updatedb                           # Update locate database
+# Safe batch operations on found files
+find_and_process() {
+    local search_path="$1"
+    local pattern="$2"
+    local action="$3"
+    
+    [[ -z "$search_path" || -z "$pattern" || -z "$action" ]] && {
+        echo "Usage: find_and_process <path> <pattern> <action>" >&2
+        return 1
+    }
+    
+    local temp_file
+    temp_file=$(mktemp)
+    trap 'rm -f "$temp_file"' EXIT
+    
+    # Find files and store in temp file
+    if ! find "$search_path" -name "$pattern" -type f > "$temp_file" 2>/dev/null; then
+        echo "ERROR: Find operation failed" >&2
+        return 1
+    fi
+    
+    local file_count
+    file_count=$(wc -l < "$temp_file")
+    
+    if [[ "$file_count" -eq 0 ]]; then
+        echo "INFO: No files found matching pattern: $pattern"
+        return 0
+    fi
+    
+    echo "Found $file_count files matching '$pattern'"
+    read -p "Proceed with $action? [y/N]: " -r response
+    
+    if [[ "$response" =~ ^[Yy]$ ]]; then
+        while IFS= read -r file; do
+            echo "Processing: $file"
+            case "$action" in
+                "delete")
+                    rm -f "$file"
+                    ;;
+                "compress")
+                    gzip "$file"
+                    ;;
+                *)
+                    echo "Unknown action: $action" >&2
+                    ;;
+            esac
+        done < "$temp_file"
+    fi
+}
 ```
 
 ## File Content Operations

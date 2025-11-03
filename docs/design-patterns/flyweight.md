@@ -24,41 +24,41 @@ public interface ICharacterFlyweight
 // Concrete Flyweight - implements Flyweight interface and stores intrinsic state
 public class CharacterFlyweight : ICharacterFlyweight
 {
-    private readonly char _character; // Intrinsic state - shared among all instances
-    private readonly byte[] _bitmap; // Intrinsic state - character shape data
-    private readonly int _baseWidth;
-    private readonly int _baseHeight;
+    private readonly char character; // Intrinsic state - shared among all instances
+    private readonly byte[] bitmap; // Intrinsic state - character shape data
+    private readonly int baseWidth;
+    private readonly int baseHeight;
     
     public CharacterFlyweight(char character)
     {
-        _character = character;
+        character = character;
         
         // Simulate creating bitmap data for the character
-        _baseWidth = 8;
-        _baseHeight = 12;
-        _bitmap = GenerateCharacterBitmap(character);
+        baseWidth = 8;
+        baseHeight = 12;
+        bitmap = GenerateCharacterBitmap(character);
         
         Console.WriteLine($"🎨 Created flyweight for character: '{character}'");
     }
     
-    public char GetCharacter() => _character;
+    public char GetCharacter() => character;
     
     public int GetIntrinsicMemoryUsage()
     {
-        return sizeof(char) + _bitmap.Length + sizeof(int) * 2;
+        return sizeof(char) + bitmap.Length + sizeof(int) * 2;
     }
     
     // Operation that uses both intrinsic and extrinsic state
     public void Render(int x, int y, Color color, int fontSize, string fontFamily)
     {
         // Extrinsic state: x, y, color, fontSize, fontFamily
-        // Intrinsic state: _character, _bitmap, _baseWidth, _baseHeight
+        // Intrinsic state: character, bitmap, baseWidth, baseHeight
         
         var scaleFactor = fontSize / 12.0; // Base font size is 12
-        var width = (int)(_baseWidth * scaleFactor);
-        var height = (int)(_baseHeight * scaleFactor);
+        var width = (int)(baseWidth * scaleFactor);
+        var height = (int)(baseHeight * scaleFactor);
         
-        Console.WriteLine($"📝 Rendering '{_character}' at ({x},{y}) " +
+        Console.WriteLine($"📝 Rendering '{character}' at ({x},{y}) " +
                          $"[{width}x{height}] in {fontFamily} font, color: {color.Name}");
     }
     
@@ -75,33 +75,33 @@ public class CharacterFlyweight : ICharacterFlyweight
 // Flyweight Factory - creates and manages flyweight objects
 public class CharacterFlyweightFactory
 {
-    private readonly Dictionary<char, ICharacterFlyweight> _flyweights;
-    private static CharacterFlyweightFactory _instance;
-    private static readonly object _lock = new object();
+    private readonly Dictionary<char, ICharacterFlyweight> flyweights;
+    private static CharacterFlyweightFactory instance;
+    private static readonly object lock = new object();
     
     private CharacterFlyweightFactory()
     {
-        _flyweights = new Dictionary<char, ICharacterFlyweight>();
+        flyweights = new Dictionary<char, ICharacterFlyweight>();
     }
     
     public static CharacterFlyweightFactory Instance
     {
         get
         {
-            if (_instance == null)
+            if (instance == null)
             {
-                lock (_lock)
+                lock (lock)
                 {
-                    _instance ??= new CharacterFlyweightFactory();
+                    instance ??= new CharacterFlyweightFactory();
                 }
             }
-            return _instance;
+            return instance;
         }
     }
     
     public ICharacterFlyweight GetCharacter(char character)
     {
-        if (!_flyweights.ContainsKey(character))
+        if (!flyweights.ContainsKey(character))
         {
             _flyweights[character] = new CharacterFlyweight(character);
         }
@@ -109,11 +109,11 @@ public class CharacterFlyweightFactory
         return _flyweights[character];
     }
     
-    public int GetCreatedFlyweightsCount() => _flyweights.Count;
+    public int GetCreatedFlyweightsCount() => flyweights.Count;
     
     public int GetTotalIntrinsicMemoryUsage()
     {
-        return _flyweights.Values.Sum(fw => fw.GetIntrinsicMemoryUsage());
+        return flyweights.Values.Sum(fw => fw.GetIntrinsicMemoryUsage());
     }
     
     public void ShowStatistics()
@@ -121,14 +121,14 @@ public class CharacterFlyweightFactory
         Console.WriteLine($"\n📊 Flyweight Factory Statistics:");
         Console.WriteLine($"   Unique characters (flyweights): {GetCreatedFlyweightsCount()}");
         Console.WriteLine($"   Total intrinsic memory usage: {GetTotalIntrinsicMemoryUsage()} bytes");
-        Console.WriteLine($"   Characters created: {string.Join("", _flyweights.Keys.OrderBy(c => c))}");
+        Console.WriteLine($"   Characters created: {string.Join("", flyweights.Keys.OrderBy(c => c))}");
     }
 }
 
 // Context - contains extrinsic state and maintains references to flyweights
 public class Character
 {
-    private readonly ICharacterFlyweight _flyweight; // Reference to flyweight
+    private readonly ICharacterFlyweight flyweight; // Reference to flyweight
     
     // Extrinsic state
     public int X { get; set; }
@@ -139,7 +139,7 @@ public class Character
     
     public Character(char character, int x, int y, Color color, int fontSize = 12, string fontFamily = "Arial")
     {
-        _flyweight = CharacterFlyweightFactory.Instance.GetCharacter(character);
+        flyweight = CharacterFlyweightFactory.Instance.GetCharacter(character);
         X = x;
         Y = y;
         Color = color;
@@ -147,11 +147,11 @@ public class Character
         FontFamily = fontFamily;
     }
     
-    public char GetCharacter() => _flyweight.GetCharacter();
+    public char GetCharacter() => flyweight.GetCharacter();
     
     public void Render()
     {
-        _flyweight.Render(X, Y, Color, FontSize, FontFamily);
+        flyweight.Render(X, Y, Color, FontSize, FontFamily);
     }
     
     public void MoveTo(int x, int y)
@@ -172,18 +172,18 @@ public class Character
 // Client - maintains collection of characters (text document)
 public class TextDocument
 {
-    private readonly List<Character> _characters;
-    private readonly string _title;
+    private readonly List<Character> characters;
+    private readonly string title;
     
     public TextDocument(string title)
     {
-        _title = title;
-        _characters = new List<Character>();
+        title = title;
+        characters = new List<Character>();
     }
     
     public void AddCharacter(char character, int x, int y, Color color, int fontSize = 12, string fontFamily = "Arial")
     {
-        _characters.Add(new Character(character, x, y, color, fontSize, fontFamily));
+        characters.Add(new Character(character, x, y, color, fontSize, fontFamily));
     }
     
     public void AddText(string text, int startX, int startY, Color color, int fontSize = 12, string fontFamily = "Arial")
@@ -201,10 +201,10 @@ public class TextDocument
     
     public void Render()
     {
-        Console.WriteLine($"\n📄 Rendering document: '{_title}'");
+        Console.WriteLine($"\n📄 Rendering document: '{title}'");
         Console.WriteLine(new string('=', 50));
         
-        foreach (var character in _characters)
+        foreach (var character in characters)
         {
             character.Render();
         }
@@ -214,10 +214,10 @@ public class TextDocument
     
     public void ShowMemoryUsage()
     {
-        var totalCharacters = _characters.Count;
+        var totalCharacters = characters.Count;
         var uniqueCharacters = CharacterFlyweightFactory.Instance.GetCreatedFlyweightsCount();
         var intrinsicMemory = CharacterFlyweightFactory.Instance.GetTotalIntrinsicMemoryUsage();
-        var extrinsicMemory = _characters.Sum(c => c.GetExtrinsicMemoryUsage());
+        var extrinsicMemory = characters.Sum(c => c.GetExtrinsicMemoryUsage());
         var totalMemory = intrinsicMemory + extrinsicMemory;
         
         // Calculate memory without flyweight pattern
@@ -234,11 +234,11 @@ public class TextDocument
         Console.WriteLine($"   Memory saved: {memoryWithoutFlyweight - totalMemory} bytes ({(1.0 - (double)totalMemory / memoryWithoutFlyweight) * 100:F1}%)");
     }
     
-    public int GetTotalCharacters() => _characters.Count;
+    public int GetTotalCharacters() => characters.Count;
     
     public void ChangeFormatting(int startIndex, int length, Color newColor, int newFontSize)
     {
-        var endIndex = Math.Min(startIndex + length, _characters.Count);
+        var endIndex = Math.Min(startIndex + length, characters.Count);
         
         for (int i = startIndex; i < endIndex; i++)
         {
@@ -260,16 +260,16 @@ public interface ITreeFlyweight
 
 public class TreeFlyweight : ITreeFlyweight
 {
-    private readonly string _treeType; // Intrinsic state
-    private readonly int _polygonCount; // Intrinsic state - 3D model complexity
-    private readonly byte[] _textureData; // Intrinsic state - tree texture
+    private readonly string treeType; // Intrinsic state
+    private readonly int polygonCount; // Intrinsic state - 3D model complexity
+    private readonly byte[] textureData; // Intrinsic state - tree texture
     
     public TreeFlyweight(string treeType)
     {
-        _treeType = treeType;
+        treeType = treeType;
         
         // Different tree types have different complexity
-        _polygonCount = treeType switch
+        polygonCount = treeType switch
         {
             "Oak" => 1500,
             "Pine" => 1200,
@@ -279,37 +279,37 @@ public class TreeFlyweight : ITreeFlyweight
         };
         
         // Simulate texture data
-        _textureData = new byte[_polygonCount / 10]; // Simplified texture size
+        textureData = new byte[polygonCount / 10]; // Simplified texture size
         
-        Console.WriteLine($"🌳 Created {treeType} tree flyweight ({_polygonCount} polygons)");
+        Console.WriteLine($"🌳 Created {treeType} tree flyweight ({polygonCount} polygons)");
     }
     
-    public string GetTreeType() => _treeType;
+    public string GetTreeType() => treeType;
     
-    public int GetModelComplexity() => _polygonCount;
+    public int GetModelComplexity() => polygonCount;
     
     public void Render(double x, double y, double scale, Color seasonColor)
     {
-        Console.WriteLine($"🎋 Rendering {_treeType} at ({x:F1}, {y:F1}) " +
+        Console.WriteLine($"🎋 Rendering {treeType} at ({x:F1}, {y:F1}) " +
                          $"scale: {scale:F2} season: {seasonColor.Name}");
     }
 }
 
 public class TreeFlyweightFactory
 {
-    private readonly Dictionary<string, ITreeFlyweight> _treeTypes;
-    private static TreeFlyweightFactory _instance;
+    private readonly Dictionary<string, ITreeFlyweight> treeTypes;
+    private static TreeFlyweightFactory instance;
     
     private TreeFlyweightFactory()
     {
-        _treeTypes = new Dictionary<string, ITreeFlyweight>();
+        treeTypes = new Dictionary<string, ITreeFlyweight>();
     }
     
-    public static TreeFlyweightFactory Instance => _instance ??= new TreeFlyweightFactory();
+    public static TreeFlyweightFactory Instance => instance ??= new TreeFlyweightFactory();
     
     public ITreeFlyweight GetTreeType(string treeType)
     {
-        if (!_treeTypes.ContainsKey(treeType))
+        if (!treeTypes.ContainsKey(treeType))
         {
             _treeTypes[treeType] = new TreeFlyweight(treeType);
         }
@@ -319,17 +319,17 @@ public class TreeFlyweightFactory
     
     public void ShowStatistics()
     {
-        var totalPolygons = _treeTypes.Values.Sum(t => t.GetModelComplexity());
+        var totalPolygons = treeTypes.Values.Sum(t => t.GetModelComplexity());
         Console.WriteLine($"\n🏞️ Forest Statistics:");
-        Console.WriteLine($"   Tree types loaded: {_treeTypes.Count}");
+        Console.WriteLine($"   Tree types loaded: {treeTypes.Count}");
         Console.WriteLine($"   Total polygons in flyweights: {totalPolygons}");
-        Console.WriteLine($"   Tree types: {string.Join(", ", _treeTypes.Keys)}");
+        Console.WriteLine($"   Tree types: {string.Join(", ", treeTypes.Keys)}");
     }
 }
 
 public class Tree
 {
-    private readonly ITreeFlyweight _flyweight;
+    private readonly ITreeFlyweight flyweight;
     
     // Extrinsic state
     public double X { get; set; }
@@ -339,7 +339,7 @@ public class Tree
     
     public Tree(string treeType, double x, double y, double scale, Color seasonColor)
     {
-        _flyweight = TreeFlyweightFactory.Instance.GetTreeType(treeType);
+        flyweight = TreeFlyweightFactory.Instance.GetTreeType(treeType);
         X = x;
         Y = y;
         Scale = scale;
@@ -348,24 +348,24 @@ public class Tree
     
     public void Render()
     {
-        _flyweight.Render(X, Y, Scale, SeasonColor);
+        flyweight.Render(X, Y, Scale, SeasonColor);
     }
     
-    public string GetTreeType() => _flyweight.GetTreeType();
+    public string GetTreeType() => flyweight.GetTreeType();
 }
 
 public class Forest
 {
-    private readonly List<Tree> _trees;
+    private readonly List<Tree> trees;
     
     public Forest()
     {
-        _trees = new List<Tree>();
+        trees = new List<Tree>();
     }
     
     public void PlantTree(string treeType, double x, double y, double scale, Color seasonColor)
     {
-        _trees.Add(new Tree(treeType, x, y, scale, seasonColor));
+        trees.Add(new Tree(treeType, x, y, scale, seasonColor));
     }
     
     public void GenerateRandomForest(int treeCount)
@@ -387,15 +387,15 @@ public class Forest
             PlantTree(treeType, x, y, scale, seasonColor);
         }
         
-        Console.WriteLine($"✅ Forest generated with {_trees.Count} trees");
+        Console.WriteLine($"✅ Forest generated with {trees.Count} trees");
     }
     
     public void RenderForest()
     {
-        Console.WriteLine($"\n🏞️ Rendering forest with {_trees.Count} trees:");
+        Console.WriteLine($"\n🏞️ Rendering forest with {trees.Count} trees:");
         
         // Group by tree type for better visualization
-        var treeGroups = _trees.GroupBy(t => t.GetTreeType()).ToList();
+        var treeGroups = trees.GroupBy(t => t.GetTreeType()).ToList();
         
         foreach (var group in treeGroups)
         {
@@ -417,8 +417,8 @@ public class Forest
     
     private void ShowMemoryEfficiency()
     {
-        var totalTrees = _trees.Count;
-        var uniqueTreeTypes = _trees.Select(t => t.GetTreeType()).Distinct().Count();
+        var totalTrees = trees.Count;
+        var uniqueTreeTypes = trees.Select(t => t.GetTreeType()).Distinct().Count();
         
         // Approximate memory calculation
         const int flyweightMemoryPerType = 2000; // Approximate bytes per tree type flyweight
@@ -446,21 +446,21 @@ public interface IIconFlyweight
 
 public class IconFlyweight : IIconFlyweight
 {
-    private readonly string _iconName;
-    private readonly byte[] _svgData; // Vector graphics data
+    private readonly string iconName;
+    private readonly byte[] svgData; // Vector graphics data
     
     public IconFlyweight(string iconName)
     {
-        _iconName = iconName;
-        _svgData = GenerateIconSvgData(iconName);
+        iconName = iconName;
+        svgData = GenerateIconSvgData(iconName);
         Console.WriteLine($"🎨 Created icon flyweight: {iconName}");
     }
     
-    public string GetIconName() => _iconName;
+    public string GetIconName() => iconName;
     
     public void Render(int x, int y, int size, Color tintColor)
     {
-        Console.WriteLine($"🖼️ Rendering {_iconName} icon at ({x},{y}) size:{size}px tint:{tintColor.Name}");
+        Console.WriteLine($"🖼️ Rendering {iconName} icon at ({x},{y}) size:{size}px tint:{tintColor.Name}");
     }
     
     private byte[] GenerateIconSvgData(string iconName)
@@ -472,11 +472,11 @@ public class IconFlyweight : IIconFlyweight
 
 public class IconFactory
 {
-    private readonly Dictionary<string, IIconFlyweight> _icons = new Dictionary<string, IIconFlyweight>();
+    private readonly Dictionary<string, IIconFlyweight> icons = new Dictionary<string, IIconFlyweight>();
     
     public IIconFlyweight GetIcon(string iconName)
     {
-        if (!_icons.ContainsKey(iconName))
+        if (!icons.ContainsKey(iconName))
         {
             _icons[iconName] = new IconFlyweight(iconName);
         }
@@ -484,32 +484,32 @@ public class IconFactory
         return _icons[iconName];
     }
     
-    public int GetLoadedIconsCount() => _icons.Count;
+    public int GetLoadedIconsCount() => icons.Count;
 }
 
 public class WebPage
 {
-    private readonly IconFactory _iconFactory;
-    private readonly List<(IIconFlyweight icon, int x, int y, int size, Color tint)> _iconInstances;
+    private readonly IconFactory iconFactory;
+    private readonly List<(IIconFlyweight icon, int x, int y, int size, Color tint)> iconInstances;
     
     public WebPage()
     {
-        _iconFactory = new IconFactory();
-        _iconInstances = new List<(IIconFlyweight, int, int, int, Color)>();
+        iconFactory = new IconFactory();
+        iconInstances = new List<(IIconFlyweight, int, int, int, Color)>();
     }
     
     public void AddIcon(string iconName, int x, int y, int size = 24, Color? tint = null)
     {
-        var icon = _iconFactory.GetIcon(iconName);
-        _iconInstances.Add((icon, x, y, size, tint ?? Color.Black));
+        var icon = iconFactory.GetIcon(iconName);
+        iconInstances.Add((icon, x, y, size, tint ?? Color.Black));
     }
     
     public void RenderPage()
     {
-        Console.WriteLine($"\n🌐 Rendering web page with {_iconInstances.Count} icons:");
-        Console.WriteLine($"   Unique icon types loaded: {_iconFactory.GetLoadedIconsCount()}");
+        Console.WriteLine($"\n🌐 Rendering web page with {iconInstances.Count} icons:");
+        Console.WriteLine($"   Unique icon types loaded: {iconFactory.GetLoadedIconsCount()}");
         
-        foreach (var (icon, x, y, size, tint) in _iconInstances)
+        foreach (var (icon, x, y, size, tint) in iconInstances)
         {
             icon.Render(x, y, size, tint);
         }

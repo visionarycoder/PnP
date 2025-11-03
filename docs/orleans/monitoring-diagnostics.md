@@ -1,8 +1,8 @@
-# Monitoring and Diagnostics
+# Enterprise Orleans Observability & Analytics
 
-**Description**: Orleans monitoring and diagnostics patterns for observability, performance monitoring, and system health tracking.
+**Description**: Production-grade Orleans monitoring with comprehensive telemetry, distributed tracing, predictive analytics, intelligent alerting, real-time dashboards, and enterprise compliance for mission-critical system observability.
 
-**Language/Technology**: C# 12, Orleans, Application Insights, Prometheus
+**Language/Technology**: C# (.NET 9.0), Orleans 8.0+, Azure Monitor, OpenTelemetry, Grafana
 
 ## Table of Contents
 

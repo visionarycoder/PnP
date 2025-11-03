@@ -61,23 +61,23 @@ public record SystemMessage(string Content, DateTime Timestamp);
 // Chat room mediator
 public class ChatRoomMediator : IMediator
 {
-    private readonly List<IColleague> _participants = new();
-    private readonly List<ChatMessage> _messageHistory = new();
-    private readonly Dictionary<string, UserProfile> _userProfiles = new();
+    private readonly List<IColleague> participants = new();
+    private readonly List<ChatMessage> messageHistory = new();
+    private readonly Dictionary<string, UserProfile> userProfiles = new();
     
-    public IReadOnlyList<ChatMessage> MessageHistory => _messageHistory.AsReadOnly();
-    public IReadOnlyList<IColleague> Participants => _participants.AsReadOnly();
+    public IReadOnlyList<ChatMessage> MessageHistory => messageHistory.AsReadOnly();
+    public IReadOnlyList<IColleague> Participants => participants.AsReadOnly();
     
     public void RegisterColleague(IColleague colleague)
     {
-        _participants.Add(colleague);
+        participants.Add(colleague);
         colleague.Mediator = this;
         
         // Notify all participants about new user
         var joinMessage = new UserJoinedMessage(colleague.Id, DateTime.UtcNow);
         _ = Task.Run(async () =>
         {
-            foreach (var participant in _participants.Where(p => p.Id != colleague.Id))
+            foreach (var participant in participants.Where(p => p.Id != colleague.Id))
             {
                 await participant.ReceiveAsync(joinMessage, colleague);
             }
@@ -88,14 +88,14 @@ public class ChatRoomMediator : IMediator
     
     public void RemoveColleague(IColleague colleague)
     {
-        _participants.Remove(colleague);
+        participants.Remove(colleague);
         colleague.Mediator = null;
         
         // Notify remaining participants
         var leaveMessage = new UserLeftMessage(colleague.Id, DateTime.UtcNow);
         _ = Task.Run(async () =>
         {
-            foreach (var participant in _participants)
+            foreach (var participant in participants)
             {
                 await participant.ReceiveAsync(leaveMessage, colleague);
             }
@@ -128,11 +128,11 @@ public class ChatRoomMediator : IMediator
     
     private async Task BroadcastMessage(ChatMessage message, IColleague sender)
     {
-        _messageHistory.Add(message);
+        messageHistory.Add(message);
         
         Console.WriteLine($"[ChatRoom] Broadcasting message from {sender.Id}: {message.Content}");
         
-        var tasks = _participants
+        var tasks = participants
             .Where(p => p.Id != sender.Id)
             .Select(p => p.ReceiveAsync(message, sender));
             
@@ -141,7 +141,7 @@ public class ChatRoomMediator : IMediator
     
     private async Task SendPrivateMessage(PrivateMessage message, IColleague sender)
     {
-        var target = _participants.FirstOrDefault(p => p.Id == message.TargetId);
+        var target = participants.FirstOrDefault(p => p.Id == message.TargetId);
         
         if (target != null)
         {
@@ -159,7 +159,7 @@ public class ChatRoomMediator : IMediator
     {
         Console.WriteLine($"[ChatRoom] System message: {message.Content}");
         
-        var tasks = _participants.Select(p => p.ReceiveAsync(message, this as IColleague ?? _participants.First()));
+        var tasks = participants.Select(p => p.ReceiveAsync(message, this as IColleague ?? participants.First()));
         await Task.WhenAll(tasks);
     }
     
@@ -170,7 +170,7 @@ public class ChatRoomMediator : IMediator
     
     public UserProfile? GetUserProfile(string userId)
     {
-        return _userProfiles.TryGetValue(userId, out var profile) ? profile : null;
+        return userProfiles.TryGetValue(userId, out var profile) ? profile : null;
     }
 }
 
@@ -237,7 +237,7 @@ public class ChatUser : BaseColleague
 
 public class ChatBot : BaseColleague
 {
-    private readonly Dictionary<string, string> _responses = new()
+    private readonly Dictionary<string, string> responses = new()
     {
         ["help"] = "Available commands: help, time, weather, joke",
         ["time"] = $"Current time: {DateTime.Now:HH:mm:ss}",
@@ -257,7 +257,7 @@ public class ChatBot : BaseColleague
         {
             var command = chatMsg.Content[1..].ToLower();
             
-            if (_responses.TryGetValue(command, out var response))
+            if (responses.TryGetValue(command, out var response))
             {
                 var botResponse = new ChatMessage($"🤖 {response}", Id, DateTime.UtcNow);
                 await SendAsync(botResponse);
@@ -284,20 +284,20 @@ public record ButtonClickMessage(string ButtonName);
 // Dialog mediator
 public class DialogMediator : IMediator
 {
-    private readonly List<IColleague> _components = new();
-    private readonly Dictionary<string, object?> _formData = new();
-    private readonly Dictionary<string, string> _validationErrors = new();
+    private readonly List<IColleague> components = new();
+    private readonly Dictionary<string, object?> formData = new();
+    private readonly Dictionary<string, string> validationErrors = new();
     
     public void RegisterColleague(IColleague colleague)
     {
-        _components.Add(colleague);
+        components.Add(colleague);
         colleague.Mediator = this;
         Console.WriteLine($"[Dialog] Registered component: {colleague.Id}");
     }
     
     public void RemoveColleague(IColleague colleague)
     {
-        _components.Remove(colleague);
+        components.Remove(colleague);
         colleague.Mediator = null;
         Console.WriteLine($"[Dialog] Removed component: {colleague.Id}");
     }
@@ -372,7 +372,7 @@ public class DialogMediator : IMediator
         
         if (isValid)
         {
-            _validationErrors.Remove(fieldName);
+            validationErrors.Remove(fieldName);
         }
         else
         {
@@ -382,10 +382,10 @@ public class DialogMediator : IMediator
         var validationMessage = new ValidationMessage(fieldName, isValid, errorMessage);
         
         // Notify validation components
-        var validationComponents = _components.OfType<ValidationDisplay>();
+        var validationComponents = components.OfType<ValidationDisplay>();
         foreach (var component in validationComponents)
         {
-            await component.ReceiveAsync(validationMessage, this as IColleague ?? _components.First());
+            await component.ReceiveAsync(validationMessage, this as IColleague ?? components.First());
         }
         
         // Update submit button state
@@ -395,7 +395,7 @@ public class DialogMediator : IMediator
     private async Task NotifyDependentComponents(FieldChangedMessage message, IColleague sender)
     {
         // Example: Update dependent dropdowns, enable/disable fields, etc.
-        var dependentComponents = _components.Where(c => c.Id != sender.Id);
+        var dependentComponents = components.Where(c => c.Id != sender.Id);
         
         foreach (var component in dependentComponents)
         {
@@ -410,9 +410,9 @@ public class DialogMediator : IMediator
         switch (message.ButtonName.ToLower())
         {
             case "submit":
-                if (_validationErrors.Count == 0)
+                if (validationErrors.Count == 0)
                 {
-                    var submitMessage = new FormSubmitMessage(new Dictionary<string, object?>(_formData));
+                    var submitMessage = new FormSubmitMessage(new Dictionary<string, object?>(formData));
                     await SendAsync(submitMessage, sender);
                 }
                 else
@@ -440,7 +440,7 @@ public class DialogMediator : IMediator
         }
         
         // Notify all components about successful submission
-        foreach (var component in _components)
+        foreach (var component in components)
         {
             await component.ReceiveAsync(message, sender);
         }
@@ -448,26 +448,26 @@ public class DialogMediator : IMediator
     
     private async Task UpdateSubmitButtonState()
     {
-        var hasErrors = _validationErrors.Count > 0;
-        var submitButtons = _components.OfType<SubmitButton>();
+        var hasErrors = validationErrors.Count > 0;
+        var submitButtons = components.OfType<SubmitButton>();
         
         foreach (var button in submitButtons)
         {
-            await button.ReceiveAsync(new ValidationMessage("form", !hasErrors), this as IColleague ?? _components.First());
+            await button.ReceiveAsync(new ValidationMessage("form", !hasErrors), this as IColleague ?? components.First());
         }
     }
     
     private async Task ResetForm()
     {
-        _formData.Clear();
-        _validationErrors.Clear();
+        formData.Clear();
+        validationErrors.Clear();
         
         Console.WriteLine("[Dialog] Form reset");
         
         // Notify all components to reset
-        foreach (var component in _components)
+        foreach (var component in components)
         {
-            await component.ReceiveAsync("RESET", this as IColleague ?? _components.First());
+            await component.ReceiveAsync("RESET", this as IColleague ?? components.First());
         }
     }
     
@@ -475,9 +475,9 @@ public class DialogMediator : IMediator
     {
         Console.WriteLine("[Dialog] Dialog cancelled");
         
-        foreach (var component in _components)
+        foreach (var component in components)
         {
-            await component.ReceiveAsync("CANCEL", this as IColleague ?? _components.First());
+            await component.ReceiveAsync("CANCEL", this as IColleague ?? components.First());
         }
     }
 }
@@ -486,7 +486,7 @@ public class DialogMediator : IMediator
 public class InputField : BaseColleague
 {
     public string Label { get; }
-    private object? _value;
+    private object? value;
     
     public InputField(string id, string label) : base(id)
     {
@@ -495,7 +495,7 @@ public class InputField : BaseColleague
     
     public async Task SetValue(object? value)
     {
-        _value = value;
+        value = value;
         var message = new FieldChangedMessage(Id, value);
         await SendAsync(message);
     }
@@ -507,7 +507,7 @@ public class InputField : BaseColleague
         switch (message)
         {
             case string str when str == "RESET":
-                _value = null;
+                value = null;
                 Console.WriteLine($"[{Label} Field] Reset to empty");
                 break;
                 
@@ -518,7 +518,7 @@ public class InputField : BaseColleague
         }
     }
     
-    public object? GetValue() => _value;
+    public object? GetValue() => value;
 }
 
 public class ValidationDisplay : BaseColleague
@@ -547,7 +547,7 @@ public class ValidationDisplay : BaseColleague
 
 public class SubmitButton : BaseColleague
 {
-    private bool _isEnabled = false;
+    private bool isEnabled = false;
     
     public SubmitButton() : base("SubmitButton")
     {
@@ -555,7 +555,7 @@ public class SubmitButton : BaseColleague
     
     public async Task Click()
     {
-        if (_isEnabled)
+        if (isEnabled)
         {
             var message = new ButtonClickMessage("submit");
             await SendAsync(message);
@@ -573,7 +573,7 @@ public class SubmitButton : BaseColleague
         switch (message)
         {
             case ValidationMessage validationMsg when validationMsg.FieldName == "form":
-                _isEnabled = validationMsg.IsValid;
+                isEnabled = validationMsg.IsValid;
                 Console.WriteLine($"[Submit Button] {'Enabled' : 'Disabled'}");
                 break;
                 
@@ -582,7 +582,7 @@ public class SubmitButton : BaseColleague
                 break;
                 
             case string str when str == "RESET":
-                _isEnabled = false;
+                isEnabled = false;
                 Console.WriteLine("[Submit Button] Reset to disabled");
                 break;
         }
@@ -608,13 +608,13 @@ public interface IMessageHandler<T> where T : class
 
 public class TypedMediator : ITypedMediator
 {
-    private readonly Dictionary<Type, List<object>> _handlers = new();
+    private readonly Dictionary<Type, List<object>> handlers = new();
     
     public void Subscribe<T>(IMessageHandler<T> handler) where T : class
     {
         var messageType = typeof(T);
         
-        if (!_handlers.ContainsKey(messageType))
+        if (!handlers.ContainsKey(messageType))
         {
             _handlers[messageType] = new List<object>();
         }
@@ -627,7 +627,7 @@ public class TypedMediator : ITypedMediator
     {
         var messageType = typeof(T);
         
-        if (_handlers.TryGetValue(messageType, out var handlers))
+        if (handlers.TryGetValue(messageType, out var handlers))
         {
             handlers.Remove(handler);
             Console.WriteLine($"[TypedMediator] Unsubscribed handler for {messageType.Name}");
@@ -638,7 +638,7 @@ public class TypedMediator : ITypedMediator
     {
         var messageType = typeof(T);
         
-        if (_handlers.TryGetValue(messageType, out var handlers))
+        if (handlers.TryGetValue(messageType, out var handlers))
         {
             Console.WriteLine($"[TypedMediator] Publishing {messageType.Name} to {handlers.Count} handlers");
             
@@ -675,7 +675,7 @@ public interface IRequestHandler<TRequest, TResponse>
 
 public class RequestResponseMediator : IRequestResponseMediator
 {
-    private readonly Dictionary<Type, object> _handlers = new();
+    private readonly Dictionary<Type, object> handlers = new();
     
     public void RegisterHandler<TRequest, TResponse>(IRequestHandler<TRequest, TResponse> handler)
         where TRequest : class
@@ -692,7 +692,7 @@ public class RequestResponseMediator : IRequestResponseMediator
     {
         var requestType = typeof(TRequest);
         
-        if (_handlers.TryGetValue(requestType, out var handlerObj) && 
+        if (handlers.TryGetValue(requestType, out var handlerObj) && 
             handlerObj is IRequestHandler<TRequest, TResponse> handler)
         {
             Console.WriteLine($"[RequestResponseMediator] Handling {requestType.Name}");
@@ -720,25 +720,25 @@ public class PriorityMessage
 
 public class PriorityMediator : IMediator
 {
-    private readonly PriorityQueue<PriorityMessage, int> _messageQueue = new();
-    private readonly List<IColleague> _colleagues = new();
-    private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private readonly Task _processingTask;
+    private readonly PriorityQueue<PriorityMessage, int> messageQueue = new();
+    private readonly List<IColleague> colleagues = new();
+    private readonly CancellationTokenSource cancellationTokenSource = new();
+    private readonly Task processingTask;
     
     public PriorityMediator()
     {
-        _processingTask = Task.Run(ProcessMessages, _cancellationTokenSource.Token);
+        processingTask = Task.Run(ProcessMessages, cancellationTokenSource.Token);
     }
     
     public void RegisterColleague(IColleague colleague)
     {
-        _colleagues.Add(colleague);
+        colleagues.Add(colleague);
         colleague.Mediator = this;
     }
     
     public void RemoveColleague(IColleague colleague)
     {
-        _colleagues.Remove(colleague);
+        colleagues.Remove(colleague);
         colleague.Mediator = null;
     }
     
@@ -747,32 +747,32 @@ public class PriorityMediator : IMediator
         var priority = message is PriorityMessage pm ? pm.Priority : 0;
         var priorityMessage = message is PriorityMessage ? (PriorityMessage)message : new PriorityMessage(message, priority);
         
-        _messageQueue.Enqueue(priorityMessage, -priorityMessage.Priority); // Negative for highest priority first
+        messageQueue.Enqueue(priorityMessage, -priorityMessage.Priority); // Negative for highest priority first
         await Task.CompletedTask;
     }
     
     private async Task ProcessMessages()
     {
-        while (!_cancellationTokenSource.Token.IsCancellationRequested)
+        while (!cancellationTokenSource.Token.IsCancellationRequested)
         {
-            if (_messageQueue.TryDequeue(out var priorityMessage, out _))
+            if (messageQueue.TryDequeue(out var priorityMessage, out _))
             {
                 Console.WriteLine($"[PriorityMediator] Processing priority {priorityMessage.Priority} message");
                 
-                var tasks = _colleagues.Select(c => c.ReceiveAsync(priorityMessage.Content, _colleagues.First()));
+                var tasks = colleagues.Select(c => c.ReceiveAsync(priorityMessage.Content, colleagues.First()));
                 await Task.WhenAll(tasks);
             }
             else
             {
-                await Task.Delay(10, _cancellationTokenSource.Token);
+                await Task.Delay(10, cancellationTokenSource.Token);
             }
         }
     }
     
     public void Stop()
     {
-        _cancellationTokenSource.Cancel();
-        _processingTask.Wait(5000);
+        cancellationTokenSource.Cancel();
+        processingTask.Wait(5000);
     }
 }
 ```

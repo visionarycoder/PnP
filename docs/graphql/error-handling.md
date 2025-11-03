@@ -172,13 +172,13 @@ public class RateLimitError : Exception, IDocumentProcessorError
 // Global error filter for GraphQL
 public class GraphQLErrorFilter : IErrorFilter
 {
-    private readonly ILogger<GraphQLErrorFilter> _logger;
-    private readonly IHostEnvironment _environment;
+    private readonly ILogger<GraphQLErrorFilter> logger;
+    private readonly IHostEnvironment environment;
 
     public GraphQLErrorFilter(ILogger<GraphQLErrorFilter> logger, IHostEnvironment environment)
     {
-        _logger = logger;
-        _environment = environment;
+        logger = logger;
+        environment = environment;
     }
 
     public IError OnError(IError error)
@@ -216,11 +216,11 @@ public class GraphQLErrorFilter : IErrorFilter
 
         if (exception != null)
         {
-            _logger.LogError(exception, "GraphQL error occurred: {@ErrorContext}", context);
+            logger.LogError(exception, "GraphQL error occurred: {@ErrorContext}", context);
         }
         else
         {
-            _logger.LogWarning("GraphQL error occurred: {@ErrorContext}", context);
+            logger.LogWarning("GraphQL error occurred: {@ErrorContext}", context);
         }
     }
 
@@ -328,7 +328,7 @@ public class GraphQLErrorFilter : IErrorFilter
             .SetMessage("An internal error occurred");
 
         // In development, include more details
-        if (_environment.IsDevelopment() && exception != null)
+        if (environment.IsDevelopment() && exception != null)
         {
             builder
                 .SetExtension("exceptionType", exception.GetType().Name)
@@ -650,18 +650,18 @@ public interface IErrorReportingService
 
 public class ErrorReportingService : IErrorReportingService
 {
-    private readonly ILogger<ErrorReportingService> _logger;
-    private readonly IErrorRepository _errorRepository;
-    private readonly IMetrics _metrics;
+    private readonly ILogger<ErrorReportingService> logger;
+    private readonly IErrorRepository errorRepository;
+    private readonly IMetrics metrics;
 
     public ErrorReportingService(
         ILogger<ErrorReportingService> logger,
         IErrorRepository errorRepository,
         IMetrics metrics)
     {
-        _logger = logger;
-        _errorRepository = errorRepository;
-        _metrics = metrics;
+        logger = logger;
+        errorRepository = errorRepository;
+        metrics = metrics;
     }
 
     public async Task ReportErrorAsync(
@@ -687,15 +687,15 @@ public class ErrorReportingService : IErrorReportingService
         };
 
         // Store error for analysis
-        await _errorRepository.SaveErrorAsync(errorRecord, cancellationToken);
+        await errorRepository.SaveErrorAsync(errorRecord, cancellationToken);
 
         // Update metrics
-        _metrics.Measure.Counter.Increment(
+        metrics.Measure.Counter.Increment(
             "graphql.errors.total",
             new MetricTags("code", errorRecord.Code, "operation", errorRecord.OperationName ?? "unknown"));
 
         // Log structured error
-        _logger.LogError("GraphQL error recorded: {@ErrorRecord}", errorRecord);
+        logger.LogError("GraphQL error recorded: {@ErrorRecord}", errorRecord);
     }
 
     public async Task<ErrorReport> GetErrorReportAsync(
@@ -703,7 +703,7 @@ public class ErrorReportingService : IErrorReportingService
         DateTime to, 
         CancellationToken cancellationToken = default)
     {
-        var errors = await _errorRepository.GetErrorsAsync(from, to, cancellationToken);
+        var errors = await errorRepository.GetErrorsAsync(from, to, cancellationToken);
         
         return new ErrorReport
         {
@@ -795,29 +795,29 @@ public class ErrorReportingService : IErrorReportingService
 // Error monitoring middleware
 public class ErrorMonitoringMiddleware
 {
-    private readonly RequestDelegate _next;
-    private readonly IErrorReportingService _errorReporting;
-    private readonly ILogger<ErrorMonitoringMiddleware> _logger;
+    private readonly RequestDelegate next;
+    private readonly IErrorReportingService errorReporting;
+    private readonly ILogger<ErrorMonitoringMiddleware> logger;
 
     public ErrorMonitoringMiddleware(
         RequestDelegate next,
         IErrorReportingService errorReporting,
         ILogger<ErrorMonitoringMiddleware> logger)
     {
-        _next = next;
-        _errorReporting = errorReporting;
-        _logger = logger;
+        next = next;
+        errorReporting = errorReporting;
+        logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
     {
         try
         {
-            await _next(context);
+            await next(context);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled exception in GraphQL pipeline");
+            logger.LogError(ex, "Unhandled exception in GraphQL pipeline");
             
             // Create error for reporting
             var error = ErrorBuilder.New()
@@ -827,7 +827,7 @@ public class ErrorMonitoringMiddleware
                 .Build();
 
             // This would need to be adapted to your GraphQL request context
-            // await _errorReporting.ReportErrorAsync(error, requestContext);
+            // await errorReporting.ReportErrorAsync(error, requestContext);
             
             throw;
         }

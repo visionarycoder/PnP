@@ -1,8 +1,9 @@
-# Text Classification with ML.NET
+# Enterprise Text Classification with ML.NET
 
-**Description**: Advanced text classification patterns using ML.NET for document categorization, sentiment analysis, and intent detection with support for custom model training and real-time inference.
+**Description**: Production-ready enterprise text classification with advanced deep learning models, transfer learning, multi-label classification, bias detection, explainable AI, and comprehensive MLOps integration for mission-critical applications.
 
-**Language/Technology**: C# (.NET 9.0) with ML.NET 3.0+
+**Language/Technology**: C#, .NET 9.0, ML.NET 3.0+, ONNX Runtime, Azure AI Services, AutoML
+**Enterprise Features**: Deep learning integration, transfer learning, bias mitigation, explainable AI, model monitoring, and enterprise security compliance
 
 ## Core Text Classification Implementation
 

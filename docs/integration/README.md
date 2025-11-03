@@ -50,12 +50,12 @@ graph TB
     subgraph "Client Layer"
         WebUI[Web UI]
         MobileApp[Mobile App]
-        API_Gateway[API Gateway]
+        ApiGateway[API Gateway]
     end
     
     subgraph "API Layer"
-        GraphQL_Server[GraphQL Server<br/>HotChocolate]
-        REST_APIs[REST APIs]
+        GraphQLServer[GraphQL Server<br/>HotChocolate]
+        RestApis[REST APIs]
         WebSocket[WebSocket Server]
     end
     
@@ -94,13 +94,13 @@ graph TB
         Monitoring[Application Insights]
     end
     
-    WebUI --> API_Gateway
-    MobileApp --> API_Gateway
-    API_Gateway --> GraphQL_Server
-    API_Gateway --> REST_APIs
+    WebUI --> ApiGateway
+    MobileApp --> ApiGateway
+    ApiGateway --> GraphQLServer
+    ApiGateway --> RestApis
     
-    GraphQL_Server --> DocumentGrain
-    REST_APIs --> DocumentGrain
+    GraphQLServer --> DocumentGrain
+    RestApis --> DocumentGrain
     WebSocket --> DocumentGrain
     
     AppHost --> ServiceDiscovery
@@ -123,7 +123,7 @@ graph TB
     
     DocumentGrain --> Monitoring
     MLCoordinator --> Monitoring
-    GraphQL_Server --> Monitoring
+    GraphQLServer --> Monitoring
 ```
 
 ## End-to-End Document Processing Workflow
@@ -148,23 +148,23 @@ public interface IDocumentIngestionWorkflow : IGrainWithStringKey
 [StatePersistence(StatePersistence.Persisted)]
 public class DocumentIngestionWorkflow : Grain<DocumentWorkflowState>, IDocumentIngestionWorkflow
 {
-    private readonly IDocumentService _documentService;
-    private readonly IMLCoordinatorGrain _mlCoordinator;
-    private readonly IEventRepository _eventRepository;
-    private readonly ILogger<DocumentIngestionWorkflow> _logger;
+    private readonly IDocumentService documentService;
+    private readonly IMLCoordinatorGrain mlCoordinator;
+    private readonly IEventRepository eventRepository;
+    private readonly ILogger<DocumentIngestionWorkflow> logger;
 
     public DocumentIngestionWorkflow(
         IDocumentService documentService,
         ILogger<DocumentIngestionWorkflow> logger)
     {
-        _documentService = documentService;
-        _logger = logger;
+        documentService = documentService;
+        logger = logger;
     }
 
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         // Initialize ML coordinator grain
-        _mlCoordinator = GrainFactory.GetGrain<IMLCoordinatorGrain>(0);
+        mlCoordinator = GrainFactory.GetGrain<IMLCoordinatorGrain>(0);
         
         // Set up periodic health checks
         RegisterTimer(CheckWorkflowHealth, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5));
@@ -179,7 +179,7 @@ public class DocumentIngestionWorkflow : Grain<DocumentWorkflowState>, IDocument
         
         try
         {
-            _logger.LogInformation("Starting document processing workflow {WorkflowId} for document {DocumentId}", 
+            logger.LogInformation("Starting document processing workflow {WorkflowId} for document {DocumentId}", 
                 workflowId, request.DocumentId);
 
             // Step 1: Validate and store document
@@ -205,7 +205,7 @@ public class DocumentIngestionWorkflow : Grain<DocumentWorkflowState>, IDocument
                 embeddings));
 
             // Step 3: Coordinate ML processing
-            var mlResults = await _mlCoordinator.ProcessDocumentAsync(new MLProcessingRequest(
+            var mlResults = await mlCoordinator.ProcessDocumentAsync(new MLProcessingRequest(
                 document.Id,
                 document.Content,
                 request.ProcessingOptions));
@@ -228,7 +228,7 @@ public class DocumentIngestionWorkflow : Grain<DocumentWorkflowState>, IDocument
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Document processing workflow {WorkflowId} failed", workflowId);
+            logger.LogError(ex, "Document processing workflow {WorkflowId} failed", workflowId);
             
             State.CurrentWorkflow.Status = WorkflowStatus.Failed;
             State.CurrentWorkflow.ErrorMessage = ex.Message;
@@ -252,7 +252,7 @@ public class DocumentIngestionWorkflow : Grain<DocumentWorkflowState>, IDocument
         var batchState = new BatchProcessingState(batchId, request.DocumentIds.Count);
         State.BatchProcessing = batchState;
 
-        _logger.LogInformation("Starting batch processing {BatchId} for {DocumentCount} documents", 
+        logger.LogInformation("Starting batch processing {BatchId} for {DocumentCount} documents", 
             batchId, request.DocumentIds.Count);
 
         var tasks = request.DocumentIds.Select(async documentId =>
@@ -273,7 +273,7 @@ public class DocumentIngestionWorkflow : Grain<DocumentWorkflowState>, IDocument
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to process document {DocumentId} in batch {BatchId}", 
+                logger.LogError(ex, "Failed to process document {DocumentId} in batch {BatchId}", 
                     documentId, batchId);
                 
                 Interlocked.Increment(ref batchState.FailedCount);
@@ -312,10 +312,10 @@ public class DocumentIngestionWorkflow : Grain<DocumentWorkflowState>, IDocument
 
         // Duplicate detection
         var contentHash = ComputeContentHash(request.Content);
-        var existingDocument = await _documentService.FindByContentHashAsync(contentHash);
+        var existingDocument = await documentService.FindByContentHashAsync(contentHash);
         if (existingDocument != null)
         {
-            _logger.LogInformation("Found duplicate document {ExistingId} for content hash {Hash}", 
+            logger.LogInformation("Found duplicate document {ExistingId} for content hash {Hash}", 
                 existingDocument.Id, contentHash);
             return existingDocument;
         }
@@ -332,7 +332,7 @@ public class DocumentIngestionWorkflow : Grain<DocumentWorkflowState>, IDocument
             CreatedAt = DateTime.UtcNow
         };
 
-        return await _documentService.CreateAsync(document);
+        return await documentService.CreateAsync(document);
     }
 
     private async Task<TextEmbedding> GenerateEmbeddingsAsync(Document document)
@@ -395,7 +395,7 @@ public class DocumentIngestionWorkflow : Grain<DocumentWorkflowState>, IDocument
 
     private async Task PublishEventAsync<T>(T domainEvent) where T : DomainEvent
     {
-        await _eventRepository.AppendEventAsync(domainEvent);
+        await eventRepository.AppendEventAsync(domainEvent);
         
         // Publish to message bus for real-time updates
         var messageBus = GrainFactory.GetGrain<IMessageBusGrain>(0);
@@ -421,7 +421,7 @@ public class DocumentIngestionWorkflow : Grain<DocumentWorkflowState>, IDocument
             State.CurrentWorkflow.Status == WorkflowStatus.InProgress &&
             DateTime.UtcNow - State.CurrentWorkflow.StartedAt > TimeSpan.FromMinutes(30))
         {
-            _logger.LogWarning("Workflow {WorkflowId} has been running for over 30 minutes", 
+            logger.LogWarning("Workflow {WorkflowId} has been running for over 30 minutes", 
                 State.CurrentWorkflow.WorkflowId);
                 
             // Consider workflow timeout logic here
@@ -503,21 +503,21 @@ public interface IMessageBusService
 
 public class ServiceBusMessageService : IMessageBusService, IAsyncDisposable
 {
-    private readonly ServiceBusClient _client;
-    private readonly Dictionary<string, ServiceBusSender> _senders;
-    private readonly Dictionary<string, ServiceBusProcessor> _processors;
-    private readonly ILogger<ServiceBusMessageService> _logger;
-    private readonly JsonSerializerOptions _jsonOptions;
+    private readonly ServiceBusClient client;
+    private readonly Dictionary<string, ServiceBusSender> senders;
+    private readonly Dictionary<string, ServiceBusProcessor> processors;
+    private readonly ILogger<ServiceBusMessageService> logger;
+    private readonly JsonSerializerOptions jsonOptions;
 
     public ServiceBusMessageService(
         ServiceBusClient client,
         ILogger<ServiceBusMessageService> logger)
     {
-        _client = client;
-        _logger = logger;
-        _senders = new Dictionary<string, ServiceBusSender>();
-        _processors = new Dictionary<string, ServiceBusProcessor>();
-        _jsonOptions = new JsonSerializerOptions
+        client = client;
+        logger = logger;
+        senders = new Dictionary<string, ServiceBusSender>();
+        processors = new Dictionary<string, ServiceBusProcessor>();
+        jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
@@ -528,7 +528,7 @@ public class ServiceBusMessageService : IMessageBusService, IAsyncDisposable
         try
         {
             var sender = GetOrCreateSender(topic);
-            var messageBody = JsonSerializer.Serialize(message, _jsonOptions);
+            var messageBody = JsonSerializer.Serialize(message, jsonOptions);
             
             var serviceBusMessage = new ServiceBusMessage(messageBody)
             {
@@ -545,12 +545,12 @@ public class ServiceBusMessageService : IMessageBusService, IAsyncDisposable
 
             await sender.SendMessageAsync(serviceBusMessage, cancellationToken);
             
-            _logger.LogDebug("Published message {MessageType} to topic {Topic}", 
+            logger.LogDebug("Published message {MessageType} to topic {Topic}", 
                 typeof(T).Name, topic);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to publish message {MessageType} to topic {Topic}", 
+            logger.LogError(ex, "Failed to publish message {MessageType} to topic {Topic}", 
                 typeof(T).Name, topic);
             throw;
         }
@@ -565,7 +565,7 @@ public class ServiceBusMessageService : IMessageBusService, IAsyncDisposable
 
             foreach (var message in messages)
             {
-                var messageBody = JsonSerializer.Serialize(message, _jsonOptions);
+                var messageBody = JsonSerializer.Serialize(message, jsonOptions);
                 var serviceBusMessage = new ServiceBusMessage(messageBody)
                 {
                     Subject = typeof(T).Name,
@@ -591,12 +591,12 @@ public class ServiceBusMessageService : IMessageBusService, IAsyncDisposable
                 await sender.SendMessagesAsync(messageBatch, cancellationToken);
             }
 
-            _logger.LogDebug("Published batch of {Count} messages to topic {Topic}", 
+            logger.LogDebug("Published batch of {Count} messages to topic {Topic}", 
                 messageBatch.Count, topic);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to publish message batch to topic {Topic}", topic);
+            logger.LogError(ex, "Failed to publish message batch to topic {Topic}", topic);
             throw;
         }
     }
@@ -615,7 +615,7 @@ public class ServiceBusMessageService : IMessageBusService, IAsyncDisposable
                     if (messageType == typeof(T).AssemblyQualifiedName)
                     {
                         var messageBody = args.Message.Body.ToString();
-                        var message = JsonSerializer.Deserialize<T>(messageBody, _jsonOptions);
+                        var message = JsonSerializer.Deserialize<T>(messageBody, jsonOptions);
                         
                         if (message != null)
                         {
@@ -625,12 +625,12 @@ public class ServiceBusMessageService : IMessageBusService, IAsyncDisposable
 
                     await args.CompleteMessageAsync(args.Message, cancellationToken);
                     
-                    _logger.LogDebug("Processed message {MessageId} from topic {Topic}", 
+                    logger.LogDebug("Processed message {MessageId} from topic {Topic}", 
                         args.Message.MessageId, topic);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to process message {MessageId} from topic {Topic}", 
+                    logger.LogError(ex, "Failed to process message {MessageId} from topic {Topic}", 
                         args.Message.MessageId, topic);
                     
                     // Dead letter the message after max retry attempts
@@ -641,27 +641,27 @@ public class ServiceBusMessageService : IMessageBusService, IAsyncDisposable
 
             processor.ProcessErrorAsync += args =>
             {
-                _logger.LogError(args.Exception, "Error processing message from topic {Topic}: {ErrorSource}", 
+                logger.LogError(args.Exception, "Error processing message from topic {Topic}: {ErrorSource}", 
                     topic, args.ErrorSource);
                 return Task.CompletedTask;
             };
 
             await processor.StartProcessingAsync(cancellationToken);
             
-            _logger.LogInformation("Started processing messages from topic {Topic}", topic);
+            logger.LogInformation("Started processing messages from topic {Topic}", topic);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to start message processing for topic {Topic}", topic);
+            logger.LogError(ex, "Failed to start message processing for topic {Topic}", topic);
             throw;
         }
     }
 
     private ServiceBusSender GetOrCreateSender(string topic)
     {
-        if (!_senders.TryGetValue(topic, out var sender))
+        if (!senders.TryGetValue(topic, out var sender))
         {
-            sender = _client.CreateSender(topic);
+            sender = client.CreateSender(topic);
             _senders[topic] = sender;
         }
         return sender;
@@ -669,7 +669,7 @@ public class ServiceBusMessageService : IMessageBusService, IAsyncDisposable
 
     private ServiceBusProcessor GetOrCreateProcessor(string topic)
     {
-        if (!_processors.TryGetValue(topic, out var processor))
+        if (!processors.TryGetValue(topic, out var processor))
         {
             var options = new ServiceBusProcessorOptions
             {
@@ -678,7 +678,7 @@ public class ServiceBusMessageService : IMessageBusService, IAsyncDisposable
                 MaxAutoLockRenewalDuration = TimeSpan.FromMinutes(5)
             };
             
-            processor = _client.CreateProcessor(topic, options);
+            processor = client.CreateProcessor(topic, options);
             _processors[topic] = processor;
         }
         return processor;
@@ -686,21 +686,21 @@ public class ServiceBusMessageService : IMessageBusService, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        foreach (var processor in _processors.Values)
+        foreach (var processor in processors.Values)
         {
             await processor.StopProcessingAsync();
             await processor.DisposeAsync();
         }
 
-        foreach (var sender in _senders.Values)
+        foreach (var sender in senders.Values)
         {
             await sender.DisposeAsync();
         }
 
-        await _client.DisposeAsync();
+        await client.DisposeAsync();
         
-        _processors.Clear();
-        _senders.Clear();
+        processors.Clear();
+        senders.Clear();
     }
 }
 ```
@@ -807,7 +807,7 @@ public class Program
             .WithReference(serviceBus)
             .WithReference(clickhouse)
             .WithEnvironment("ANALYTICS_BATCH_SIZE", "1000")
-            .WithEnvironment("HEALTH_CHECK_INTERVAL", "00:05:00");
+            .WithEnvironment("healthCheck_INTERVAL", "00:05:00");
 
         // Monitoring and Observability
         if (builder.Environment.IsDevelopment())
@@ -1405,53 +1405,53 @@ public interface IDocumentProcessorMetrics
 
 public class DocumentProcessorMetrics : IDocumentProcessorMetrics
 {
-    private readonly Counter<int> _documentsProcessedCounter;
-    private readonly Histogram<double> _processingDurationHistogram;
-    private readonly Histogram<double> _mlInferenceHistogram;
-    private readonly Counter<int> _apiRequestsCounter;
+    private readonly Counter<int> documentsProcessedCounter;
+    private readonly Histogram<double> processingDurationHistogram;
+    private readonly Histogram<double> mlInferenceHistogram;
+    private readonly Counter<int> apiRequestsCounter;
 
     public DocumentProcessorMetrics(IMeterFactory meterFactory)
     {
         var meter = meterFactory.Create("DocumentProcessor");
         
-        _documentsProcessedCounter = meter.CreateCounter<int>(
+        documentsProcessedCounter = meter.CreateCounter<int>(
             "documents_processed_total",
             description: "Total number of documents processed");
             
-        _processingDurationHistogram = meter.CreateHistogram<double>(
+        processingDurationHistogram = meter.CreateHistogram<double>(
             "processing_duration_ms",
             description: "Duration of document processing operations");
             
-        _mlInferenceHistogram = meter.CreateHistogram<double>(
+        mlInferenceHistogram = meter.CreateHistogram<double>(
             "ml_inference_duration_ms", 
             description: "Duration of ML model inference operations");
             
-        _apiRequestsCounter = meter.CreateCounter<int>(
+        apiRequestsCounter = meter.CreateCounter<int>(
             "api_requests_total",
             description: "Total number of API requests");
     }
 
     public void IncrementDocumentsProcessed(string documentType, string status)
     {
-        _documentsProcessedCounter.Add(1, new KeyValuePair<string, object?>("document_type", documentType),
+        documentsProcessedCounter.Add(1, new KeyValuePair<string, object?>("documentType", documentType),
                                          new KeyValuePair<string, object?>("status", status));
     }
 
     public void RecordProcessingDuration(string operationType, double durationMs)
     {
-        _processingDurationHistogram.Record(durationMs, new KeyValuePair<string, object?>("operation", operationType));
+        processingDurationHistogram.Record(durationMs, new KeyValuePair<string, object?>("operation", operationType));
     }
 
     public void RecordMLModelInference(string modelType, double inferenceTimeMs, float confidence)
     {
-        _mlInferenceHistogram.Record(inferenceTimeMs, 
+        mlInferenceHistogram.Record(inferenceTimeMs, 
             new KeyValuePair<string, object?>("model_type", modelType),
             new KeyValuePair<string, object?>("confidence_bucket", GetConfidenceBucket(confidence)));
     }
 
     public void IncrementApiRequests(string endpoint, string method, int statusCode)
     {
-        _apiRequestsCounter.Add(1,
+        apiRequestsCounter.Add(1,
             new KeyValuePair<string, object?>("endpoint", endpoint),
             new KeyValuePair<string, object?>("method", method),
             new KeyValuePair<string, object?>("status_code", statusCode));
@@ -1593,7 +1593,6 @@ public class DocumentProcessorMetrics : IDocumentProcessorMetrics
 ### ML & Analytics Integration
 
 - [PostgreSQL Examples](../../../src/Notebooks.MLDatabaseExamples/postgresql-examples.ipynb) - ML experiment tracking with pgvector
-- [ChromaDB Examples](../../../src/Notebooks.MLDatabaseExamples/chroma-examples.ipynb) - Vector similarity search
 - [DuckDB Analytics](../../../src/Notebooks.MLDatabaseExamples/duckdb-analytics.ipynb) - Fast analytical processing
 
 ## Integration Architecture Decision Matrix

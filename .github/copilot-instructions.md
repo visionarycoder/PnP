@@ -13,8 +13,8 @@ This is a **personal knowledge base repository** containing curated code snippet
 
 ### Key Directories
 - `snippets/csharp/` - C# code examples and patterns (documentation only)
-- `src/Patterns/` - Production C# library with `LazySingleton<T>` and `ConstantsDictionaryBuilder`
-- `tests/Patterns.Tests/` - Comprehensive test coverage with xUnit
+- `src/chsharp/Patterns/` - Production C# library with `LazySingleton<T>` and `ConstantsDictionaryBuilder`
+- `tests/csharpPatterns.Tests/` - Comprehensive test coverage with xUnit
 
 ## Development Patterns
 
@@ -116,12 +116,18 @@ Focus on **practical, reusable solutions** rather than academic examples. Each s
 ## C# Best Practices & Microsoft Idioms
 
 ### Code Style & Conventions
+- **Best Practices**: Follow Microsoft's C# coding conventions
+- **Consistent naming**: Use consistent naming conventions across the codebase
 - **No underscore prefixes**: Never use `_field`, `_parameter`, or `_variable` naming
 - **Primary constructors**: Prefer primary constructors for simple parameter assignment
 - **Modern C# features**: Use pattern matching, switch expressions, and record types
 - **Nullable reference types**: Always enable and handle null scenarios explicitly
 - **File-scoped namespaces**: Use single-line namespace declarations
 - **Expression-bodied members**: Prefer for simple property getters and single-line methods
+- **PascalCase**: For classes, methods, properties, and namespaces
+- **camelCase**: For local variables and method parameters
+- **snake_case**: For private fields (e.g., `fieldName`)
+- **kebab-case**: For file names and URLs (e.g., `my-file-name.md`)
 
 ```csharp
 // ✅ Preferred - Primary constructor with modern syntax

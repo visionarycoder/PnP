@@ -20,48 +20,48 @@ public interface ICommand
 // Receiver - performs the actual work
 public class TextEditor
 {
-    private readonly StringBuilder _content = new();
-    private int _cursorPosition = 0;
+    private readonly StringBuilder content = new();
+    private int cursorPosition = 0;
     
-    public string Content => _content.ToString();
-    public int CursorPosition => _cursorPosition;
+    public string Content => content.ToString();
+    public int CursorPosition => cursorPosition;
     
     public void InsertText(string text, int position)
     {
-        if (position < 0 || position > _content.Length)
+        if (position < 0 || position > content.Length)
             throw new ArgumentOutOfRangeException(nameof(position));
             
-        _content.Insert(position, text);
-        _cursorPosition = position + text.Length;
+        content.Insert(position, text);
+        cursorPosition = position + text.Length;
         Console.WriteLine($"Inserted '{text}' at position {position}");
     }
     
     public string DeleteText(int startPosition, int length)
     {
-        if (startPosition < 0 || startPosition + length > _content.Length)
+        if (startPosition < 0 || startPosition + length > content.Length)
             throw new ArgumentOutOfRangeException();
             
-        var deletedText = _content.ToString(startPosition, length);
-        _content.Remove(startPosition, length);
-        _cursorPosition = startPosition;
+        var deletedText = content.ToString(startPosition, length);
+        content.Remove(startPosition, length);
+        cursorPosition = startPosition;
         Console.WriteLine($"Deleted '{deletedText}' from position {startPosition}");
         return deletedText;
     }
     
     public void MoveCursor(int newPosition)
     {
-        if (newPosition < 0 || newPosition > _content.Length)
+        if (newPosition < 0 || newPosition > content.Length)
             throw new ArgumentOutOfRangeException(nameof(newPosition));
             
-        var oldPosition = _cursorPosition;
-        _cursorPosition = newPosition;
+        var oldPosition = cursorPosition;
+        cursorPosition = newPosition;
         Console.WriteLine($"Moved cursor from {oldPosition} to {newPosition}");
     }
     
     public void Clear()
     {
-        _content.Clear();
-        _cursorPosition = 0;
+        content.Clear();
+        cursorPosition = 0;
     }
     
     public override string ToString() => $"Content: '{Content}', Cursor: {CursorPosition}";
@@ -74,92 +74,92 @@ public class TextEditor
 // Insert text command
 public class InsertTextCommand : ICommand
 {
-    private readonly TextEditor _editor;
-    private readonly string _text;
-    private readonly int _position;
+    private readonly TextEditor editor;
+    private readonly string text;
+    private readonly int position;
     
     public string Description { get; }
     
     public InsertTextCommand(TextEditor editor, string text, int position)
     {
-        _editor = editor;
-        _text = text;
-        _position = position;
+        editor = editor;
+        text = text;
+        position = position;
         Description = $"Insert '{text}' at position {position}";
     }
     
     public void Execute()
     {
-        _editor.InsertText(_text, _position);
+        editor.InsertText(text, position);
     }
     
     public void Undo()
     {
-        _editor.DeleteText(_position, _text.Length);
+        editor.DeleteText(position, text.Length);
     }
 }
 
 // Delete text command
 public class DeleteTextCommand : ICommand
 {
-    private readonly TextEditor _editor;
-    private readonly int _startPosition;
-    private readonly int _length;
-    private string _deletedText = "";
+    private readonly TextEditor editor;
+    private readonly int startPosition;
+    private readonly int length;
+    private string deletedText = "";
     
     public string Description { get; }
     
     public DeleteTextCommand(TextEditor editor, int startPosition, int length)
     {
-        _editor = editor;
-        _startPosition = startPosition;
-        _length = length;
+        editor = editor;
+        startPosition = startPosition;
+        length = length;
         Description = $"Delete {length} characters from position {startPosition}";
     }
     
     public void Execute()
     {
-        _deletedText = _editor.DeleteText(_startPosition, _length);
+        deletedText = editor.DeleteText(startPosition, length);
     }
     
     public void Undo()
     {
-        _editor.InsertText(_deletedText, _startPosition);
+        editor.InsertText(deletedText, startPosition);
     }
 }
 
 // Move cursor command
 public class MoveCursorCommand : ICommand
 {
-    private readonly TextEditor _editor;
-    private readonly int _newPosition;
-    private int _oldPosition;
+    private readonly TextEditor editor;
+    private readonly int newPosition;
+    private int oldPosition;
     
     public string Description { get; }
     
     public MoveCursorCommand(TextEditor editor, int newPosition)
     {
-        _editor = editor;
-        _newPosition = newPosition;
+        editor = editor;
+        newPosition = newPosition;
         Description = $"Move cursor to position {newPosition}";
     }
     
     public void Execute()
     {
-        _oldPosition = _editor.CursorPosition;
-        _editor.MoveCursor(_newPosition);
+        oldPosition = editor.CursorPosition;
+        editor.MoveCursor(newPosition);
     }
     
     public void Undo()
     {
-        _editor.MoveCursor(_oldPosition);
+        editor.MoveCursor(oldPosition);
     }
 }
 
 // Composite command for complex operations
 public class CompositeCommand : ICommand
 {
-    private readonly List<ICommand> _commands = new();
+    private readonly List<ICommand> commands = new();
     
     public string Description { get; private set; }
     
@@ -170,13 +170,13 @@ public class CompositeCommand : ICommand
     
     public void AddCommand(ICommand command)
     {
-        _commands.Add(command);
+        commands.Add(command);
     }
     
     public void Execute()
     {
         Console.WriteLine($"Executing composite command: {Description}");
-        foreach (var command in _commands)
+        foreach (var command in commands)
         {
             command.Execute();
         }
@@ -186,9 +186,9 @@ public class CompositeCommand : ICommand
     {
         Console.WriteLine($"Undoing composite command: {Description}");
         // Undo in reverse order
-        for (int i = _commands.Count - 1; i >= 0; i--)
+        for (int i = commands.Count - 1; i >= 0; i--)
         {
-            _commands[i].Undo();
+            commands[i].Undo();
         }
     }
 }
@@ -199,22 +199,22 @@ public class CompositeCommand : ICommand
 ```csharp
 public class CommandManager
 {
-    private readonly Stack<ICommand> _undoStack = new();
-    private readonly Stack<ICommand> _redoStack = new();
-    private readonly List<ICommand> _commandHistory = new();
+    private readonly Stack<ICommand> undoStack = new();
+    private readonly Stack<ICommand> redoStack = new();
+    private readonly List<ICommand> commandHistory = new();
     
-    public IReadOnlyList<ICommand> CommandHistory => _commandHistory.AsReadOnly();
-    public bool CanUndo => _undoStack.Count > 0;
-    public bool CanRedo => _redoStack.Count > 0;
+    public IReadOnlyList<ICommand> CommandHistory => commandHistory.AsReadOnly();
+    public bool CanUndo => undoStack.Count > 0;
+    public bool CanRedo => redoStack.Count > 0;
     
     public void ExecuteCommand(ICommand command)
     {
         try
         {
             command.Execute();
-            _undoStack.Push(command);
-            _commandHistory.Add(command);
-            _redoStack.Clear(); // Clear redo stack when new command is executed
+            undoStack.Push(command);
+            commandHistory.Add(command);
+            redoStack.Clear(); // Clear redo stack when new command is executed
             
             Console.WriteLine($"Command executed: {command.Description}");
         }
@@ -233,17 +233,17 @@ public class CommandManager
             return;
         }
         
-        var command = _undoStack.Pop();
+        var command = undoStack.Pop();
         try
         {
             command.Undo();
-            _redoStack.Push(command);
+            redoStack.Push(command);
             Console.WriteLine($"Command undone: {command.Description}");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Undo failed: {ex.Message}");
-            _undoStack.Push(command); // Put it back if undo fails
+            undoStack.Push(command); // Put it back if undo fails
             throw;
         }
     }
@@ -256,35 +256,35 @@ public class CommandManager
             return;
         }
         
-        var command = _redoStack.Pop();
+        var command = redoStack.Pop();
         try
         {
             command.Execute();
-            _undoStack.Push(command);
+            undoStack.Push(command);
             Console.WriteLine($"Command redone: {command.Description}");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Redo failed: {ex.Message}");
-            _redoStack.Push(command); // Put it back if redo fails
+            redoStack.Push(command); // Put it back if redo fails
             throw;
         }
     }
     
     public void ClearHistory()
     {
-        _undoStack.Clear();
-        _redoStack.Clear();
-        _commandHistory.Clear();
+        undoStack.Clear();
+        redoStack.Clear();
+        commandHistory.Clear();
         Console.WriteLine("Command history cleared");
     }
     
     public void PrintHistory()
     {
         Console.WriteLine("\nCommand History:");
-        for (int i = 0; i < _commandHistory.Count; i++)
+        for (int i = 0; i < commandHistory.Count; i++)
         {
-            Console.WriteLine($"{i + 1}. {_commandHistory[i].Description}");
+            Console.WriteLine($"{i + 1}. {commandHistory[i].Description}");
         }
         Console.WriteLine($"Can Undo: {CanUndo}, Can Redo: {CanRedo}");
     }
@@ -297,25 +297,25 @@ public class CommandManager
 // Macro command for recording and replaying sequences
 public class MacroCommand : ICommand
 {
-    private readonly List<ICommand> _commands = new();
-    private readonly string _name;
+    private readonly List<ICommand> commands = new();
+    private readonly string name;
     
-    public string Description => $"Macro: {_name} ({_commands.Count} commands)";
+    public string Description => $"Macro: {name} ({commands.Count} commands)";
     
     public MacroCommand(string name)
     {
-        _name = name;
+        name = name;
     }
     
     public void AddCommand(ICommand command)
     {
-        _commands.Add(command);
+        commands.Add(command);
     }
     
     public void Execute()
     {
-        Console.WriteLine($"Executing macro '{_name}':");
-        foreach (var command in _commands)
+        Console.WriteLine($"Executing macro '{name}':");
+        foreach (var command in commands)
         {
             command.Execute();
         }
@@ -323,17 +323,17 @@ public class MacroCommand : ICommand
     
     public void Undo()
     {
-        Console.WriteLine($"Undoing macro '{_name}':");
-        for (int i = _commands.Count - 1; i >= 0; i--)
+        Console.WriteLine($"Undoing macro '{name}':");
+        for (int i = commands.Count - 1; i >= 0; i--)
         {
-            _commands[i].Undo();
+            commands[i].Undo();
         }
     }
     
     public MacroCommand Clone()
     {
-        var clone = new MacroCommand(_name);
-        foreach (var command in _commands)
+        var clone = new MacroCommand(name);
+        foreach (var command in commands)
         {
             clone.AddCommand(command);
         }
@@ -353,158 +353,158 @@ public interface IDevice
 
 public class Television : IDevice
 {
-    private bool _isOn = false;
-    private int _volume = 50;
-    private int _channel = 1;
+    private bool isOn = false;
+    private int volume = 50;
+    private int channel = 1;
     
-    public string Status => $"TV: {(_isOn ? "ON" : "OFF")}, Volume: {_volume}, Channel: {_channel}";
+    public string Status => $"TV: {(isOn ? "ON" : "OFF")}, Volume: {volume}, Channel: {channel}";
     
     public void TurnOn()
     {
-        _isOn = true;
+        isOn = true;
         Console.WriteLine("TV turned on");
     }
     
     public void TurnOff()
     {
-        _isOn = false;
+        isOn = false;
         Console.WriteLine("TV turned off");
     }
     
     public void SetVolume(int volume)
     {
-        _volume = Math.Clamp(volume, 0, 100);
-        Console.WriteLine($"TV volume set to {_volume}");
+        volume = Math.Clamp(volume, 0, 100);
+        Console.WriteLine($"TV volume set to {volume}");
     }
     
     public void ChangeChannel(int channel)
     {
-        _channel = Math.Max(1, channel);
-        Console.WriteLine($"TV channel changed to {_channel}");
+        channel = Math.Max(1, channel);
+        Console.WriteLine($"TV channel changed to {channel}");
     }
 }
 
 public class Stereo : IDevice
 {
-    private bool _isOn = false;
-    private int _volume = 30;
-    private int _channel = 101; // FM frequency
+    private bool isOn = false;
+    private int volume = 30;
+    private int channel = 101; // FM frequency
     
-    public string Status => $"Stereo: {(_isOn ? "ON" : "OFF")}, Volume: {_volume}, Station: {_channel}";
+    public string Status => $"Stereo: {(isOn ? "ON" : "OFF")}, Volume: {volume}, Station: {channel}";
     
     public void TurnOn()
     {
-        _isOn = true;
+        isOn = true;
         Console.WriteLine("Stereo turned on");
     }
     
     public void TurnOff()
     {
-        _isOn = false;
+        isOn = false;
         Console.WriteLine("Stereo turned off");
     }
     
     public void SetVolume(int volume)
     {
-        _volume = Math.Clamp(volume, 0, 100);
-        Console.WriteLine($"Stereo volume set to {_volume}");
+        volume = Math.Clamp(volume, 0, 100);
+        Console.WriteLine($"Stereo volume set to {volume}");
     }
     
     public void ChangeChannel(int station)
     {
-        _channel = station;
-        Console.WriteLine($"Stereo tuned to station {_station}");
+        channel = station;
+        Console.WriteLine($"Stereo tuned to station {station}");
     }
 }
 
 // Device commands
 public class TurnOnCommand : ICommand
 {
-    private readonly IDevice _device;
-    private bool _wasAlreadyOn;
+    private readonly IDevice device;
+    private bool wasAlreadyOn;
     
     public string Description { get; }
     
     public TurnOnCommand(IDevice device)
     {
-        _device = device;
+        device = device;
         Description = $"Turn on {device.GetType().Name}";
     }
     
     public void Execute()
     {
-        _wasAlreadyOn = _device.Status.Contains("ON");
-        if (!_wasAlreadyOn)
+        wasAlreadyOn = device.Status.Contains("ON");
+        if (!wasAlreadyOn)
         {
-            _device.TurnOn();
+            device.TurnOn();
         }
     }
     
     public void Undo()
     {
-        if (!_wasAlreadyOn)
+        if (!wasAlreadyOn)
         {
-            _device.TurnOff();
+            device.TurnOff();
         }
     }
 }
 
 public class SetVolumeCommand : ICommand
 {
-    private readonly IDevice _device;
-    private readonly int _newVolume;
-    private int _previousVolume;
+    private readonly IDevice device;
+    private readonly int newVolume;
+    private int previousVolume;
     
     public string Description { get; }
     
     public SetVolumeCommand(IDevice device, int volume)
     {
-        _device = device;
-        _newVolume = volume;
+        device = device;
+        newVolume = volume;
         Description = $"Set {device.GetType().Name} volume to {volume}";
     }
     
     public void Execute()
     {
         // Extract current volume from status (simplified)
-        var status = _device.Status;
+        var status = device.Status;
         var volumeIndex = status.IndexOf("Volume: ") + 8;
         var volumeEnd = status.IndexOf(",", volumeIndex);
         if (volumeEnd == -1) volumeEnd = status.Length;
         
         if (int.TryParse(status.Substring(volumeIndex, volumeEnd - volumeIndex), out var currentVolume))
         {
-            _previousVolume = currentVolume;
+            previousVolume = currentVolume;
         }
         
-        _device.SetVolume(_newVolume);
+        device.SetVolume(newVolume);
     }
     
     public void Undo()
     {
-        _device.SetVolume(_previousVolume);
+        device.SetVolume(previousVolume);
     }
 }
 
 // Remote control with programmable buttons
 public class UniversalRemote
 {
-    private readonly Dictionary<string, ICommand> _commands = new();
-    private readonly Dictionary<string, ICommand> _undoCommands = new();
-    private ICommand? _lastCommand;
+    private readonly Dictionary<string, ICommand> commands = new();
+    private readonly Dictionary<string, ICommand> undoCommands = new();
+    private ICommand? lastCommand;
     
     public void SetCommand(string slot, ICommand command)
     {
-        _commands[slot] = command;
+        commands[slot] = command;
         Console.WriteLine($"Programmed slot '{slot}': {command.Description}");
     }
     
     public void PressButton(string slot)
     {
-        if (_commands.TryGetValue(slot, out var command))
+        if (commands.TryGetValue(slot, out var command))
         {
             command.Execute();
-            _lastCommand = command;
+            lastCommand = command;
             Console.WriteLine($"Button '{slot}' pressed");
         }
         else
@@ -515,11 +515,11 @@ public class UniversalRemote
     
     public void PressUndo()
     {
-        if (_lastCommand != null)
+        if (lastCommand != null)
         {
-            _lastCommand.Undo();
+            lastCommand.Undo();
             Console.WriteLine("Undo button pressed");
-            _lastCommand = null;
+            lastCommand = null;
         }
         else
         {
@@ -530,7 +530,7 @@ public class UniversalRemote
     public void PrintRemoteStatus()
     {
         Console.WriteLine("\nRemote Control Status:");
-        foreach (var kvp in _commands)
+        foreach (var kvp in commands)
         {
             Console.WriteLine($"  {kvp.Key}: {kvp.Value.Description}");
         }
@@ -559,32 +559,32 @@ public class NoOpCommand : ICommand
 ```csharp
 public class CommandQueue
 {
-    private readonly Queue<ICommand> _commandQueue = new();
-    private readonly object _lock = new();
-    private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private readonly Task _processingTask;
+    private readonly Queue<ICommand> commandQueue = new();
+    private readonly object lock = new();
+    private readonly CancellationTokenSource cancellationTokenSource = new();
+    private readonly Task processingTask;
     
     public CommandQueue()
     {
-        _processingTask = Task.Run(ProcessCommands, _cancellationTokenSource.Token);
+        processingTask = Task.Run(ProcessCommands, cancellationTokenSource.Token);
     }
     
     public void EnqueueCommand(ICommand command)
     {
-        lock (_lock)
+        lock (lock)
         {
-            _commandQueue.Enqueue(command);
+            commandQueue.Enqueue(command);
             Console.WriteLine($"Command queued: {command.Description}");
         }
     }
     
     public void EnqueueCommands(IEnumerable<ICommand> commands)
     {
-        lock (_lock)
+        lock (lock)
         {
             foreach (var command in commands)
             {
-                _commandQueue.Enqueue(command);
+                commandQueue.Enqueue(command);
             }
             Console.WriteLine($"Batch of {commands.Count()} commands queued");
         }
@@ -592,15 +592,15 @@ public class CommandQueue
     
     private async Task ProcessCommands()
     {
-        while (!_cancellationTokenSource.Token.IsCancellationRequested)
+        while (!cancellationTokenSource.Token.IsCancellationRequested)
         {
             ICommand? command = null;
             
-            lock (_lock)
+            lock (lock)
             {
-                if (_commandQueue.Count > 0)
+                if (commandQueue.Count > 0)
                 {
-                    command = _commandQueue.Dequeue();
+                    command = commandQueue.Dequeue();
                 }
             }
             
@@ -618,24 +618,24 @@ public class CommandQueue
             }
             else
             {
-                await Task.Delay(100, _cancellationTokenSource.Token);
+                await Task.Delay(100, cancellationTokenSource.Token);
             }
         }
     }
     
     public void Stop()
     {
-        _cancellationTokenSource.Cancel();
-        _processingTask.Wait(5000);
+        cancellationTokenSource.Cancel();
+        processingTask.Wait(5000);
     }
     
     public int QueuedCommandsCount
     {
         get
         {
-            lock (_lock)
+            lock (lock)
             {
-                return _commandQueue.Count;
+                return commandQueue.Count;
             }
         }
     }
@@ -644,43 +644,43 @@ public class CommandQueue
 // Command with priority
 public class PriorityCommand : ICommand
 {
-    private readonly ICommand _innerCommand;
+    private readonly ICommand innerCommand;
     public int Priority { get; }
-    public string Description => $"{_innerCommand.Description} (Priority: {Priority})";
+    public string Description => $"{innerCommand.Description} (Priority: {Priority})";
     
     public PriorityCommand(ICommand command, int priority)
     {
-        _innerCommand = command;
+        innerCommand = command;
         Priority = priority;
     }
     
-    public void Execute() => _innerCommand.Execute();
-    public void Undo() => _innerCommand.Undo();
+    public void Execute() => innerCommand.Execute();
+    public void Undo() => innerCommand.Undo();
 }
 
 public class PriorityCommandQueue
 {
-    private readonly PriorityQueue<ICommand, int> _priorityQueue = new();
-    private readonly object _lock = new();
+    private readonly PriorityQueue<ICommand, int> priorityQueue = new();
+    private readonly object lock = new();
     
     public void EnqueueCommand(ICommand command, int priority = 0)
     {
-        lock (_lock)
+        lock (lock)
         {
-            _priorityQueue.Enqueue(command, -priority); // Negative for highest priority first
+            priorityQueue.Enqueue(command, -priority); // Negative for highest priority first
             Console.WriteLine($"Priority command queued: {command.Description} (Priority: {priority})");
         }
     }
     
     public ICommand? DequeueCommand()
     {
-        lock (_lock)
+        lock (lock)
         {
-            return _priorityQueue.TryDequeue(out var command, out _) ? command : null;
+            return priorityQueue.TryDequeue(out var command, out _) ? command : null;
         }
     }
     
-    public bool HasCommands => _priorityQueue.Count > 0;
+    public bool HasCommands => priorityQueue.Count > 0;
 }
 ```
 

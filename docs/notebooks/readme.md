@@ -160,7 +160,7 @@ def find_similar_documents(query_embedding, limit=5):
 query_embedding = np.random.normal(0, 0.1, 1536).tolist()
 similar_docs = find_similar_documents(query_embedding)
 
-for doc_id, model_name, metadata, distance in similar_docs:
+for doc_id, model_name, metadata, distance in similardocs:
     print(f"Document: {doc_id}, Distance: {distance:.4f}")
     print(f"Content: {json.loads(metadata)['content'][:50]}...")
 ```
@@ -351,25 +351,25 @@ class MLWorkflowManager:
         print(f"Starting ML experiment: {model_name} on {dataset_name}")
         
         # 1. Create experiment in PostgreSQL
-        experiment_id = self._create_postgres_experiment(model_name, dataset_name, model_params)
+        experiment_id = self.create_postgres_experiment(model_name, dataset_name, model_params)
         
         # 2. Store model embeddings in Chroma
         collection_name = f"{model_name.lower()}_{dataset_name.lower()}"
-        self._store_embeddings_chroma(collection_name, model_name)
+        self.store_embeddings_chroma(collection_name, model_name)
         
         # 3. Simulate training and get results
-        results = self._simulate_training(model_name)
+        results = self.simulate_training(model_name)
         
         # 4. Store performance metrics in DuckDB
-        self._store_performance_duckdb(experiment_id, model_name, dataset_name, results)
+        self.store_performance_duckdb(experiment_id, model_name, dataset_name, results)
         
         # 5. Update experiment status in PostgreSQL
-        self._update_postgres_experiment(experiment_id, results)
+        self.update_postgres_experiment(experiment_id, results)
         
         print(f"Experiment {experiment_id} completed successfully!")
         return experiment_id, results
     
-    def _simulate_training(self, model_name):
+    def simulate_training(self, model_name):
         """Simulate training and return performance metrics"""
         
         # Different models have different characteristics
@@ -406,7 +406,7 @@ dataset = 'sentiment_analysis_v3'
 
 experiment_results = []
 
-for model in models_to_test:
+for model in modelstotest:
     params = {
         'learning_rate': 0.001,
         'batch_size': 32,

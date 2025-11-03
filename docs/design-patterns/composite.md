@@ -16,20 +16,20 @@ using System.Text.Json;
 // Component - declares interface for objects in the composition
 public abstract class FileSystemComponent
 {
-    protected string _name;
-    protected DateTime _created;
-    protected DateTime _modified;
+    protected string name;
+    protected DateTime created;
+    protected DateTime modified;
     
     protected FileSystemComponent(string name)
     {
-        _name = name ?? throw new ArgumentNullException(nameof(name));
-        _created = DateTime.Now;
-        _modified = DateTime.Now;
+        name = name ?? throw new ArgumentNullException(nameof(name));
+        created = DateTime.Now;
+        modified = DateTime.Now;
     }
     
-    public string Name => _name;
-    public DateTime Created => _created;
-    public DateTime Modified => _modified;
+    public string Name => name;
+    public DateTime Created => created;
+    public DateTime Modified => modified;
     
     public abstract long GetSize();
     public abstract int GetCount();
@@ -60,7 +60,7 @@ public abstract class FileSystemComponent
     
     protected void UpdateModified()
     {
-        _modified = DateTime.Now;
+        modified = DateTime.Now;
     }
     
     protected string GetIndentation(int depth)
@@ -72,26 +72,26 @@ public abstract class FileSystemComponent
 // Leaf - represents leaf objects (files)
 public class File : FileSystemComponent
 {
-    private byte[] _content;
-    private readonly string _extension;
+    private byte[] content;
+    private readonly string extension;
     
     public File(string name, byte[] content = null) : base(name)
     {
-        _content = content ?? Array.Empty<byte>();
-        _extension = System.IO.Path.GetExtension(name);
+        content = content ?? Array.Empty<byte>();
+        extension = System.IO.Path.GetExtension(name);
     }
     
     public File(string name, string textContent) : base(name)
     {
-        _content = Encoding.UTF8.GetBytes(textContent ?? string.Empty);
-        _extension = System.IO.Path.GetExtension(name);
+        content = Encoding.UTF8.GetBytes(textContent ?? string.Empty);
+        extension = System.IO.Path.GetExtension(name);
     }
     
-    public string Extension => _extension;
-    public byte[] Content => _content;
-    public string TextContent => Encoding.UTF8.GetString(_content);
+    public string Extension => extension;
+    public byte[] Content => content;
+    public string TextContent => Encoding.UTF8.GetString(content);
     
-    public override long GetSize() => _content.Length;
+    public override long GetSize() => content.Length;
     
     public override int GetCount() => 1;
     
@@ -99,50 +99,50 @@ public class File : FileSystemComponent
     {
         var indent = GetIndentation(depth);
         var sizeStr = GetSize() < 1024 ? $"{GetSize()}B" : $"{GetSize() / 1024.0:F1}KB";
-        Console.WriteLine($"{indent}📄 {_name} ({sizeStr}) [{_extension}]");
+        Console.WriteLine($"{indent}📄 {name} ({sizeStr}) [{extension}]");
     }
     
     public override string GetPath()
     {
         // Files don't know their parent path in this simple implementation
-        return _name;
+        return name;
     }
     
     public void WriteContent(string content)
     {
-        _content = Encoding.UTF8.GetBytes(content ?? string.Empty);
+        content = Encoding.UTF8.GetBytes(content ?? string.Empty);
         UpdateModified();
     }
     
     public void WriteContent(byte[] content)
     {
-        _content = content ?? Array.Empty<byte>();
+        content = content ?? Array.Empty<byte>();
         UpdateModified();
     }
     
     public override FileSystemComponent Clone()
     {
-        return new File(_name, (byte[])_content.Clone());
+        return new File(name, (byte[])content.Clone());
     }
 }
 
 // Composite - represents composite objects (directories)
 public class Directory : FileSystemComponent
 {
-    private readonly List<FileSystemComponent> _children;
-    private Directory _parent;
+    private readonly List<FileSystemComponent> children;
+    private Directory parent;
     
     public Directory(string name) : base(name)
     {
-        _children = new List<FileSystemComponent>();
+        children = new List<FileSystemComponent>();
     }
     
-    public Directory Parent => _parent;
-    public IReadOnlyList<FileSystemComponent> Children => _children.AsReadOnly();
+    public Directory Parent => parent;
+    public IReadOnlyList<FileSystemComponent> Children => children.AsReadOnly();
     
-    public override long GetSize() => _children.Sum(child => child.GetSize());
+    public override long GetSize() => children.Sum(child => child.GetSize());
     
-    public override int GetCount() => _children.Sum(child => child.GetCount());
+    public override int GetCount() => children.Sum(child => child.GetCount());
     
     public override void Display(int depth = 0)
     {
@@ -151,9 +151,9 @@ public class Directory : FileSystemComponent
                      GetSize() < 1024 * 1024 ? $"{GetSize() / 1024.0:F1}KB" : 
                      $"{GetSize() / (1024.0 * 1024.0):F1}MB";
         
-        Console.WriteLine($"{indent}📁 {_name}/ ({GetCount()} items, {sizeStr})");
+        Console.WriteLine($"{indent}📁 {name}/ ({GetCount()} items, {sizeStr})");
         
-        foreach (var child in _children)
+        foreach (var child in children)
         {
             child.Display(depth + 1);
         }
@@ -161,10 +161,10 @@ public class Directory : FileSystemComponent
     
     public override string GetPath()
     {
-        if (_parent == null)
-            return _name;
+        if (parent == null)
+            return name;
         
-        return $"{_parent.GetPath()}/{_name}";
+        return $"{parent.GetPath()}/{name}";
     }
     
     public override void Add(FileSystemComponent component)
@@ -179,11 +179,11 @@ public class Directory : FileSystemComponent
         if (component is Directory dir && IsAncestor(dir))
             throw new ArgumentException("Cannot create circular reference");
         
-        _children.Add(component);
+        children.Add(component);
         
         if (component is Directory childDir)
         {
-            childDir._parent = this;
+            childDir.parent = this;
         }
         
         UpdateModified();
@@ -191,11 +191,11 @@ public class Directory : FileSystemComponent
     
     public override void Remove(FileSystemComponent component)
     {
-        if (_children.Remove(component))
+        if (children.Remove(component))
         {
             if (component is Directory dir)
             {
-                dir._parent = null;
+                dir.parent = null;
             }
             UpdateModified();
         }
@@ -203,7 +203,7 @@ public class Directory : FileSystemComponent
     
     public override FileSystemComponent GetChild(int index)
     {
-        if (index < 0 || index >= _children.Count)
+        if (index < 0 || index >= children.Count)
             throw new ArgumentOutOfRangeException(nameof(index));
         
         return _children[index];
@@ -211,27 +211,27 @@ public class Directory : FileSystemComponent
     
     public override IEnumerable<FileSystemComponent> GetChildren()
     {
-        return _children.AsEnumerable();
+        return children.AsEnumerable();
     }
     
     private bool IsAncestor(Directory potentialAncestor)
     {
-        var current = _parent;
+        var current = parent;
         while (current != null)
         {
             if (current == potentialAncestor)
                 return true;
-            current = current._parent;
+            current = current.parent;
         }
         return false;
     }
     
     public FileSystemComponent Find(string name)
     {
-        if (_name.Equals(name, StringComparison.OrdinalIgnoreCase))
+        if (name.Equals(name, StringComparison.OrdinalIgnoreCase))
             return this;
         
-        foreach (var child in _children)
+        foreach (var child in children)
         {
             if (child.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
                 return child;
@@ -249,7 +249,7 @@ public class Directory : FileSystemComponent
     
     public IEnumerable<File> GetAllFiles()
     {
-        foreach (var child in _children)
+        foreach (var child in children)
         {
             if (child is File file)
             {
@@ -267,9 +267,9 @@ public class Directory : FileSystemComponent
     
     public override FileSystemComponent Clone()
     {
-        var clonedDir = new Directory(_name);
+        var clonedDir = new Directory(name);
         
-        foreach (var child in _children)
+        foreach (var child in children)
         {
             clonedDir.Add(child.Clone());
         }
@@ -281,23 +281,23 @@ public class Directory : FileSystemComponent
 // Advanced Composite: Organizational Chart
 public abstract class OrganizationComponent
 {
-    protected string _name;
-    protected string _position;
-    protected decimal _salary;
-    protected DateTime _hireDate;
+    protected string name;
+    protected string position;
+    protected decimal salary;
+    protected DateTime hireDate;
     
     protected OrganizationComponent(string name, string position, decimal salary)
     {
-        _name = name ?? throw new ArgumentNullException(nameof(name));
-        _position = position ?? throw new ArgumentNullException(nameof(position));
-        _salary = salary;
-        _hireDate = DateTime.Now;
+        name = name ?? throw new ArgumentNullException(nameof(name));
+        position = position ?? throw new ArgumentNullException(nameof(position));
+        salary = salary;
+        hireDate = DateTime.Now;
     }
     
-    public string Name => _name;
-    public string Position => _position;
-    public decimal Salary => _salary;
-    public DateTime HireDate => _hireDate;
+    public string Name => name;
+    public string Position => position;
+    public decimal Salary => salary;
+    public DateTime HireDate => hireDate;
     
     public abstract decimal GetTotalSalary();
     public abstract int GetTeamSize();
@@ -327,81 +327,81 @@ public abstract class OrganizationComponent
 
 public class Employee : OrganizationComponent
 {
-    private readonly string _department;
-    private readonly List<string> _skills;
+    private readonly string department;
+    private readonly List<string> skills;
     
     public Employee(string name, string position, decimal salary, string department) 
         : base(name, position, salary)
     {
-        _department = department ?? "General";
-        _skills = new List<string>();
+        department = department ?? "General";
+        skills = new List<string>();
     }
     
-    public string Department => _department;
-    public IReadOnlyList<string> Skills => _skills.AsReadOnly();
+    public string Department => department;
+    public IReadOnlyList<string> Skills => skills.AsReadOnly();
     
     public void AddSkill(string skill)
     {
-        if (!string.IsNullOrWhiteSpace(skill) && !_skills.Contains(skill))
+        if (!string.IsNullOrWhiteSpace(skill) && !skills.Contains(skill))
         {
-            _skills.Add(skill);
+            skills.Add(skill);
         }
     }
     
-    public override decimal GetTotalSalary() => _salary;
+    public override decimal GetTotalSalary() => salary;
     
     public override int GetTeamSize() => 1;
     
     public override void DisplayHierarchy(int depth = 0)
     {
         var indent = GetIndentation(depth);
-        Console.WriteLine($"{indent}👤 {_name} - {_position} ({_department})");
-        Console.WriteLine($"{new string(' ', indent.Length)}   💰 ${_salary:N0}/year | Skills: {string.Join(", ", _skills)}");
+        Console.WriteLine($"{indent}👤 {name} - {position} ({department})");
+        Console.WriteLine($"{new string(' ', indent.Length)}   💰 ${salary:N0}/year | Skills: {string.Join(", ", skills)}");
     }
     
     public override void GiveRaise(decimal percentage)
     {
-        _salary *= (1 + percentage / 100);
-        Console.WriteLine($"💰 {_name} received a {percentage}% raise. New salary: ${_salary:N0}");
+        salary *= (1 + percentage / 100);
+        Console.WriteLine($"💰 {name} received a {percentage}% raise. New salary: ${salary:N0}");
     }
 }
 
 public class Manager : OrganizationComponent
 {
-    private readonly List<OrganizationComponent> _subordinates;
-    private readonly string _department;
-    private readonly decimal _bonus;
+    private readonly List<OrganizationComponent> subordinates;
+    private readonly string department;
+    private readonly decimal bonus;
     
     public Manager(string name, string position, decimal salary, string department, decimal bonus = 0) 
         : base(name, position, salary)
     {
-        _subordinates = new List<OrganizationComponent>();
-        _department = department ?? "Management";
-        _bonus = bonus;
+        subordinates = new List<OrganizationComponent>();
+        department = department ?? "Management";
+        bonus = bonus;
     }
     
-    public string Department => _department;
-    public decimal Bonus => _bonus;
-    public IReadOnlyList<OrganizationComponent> Subordinates => _subordinates.AsReadOnly();
+    public string Department => department;
+    public decimal Bonus => bonus;
+    public IReadOnlyList<OrganizationComponent> Subordinates => subordinates.AsReadOnly();
     
     public override decimal GetTotalSalary()
     {
-        return _salary + _bonus + _subordinates.Sum(s => s.GetTotalSalary());
+        return salary + bonus + subordinates.Sum(s => s.GetTotalSalary());
     }
     
     public override int GetTeamSize()
     {
-        return 1 + _subordinates.Sum(s => s.GetTeamSize());
+        return 1 + subordinates.Sum(s => s.GetTeamSize());
     }
     
     public override void DisplayHierarchy(int depth = 0)
     {
         var indent = GetIndentation(depth);
-        var bonusText = _bonus > 0 ? $" (+ ${_bonus:N0} bonus)" : "";
-        Console.WriteLine($"{indent}👨‍💼 {_name} - {_position} ({_department})");
-        Console.WriteLine($"{new string(' ', indent.Length)}   💰 ${_salary:N0}/year{bonusText} | Team: {GetTeamSize()} people | Budget: ${GetTotalSalary():N0}");
+        var bonusText = bonus > 0 ? $" (+ ${bonus:N0} bonus)" : "";
+        Console.WriteLine($"{indent}👨‍💼 {name} - {position} ({department})");
+        Console.WriteLine($"{new string(' ', indent.Length)}   💰 ${salary:N0}/year{bonusText} | Team: {GetTeamSize()} people | Budget: ${GetTotalSalary():N0}");
         
-        foreach (var subordinate in _subordinates)
+        foreach (var subordinate in subordinates)
         {
             subordinate.DisplayHierarchy(depth + 1);
         }
@@ -415,27 +415,27 @@ public class Manager : OrganizationComponent
         if (component == this)
             throw new ArgumentException("Cannot add manager to themselves");
         
-        _subordinates.Add(component);
+        subordinates.Add(component);
     }
     
     public override void Remove(OrganizationComponent component)
     {
-        _subordinates.Remove(component);
+        subordinates.Remove(component);
     }
     
     public override IEnumerable<OrganizationComponent> GetSubordinates()
     {
-        return _subordinates.AsEnumerable();
+        return subordinates.AsEnumerable();
     }
     
     public override void GiveRaise(decimal percentage)
     {
         // Manager raises affect the entire team
-        _salary *= (1 + percentage / 100);
-        Console.WriteLine($"💰 {_name} (Manager) received a {percentage}% raise. New salary: ${_salary:N0}");
+        salary *= (1 + percentage / 100);
+        Console.WriteLine($"💰 {name} (Manager) received a {percentage}% raise. New salary: ${salary:N0}");
         
         // Give smaller raise to subordinates
-        foreach (var subordinate in _subordinates)
+        foreach (var subordinate in subordinates)
         {
             subordinate.GiveRaise(percentage * 0.5m); // Half the manager's raise
         }
@@ -445,23 +445,23 @@ public class Manager : OrganizationComponent
 // Composite Pattern with UI Components
 public abstract class UIComponent
 {
-    protected string _name;
-    protected bool _visible;
-    protected (int X, int Y) _position;
-    protected (int Width, int Height) _size;
+    protected string name;
+    protected bool visible;
+    protected (int X, int Y) position;
+    protected (int Width, int Height) size;
     
     protected UIComponent(string name, int x = 0, int y = 0, int width = 100, int height = 20)
     {
-        _name = name ?? throw new ArgumentNullException(nameof(name));
-        _visible = true;
-        _position = (x, y);
-        _size = (width, height);
+        name = name ?? throw new ArgumentNullException(nameof(name));
+        visible = true;
+        position = (x, y);
+        size = (width, height);
     }
     
-    public string Name => _name;
-    public bool Visible => _visible;
-    public (int X, int Y) Position => _position;
-    public (int Width, int Height) Size => _size;
+    public string Name => name;
+    public bool Visible => visible;
+    public (int X, int Y) Position => position;
+    public (int Width, int Height) Size => size;
     
     public abstract void Render(int depth = 0);
     public abstract void SetVisible(bool visible);
@@ -479,12 +479,12 @@ public abstract class UIComponent
     
     public void Move(int x, int y)
     {
-        _position = (x, y);
+        position = (x, y);
     }
     
     public void Resize(int width, int height)
     {
-        _size = (width, height);
+        size = (width, height);
     }
     
     protected string GetIndentation(int depth)
@@ -495,101 +495,101 @@ public abstract class UIComponent
 
 public class Button : UIComponent
 {
-    private readonly string _text;
-    private readonly string _action;
+    private readonly string text;
+    private readonly string action;
     
     public Button(string name, string text, string action, int x = 0, int y = 0) 
         : base(name, x, y, text.Length * 8 + 20, 30)
     {
-        _text = text ?? name;
-        _action = action ?? "NoAction";
+        text = text ?? name;
+        action = action ?? "NoAction";
     }
     
-    public string Text => _text;
-    public string Action => _action;
+    public string Text => text;
+    public string Action => action;
     
     public override void Render(int depth = 0)
     {
-        if (!_visible) return;
+        if (!visible) return;
         
         var indent = GetIndentation(depth);
-        Console.WriteLine($"{indent}🔘 Button '{_name}': \"{_text}\" @ ({_position.X},{_position.Y}) [{_size.Width}x{_size.Height}] -> {_action}");
+        Console.WriteLine($"{indent}🔘 Button '{name}': \"{text}\" @ ({position.X},{position.Y}) [{size.Width}x{size.Height}] -> {action}");
     }
     
     public override void SetVisible(bool visible)
     {
-        _visible = visible;
+        visible = visible;
     }
     
     public override (int Width, int Height) GetTotalSize()
     {
-        return _visible ? _size : (0, 0);
+        return visible ? size : (0, 0);
     }
 }
 
 public class TextBox : UIComponent
 {
-    private string _content;
-    private readonly bool _multiline;
+    private string content;
+    private readonly bool multiline;
     
     public TextBox(string name, string placeholder = "", bool multiline = false, int x = 0, int y = 0) 
         : base(name, x, y, 200, multiline ? 100 : 25)
     {
-        _content = placeholder ?? string.Empty;
-        _multiline = multiline;
+        content = placeholder ?? string.Empty;
+        multiline = multiline;
     }
     
-    public string Content => _content;
-    public bool Multiline => _multiline;
+    public string Content => content;
+    public bool Multiline => multiline;
     
     public void SetContent(string content)
     {
-        _content = content ?? string.Empty;
+        content = content ?? string.Empty;
     }
     
     public override void Render(int depth = 0)
     {
-        if (!_visible) return;
+        if (!visible) return;
         
         var indent = GetIndentation(depth);
-        var type = _multiline ? "TextArea" : "TextBox";
-        Console.WriteLine($"{indent}📝 {type} '{_name}': \"{_content}\" @ ({_position.X},{_position.Y}) [{_size.Width}x{_size.Height}]");
+        var type = multiline ? "TextArea" : "TextBox";
+        Console.WriteLine($"{indent}📝 {type} '{name}': \"{content}\" @ ({position.X},{position.Y}) [{size.Width}x{size.Height}]");
     }
     
     public override void SetVisible(bool visible)
     {
-        _visible = visible;
+        visible = visible;
     }
     
     public override (int Width, int Height) GetTotalSize()
     {
-        return _visible ? _size : (0, 0);
+        return visible ? size : (0, 0);
     }
 }
 
 public class Panel : UIComponent
 {
-    private readonly List<UIComponent> _children;
-    private readonly string _backgroundColor;
+    private readonly List<UIComponent> children;
+    private readonly string backgroundColor;
     
     public Panel(string name, string backgroundColor = "#FFFFFF", int x = 0, int y = 0, int width = 400, int height = 300) 
         : base(name, x, y, width, height)
     {
-        _children = new List<UIComponent>();
-        _backgroundColor = backgroundColor;
+        children = new List<UIComponent>();
+        backgroundColor = backgroundColor;
     }
     
-    public string BackgroundColor => _backgroundColor;
-    public IReadOnlyList<UIComponent> Children => _children.AsReadOnly();
+    public string BackgroundColor => backgroundColor;
+    public IReadOnlyList<UIComponent> Children => children.AsReadOnly();
     
     public override void Render(int depth = 0)
     {
-        if (!_visible) return;
+        if (!visible) return;
         
         var indent = GetIndentation(depth);
-        Console.WriteLine($"{indent}📋 Panel '{_name}' [{_backgroundColor}] @ ({_position.X},{_position.Y}) [{_size.Width}x{_size.Height}]");
+        Console.WriteLine($"{indent}📋 Panel '{name}' [{backgroundColor}] @ ({position.X},{position.Y}) [{size.Width}x{size.Height}]");
         
-        foreach (var child in _children)
+        foreach (var child in children)
         {
             child.Render(depth + 1);
         }
@@ -597,10 +597,10 @@ public class Panel : UIComponent
     
     public override void SetVisible(bool visible)
     {
-        _visible = visible;
+        visible = visible;
         
         // Propagate visibility to children
-        foreach (var child in _children)
+        foreach (var child in children)
         {
             child.SetVisible(visible);
         }
@@ -608,12 +608,12 @@ public class Panel : UIComponent
     
     public override (int Width, int Height) GetTotalSize()
     {
-        if (!_visible) return (0, 0);
+        if (!visible) return (0, 0);
         
-        var maxWidth = _children.Count > 0 ? _children.Max(c => c.Position.X + c.GetTotalSize().Width) : 0;
-        var maxHeight = _children.Count > 0 ? _children.Max(c => c.Position.Y + c.GetTotalSize().Height) : 0;
+        var maxWidth = children.Count > 0 ? children.Max(c => c.Position.X + c.GetTotalSize().Width) : 0;
+        var maxHeight = children.Count > 0 ? children.Max(c => c.Position.Y + c.GetTotalSize().Height) : 0;
         
-        return (Math.Max(_size.Width, maxWidth), Math.Max(_size.Height, maxHeight));
+        return (Math.Max(size.Width, maxWidth), Math.Max(size.Height, maxHeight));
     }
     
     public override void Add(UIComponent component)
@@ -621,12 +621,12 @@ public class Panel : UIComponent
         if (component == null)
             throw new ArgumentNullException(nameof(component));
         
-        _children.Add(component);
+        children.Add(component);
     }
     
     public override void Remove(UIComponent component)
     {
-        _children.Remove(component);
+        children.Remove(component);
     }
 }
 ```

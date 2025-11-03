@@ -66,63 +66,63 @@ public class TextEditorMemento : IMemento
 // Text editor (Originator)
 public class TextEditor : IOriginator<TextEditorMemento>
 {
-    private StringBuilder _content = new();
-    private int _cursorPosition = 0;
-    private string _fontName = "Arial";
-    private int _fontSize = 12;
-    private bool _isBold = false;
-    private bool _isItalic = false;
+    private StringBuilder content = new();
+    private int cursorPosition = 0;
+    private string fontName = "Arial";
+    private int fontSize = 12;
+    private bool isBold = false;
+    private bool isItalic = false;
     
-    public string Content => _content.ToString();
-    public int CursorPosition => _cursorPosition;
-    public string FontName => _fontName;
-    public int FontSize => _fontSize;
-    public bool IsBold => _isBold;
-    public bool IsItalic => _isItalic;
+    public string Content => content.ToString();
+    public int CursorPosition => cursorPosition;
+    public string FontName => fontName;
+    public int FontSize => fontSize;
+    public bool IsBold => isBold;
+    public bool IsItalic => isItalic;
     
     public void InsertText(string text)
     {
-        _content.Insert(_cursorPosition, text);
-        _cursorPosition += text.Length;
-        Console.WriteLine($"Inserted '{text}' at position {_cursorPosition - text.Length}");
+        content.Insert(cursorPosition, text);
+        cursorPosition += text.Length;
+        Console.WriteLine($"Inserted '{text}' at position {cursorPosition - text.Length}");
     }
     
     public void DeleteText(int length)
     {
-        if (_cursorPosition >= length)
+        if (cursorPosition >= length)
         {
-            var deletedText = _content.ToString(_cursorPosition - length, length);
-            _content.Remove(_cursorPosition - length, length);
-            _cursorPosition -= length;
+            var deletedText = content.ToString(cursorPosition - length, length);
+            content.Remove(cursorPosition - length, length);
+            cursorPosition -= length;
             Console.WriteLine($"Deleted '{deletedText}'");
         }
     }
     
     public void MoveCursor(int position)
     {
-        if (position >= 0 && position <= _content.Length)
+        if (position >= 0 && position <= content.Length)
         {
-            _cursorPosition = position;
+            cursorPosition = position;
             Console.WriteLine($"Cursor moved to position {position}");
         }
     }
     
     public void SetFont(string fontName, int fontSize)
     {
-        _fontName = fontName;
-        _fontSize = fontSize;
+        fontName = fontName;
+        fontSize = fontSize;
         Console.WriteLine($"Font changed to {fontName} {fontSize}pt");
     }
     
     public void SetBold(bool isBold)
     {
-        _isBold = isBold;
+        isBold = isBold;
         Console.WriteLine($"Bold: {(isBold ? "ON" : "OFF")}");
     }
     
     public void SetItalic(bool isItalic)
     {
-        _isItalic = isItalic;
+        isItalic = isItalic;
         Console.WriteLine($"Italic: {(isItalic ? "ON" : "OFF")}");
     }
     
@@ -131,32 +131,32 @@ public class TextEditor : IOriginator<TextEditorMemento>
         var description = $"State at {DateTime.Now:HH:mm:ss} - {Content.Length} chars";
         return new TextEditorMemento(
             Content, 
-            _cursorPosition, 
-            _fontName, 
-            _fontSize, 
-            _isBold, 
-            _isItalic, 
+            cursorPosition, 
+            fontName, 
+            fontSize, 
+            isBold, 
+            isItalic, 
             description);
     }
     
     public void RestoreFromMemento(TextEditorMemento memento)
     {
-        _content = new StringBuilder(memento.Content);
-        _cursorPosition = memento.CursorPosition;
-        _fontName = memento.FontName;
-        _fontSize = memento.FontSize;
-        _isBold = memento.IsBold;
-        _isItalic = memento.IsItalic;
+        content = new StringBuilder(memento.Content);
+        cursorPosition = memento.CursorPosition;
+        fontName = memento.FontName;
+        fontSize = memento.FontSize;
+        isBold = memento.IsBold;
+        isItalic = memento.IsItalic;
         
         Console.WriteLine($"Restored state from {memento.CreatedAt:HH:mm:ss}");
-        Console.WriteLine($"Content: '{Content}', Cursor: {_cursorPosition}");
+        Console.WriteLine($"Content: '{Content}', Cursor: {cursorPosition}");
     }
     
     public void PrintStatus()
     {
         Console.WriteLine($"Content: '{Content}'");
-        Console.WriteLine($"Cursor: {_cursorPosition}, Font: {_fontName} {_fontSize}pt");
-        Console.WriteLine($"Bold: {_isBold}, Italic: {_isItalic}");
+        Console.WriteLine($"Cursor: {cursorPosition}, Font: {fontName} {fontSize}pt");
+        Console.WriteLine($"Bold: {isBold}, Italic: {isItalic}");
     }
 }
 ```
@@ -196,79 +196,79 @@ public record Item(string Name, string Type, int Quantity, Dictionary<string, ob
 // Game state (Originator)
 public class GameState : IOriginator<GameStateMemento>
 {
-    private int _level = 1;
-    private int _score = 0;
-    private int _lives = 3;
-    private PlayerPosition _position = new(0, 0, "StartArea");
-    private List<Item> _inventory = new();
-    private Dictionary<string, object> _gameData = new();
+    private int level = 1;
+    private int score = 0;
+    private int lives = 3;
+    private PlayerPosition position = new(0, 0, "StartArea");
+    private List<Item> inventory = new();
+    private Dictionary<string, object> gameData = new();
     
-    public int Level => _level;
-    public int Score => _score;
-    public int Lives => _lives;
-    public PlayerPosition Position => _position;
-    public IReadOnlyList<Item> Inventory => _inventory.AsReadOnly();
+    public int Level => level;
+    public int Score => score;
+    public int Lives => lives;
+    public PlayerPosition Position => position;
+    public IReadOnlyList<Item> Inventory => inventory.AsReadOnly();
     
     public void AddScore(int points)
     {
-        _score += points;
-        Console.WriteLine($"Score increased by {points}. Total: {_score}");
+        score += points;
+        Console.WriteLine($"Score increased by {points}. Total: {score}");
     }
     
     public void LoseLife()
     {
-        if (_lives > 0)
+        if (lives > 0)
         {
             _lives--;
-            Console.WriteLine($"Life lost! Remaining lives: {_lives}");
+            Console.WriteLine($"Life lost! Remaining lives: {lives}");
         }
     }
     
     public void GainLife()
     {
         _lives++;
-        Console.WriteLine($"Extra life gained! Lives: {_lives}");
+        Console.WriteLine($"Extra life gained! Lives: {lives}");
     }
     
     public void LevelUp()
     {
         _level++;
-        Console.WriteLine($"Level up! Now at level {_level}");
+        Console.WriteLine($"Level up! Now at level {level}");
     }
     
     public void MovePlayer(int x, int y, string area)
     {
-        _position = new PlayerPosition(x, y, area);
+        position = new PlayerPosition(x, y, area);
         Console.WriteLine($"Player moved to {area} ({x}, {y})");
     }
     
     public void AddItem(Item item)
     {
-        var existingItem = _inventory.FirstOrDefault(i => i.Name == item.Name);
+        var existingItem = inventory.FirstOrDefault(i => i.Name == item.Name);
         if (existingItem != null)
         {
             var newQuantity = existingItem.Quantity + item.Quantity;
-            _inventory.Remove(existingItem);
-            _inventory.Add(existingItem with { Quantity = newQuantity });
+            inventory.Remove(existingItem);
+            inventory.Add(existingItem with { Quantity = newQuantity });
         }
         else
         {
-            _inventory.Add(item);
+            inventory.Add(item);
         }
         Console.WriteLine($"Added {item.Quantity}x {item.Name} to inventory");
     }
     
     public bool UseItem(string itemName, int quantity = 1)
     {
-        var item = _inventory.FirstOrDefault(i => i.Name == itemName);
+        var item = inventory.FirstOrDefault(i => i.Name == itemName);
         if (item != null && item.Quantity >= quantity)
         {
             var newQuantity = item.Quantity - quantity;
-            _inventory.Remove(item);
+            inventory.Remove(item);
             
             if (newQuantity > 0)
             {
-                _inventory.Add(item with { Quantity = newQuantity });
+                inventory.Add(item with { Quantity = newQuantity });
             }
             
             Console.WriteLine($"Used {quantity}x {itemName}");
@@ -287,35 +287,35 @@ public class GameState : IOriginator<GameStateMemento>
     
     public GameStateMemento CreateMemento()
     {
-        var description = $"Level {_level} - Score: {_score} - Lives: {_lives}";
+        var description = $"Level {level} - Score: {score} - Lives: {lives}";
         return new GameStateMemento(
-            _level,
-            _score,
-            _lives,
-            _position,
-            _inventory,
-            _gameData,
+            level,
+            score,
+            lives,
+            position,
+            inventory,
+            gameData,
             description);
     }
     
     public void RestoreFromMemento(GameStateMemento memento)
     {
-        _level = memento.Level;
-        _score = memento.Score;
-        _lives = memento.Lives;
-        _position = memento.Position;
-        _inventory = new List<Item>(memento.Inventory);
-        _gameData = new Dictionary<string, object>(memento.GameData);
+        level = memento.Level;
+        score = memento.Score;
+        lives = memento.Lives;
+        position = memento.Position;
+        inventory = new List<Item>(memento.Inventory);
+        gameData = new Dictionary<string, object>(memento.GameData);
         
         Console.WriteLine($"Game state restored: {memento.Description}");
     }
     
     public void PrintStatus()
     {
-        Console.WriteLine($"Level: {_level}, Score: {_score}, Lives: {_lives}");
-        Console.WriteLine($"Position: {_position.Area} ({_position.X}, {_position.Y})");
-        Console.WriteLine($"Inventory: {_inventory.Count} items");
-        foreach (var item in _inventory)
+        Console.WriteLine($"Level: {level}, Score: {score}, Lives: {lives}");
+        Console.WriteLine($"Position: {position.Area} ({position.X}, {position.Y})");
+        Console.WriteLine($"Inventory: {inventory.Count} items");
+        foreach (var item in inventory)
         {
             Console.WriteLine($"  - {item.Name} x{item.Quantity}");
         }
@@ -329,23 +329,23 @@ public class GameState : IOriginator<GameStateMemento>
 // Generic caretaker
 public class MementoCaretaker<T> : ICaretaker<T> where T : IMemento
 {
-    private readonly List<(T Memento, string Label, DateTime SavedAt)> _history = new();
-    private readonly int _maxHistorySize;
+    private readonly List<(T Memento, string Label, DateTime SavedAt)> history = new();
+    private readonly int maxHistorySize;
     
     public MementoCaretaker(int maxHistorySize = 50)
     {
-        _maxHistorySize = maxHistorySize;
+        maxHistorySize = maxHistorySize;
     }
     
     public void SaveMemento(T memento, string? label = null)
     {
-        var saveLabel = label ?? $"Save {_history.Count + 1}";
-        _history.Add((memento, saveLabel, DateTime.UtcNow));
+        var saveLabel = label ?? $"Save {history.Count + 1}";
+        history.Add((memento, saveLabel, DateTime.UtcNow));
         
         // Maintain max history size
-        while (_history.Count > _maxHistorySize)
+        while (history.Count > maxHistorySize)
         {
-            _history.RemoveAt(0);
+            history.RemoveAt(0);
         }
         
         Console.WriteLine($"Memento saved: {saveLabel} ({memento.Description})");
@@ -353,7 +353,7 @@ public class MementoCaretaker<T> : ICaretaker<T> where T : IMemento
     
     public T? RestoreMemento(int index)
     {
-        if (index >= 0 && index < _history.Count)
+        if (index >= 0 && index < history.Count)
         {
             var (memento, label, savedAt) = _history[index];
             Console.WriteLine($"Restoring memento {index}: {label}");
@@ -366,9 +366,9 @@ public class MementoCaretaker<T> : ICaretaker<T> where T : IMemento
     
     public T? RestoreLatest()
     {
-        if (_history.Count > 0)
+        if (history.Count > 0)
         {
-            return RestoreMemento(_history.Count - 1);
+            return RestoreMemento(history.Count - 1);
         }
         
         Console.WriteLine("No mementos available");
@@ -377,20 +377,20 @@ public class MementoCaretaker<T> : ICaretaker<T> where T : IMemento
     
     public IReadOnlyList<T> GetHistory()
     {
-        return _history.Select(h => h.Memento).ToList().AsReadOnly();
+        return history.Select(h => h.Memento).ToList().AsReadOnly();
     }
     
     public void ClearHistory()
     {
-        var count = _history.Count;
-        _history.Clear();
+        var count = history.Count;
+        history.Clear();
         Console.WriteLine($"Cleared {count} mementos from history");
     }
     
     public void PrintHistory()
     {
-        Console.WriteLine($"\nMemento History ({_history.Count} items):");
-        for (int i = 0; i < _history.Count; i++)
+        Console.WriteLine($"\nMemento History ({history.Count} items):");
+        for (int i = 0; i < history.Count; i++)
         {
             var (memento, label, savedAt) = _history[i];
             Console.WriteLine($"{i}: {label} - {memento.Description} (Saved: {savedAt:HH:mm:ss})");
@@ -399,17 +399,17 @@ public class MementoCaretaker<T> : ICaretaker<T> where T : IMemento
     
     public void DeleteMemento(int index)
     {
-        if (index >= 0 && index < _history.Count)
+        if (index >= 0 && index < history.Count)
         {
             var (_, label, _) = _history[index];
-            _history.RemoveAt(index);
+            history.RemoveAt(index);
             Console.WriteLine($"Deleted memento: {label}");
         }
     }
     
     public List<T> GetMementosByTimeRange(DateTime start, DateTime end)
     {
-        return _history
+        return history
             .Where(h => h.SavedAt >= start && h.SavedAt <= end)
             .Select(h => h.Memento)
             .ToList();
@@ -504,14 +504,14 @@ public class IncrementalMemento : IMemento
 // Snapshot manager with branching
 public class SnapshotManager<T> where T : IMemento
 {
-    private readonly Dictionary<string, List<T>> _branches = new();
-    private string _currentBranch = "main";
+    private readonly Dictionary<string, List<T>> branches = new();
+    private string currentBranch = "main";
     
     public void CreateBranch(string branchName, string? fromBranch = null)
     {
-        var sourceBranch = fromBranch ?? _currentBranch;
+        var sourceBranch = fromBranch ?? currentBranch;
         
-        if (_branches.TryGetValue(sourceBranch, out var sourceSnapshots))
+        if (branches.TryGetValue(sourceBranch, out var sourceSnapshots))
         {
             _branches[branchName] = new List<T>(sourceSnapshots);
         }
@@ -525,9 +525,9 @@ public class SnapshotManager<T> where T : IMemento
     
     public void SwitchBranch(string branchName)
     {
-        if (_branches.ContainsKey(branchName))
+        if (branches.ContainsKey(branchName))
         {
-            _currentBranch = branchName;
+            currentBranch = branchName;
             Console.WriteLine($"Switched to branch '{branchName}'");
         }
         else
@@ -538,18 +538,18 @@ public class SnapshotManager<T> where T : IMemento
     
     public void SaveSnapshot(T memento, string? label = null)
     {
-        if (!_branches.ContainsKey(_currentBranch))
+        if (!branches.ContainsKey(currentBranch))
         {
             _branches[_currentBranch] = new List<T>();
         }
         
         _branches[_currentBranch].Add(memento);
-        Console.WriteLine($"Saved snapshot to branch '{_currentBranch}': {label ?? memento.Description}");
+        Console.WriteLine($"Saved snapshot to branch '{currentBranch}': {label ?? memento.Description}");
     }
     
     public T? GetSnapshot(int index)
     {
-        if (_branches.TryGetValue(_currentBranch, out var snapshots) && 
+        if (branches.TryGetValue(currentBranch, out var snapshots) && 
             index >= 0 && index < snapshots.Count)
         {
             return snapshots[index];
@@ -560,13 +560,13 @@ public class SnapshotManager<T> where T : IMemento
     
     public List<string> GetBranches()
     {
-        return _branches.Keys.ToList();
+        return branches.Keys.ToList();
     }
     
     public void MergeBranch(string sourceBranch, string targetBranch)
     {
-        if (_branches.TryGetValue(sourceBranch, out var sourceSnapshots) &&
-            _branches.TryGetValue(targetBranch, out var targetSnapshots))
+        if (branches.TryGetValue(sourceBranch, out var sourceSnapshots) &&
+            branches.TryGetValue(targetBranch, out var targetSnapshots))
         {
             // Simple merge: append source snapshots to target
             targetSnapshots.AddRange(sourceSnapshots);
@@ -578,57 +578,57 @@ public class SnapshotManager<T> where T : IMemento
 // Auto-save caretaker
 public class AutoSaveCaretaker<T> : ICaretaker<T>, IDisposable where T : IMemento
 {
-    private readonly MementoCaretaker<T> _caretaker;
-    private readonly Timer _autoSaveTimer;
-    private readonly TimeSpan _autoSaveInterval;
-    private Func<T>? _mementoFactory;
+    private readonly MementoCaretaker<T> caretaker;
+    private readonly Timer autoSaveTimer;
+    private readonly TimeSpan autoSaveInterval;
+    private Func<T>? mementoFactory;
     
     public AutoSaveCaretaker(TimeSpan autoSaveInterval, int maxHistorySize = 50)
     {
-        _caretaker = new MementoCaretaker<T>(maxHistorySize);
-        _autoSaveInterval = autoSaveInterval;
-        _autoSaveTimer = new Timer(AutoSave, null, Timeout.Infinite, Timeout.Infinite);
+        caretaker = new MementoCaretaker<T>(maxHistorySize);
+        autoSaveInterval = autoSaveInterval;
+        autoSaveTimer = new Timer(AutoSave, null, Timeout.Infinite, Timeout.Infinite);
     }
     
     public void SetMementoFactory(Func<T> factory)
     {
-        _mementoFactory = factory;
+        mementoFactory = factory;
     }
     
     public void StartAutoSave()
     {
-        _autoSaveTimer.Change(_autoSaveInterval, _autoSaveInterval);
-        Console.WriteLine($"Auto-save started with interval: {_autoSaveInterval.TotalSeconds}s");
+        autoSaveTimer.Change(autoSaveInterval, autoSaveInterval);
+        Console.WriteLine($"Auto-save started with interval: {autoSaveInterval.TotalSeconds}s");
     }
     
     public void StopAutoSave()
     {
-        _autoSaveTimer.Change(Timeout.Infinite, Timeout.Infinite);
+        autoSaveTimer.Change(Timeout.Infinite, Timeout.Infinite);
         Console.WriteLine("Auto-save stopped");
     }
     
     private void AutoSave(object? state)
     {
-        if (_mementoFactory != null)
+        if (mementoFactory != null)
         {
-            var memento = _mementoFactory();
+            var memento = mementoFactory();
             SaveMemento(memento, "Auto-save");
         }
     }
     
     public void SaveMemento(T memento, string? label = null)
     {
-        _caretaker.SaveMemento(memento, label);
+        caretaker.SaveMemento(memento, label);
     }
     
-    public T? RestoreMemento(int index) => _caretaker.RestoreMemento(index);
-    public T? RestoreLatest() => _caretaker.RestoreLatest();
-    public IReadOnlyList<T> GetHistory() => _caretaker.GetHistory();
-    public void ClearHistory() => _caretaker.ClearHistory();
+    public T? RestoreMemento(int index) => caretaker.RestoreMemento(index);
+    public T? RestoreLatest() => caretaker.RestoreLatest();
+    public IReadOnlyList<T> GetHistory() => caretaker.GetHistory();
+    public void ClearHistory() => caretaker.ClearHistory();
     
     public void Dispose()
     {
-        _autoSaveTimer?.Dispose();
+        autoSaveTimer?.Dispose();
     }
 }
 ```

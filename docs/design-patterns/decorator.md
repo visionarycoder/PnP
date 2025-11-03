@@ -45,26 +45,26 @@ public class BasicTextProcessor : ITextProcessor
 // Base Decorator - maintains a reference to a Component object and defines interface that conforms to Component
 public abstract class TextDecorator : ITextProcessor
 {
-    protected ITextProcessor _textProcessor;
+    protected ITextProcessor textProcessor;
     
     protected TextDecorator(ITextProcessor textProcessor)
     {
-        _textProcessor = textProcessor ?? throw new ArgumentNullException(nameof(textProcessor));
+        textProcessor = textProcessor ?? throw new ArgumentNullException(nameof(textProcessor));
     }
     
     public virtual string Process(string text)
     {
-        return _textProcessor.Process(text);
+        return textProcessor.Process(text);
     }
     
     public virtual string GetDescription()
     {
-        return _textProcessor.GetDescription();
+        return textProcessor.GetDescription();
     }
     
     public virtual int GetProcessingCost()
     {
-        return _textProcessor.GetProcessingCost();
+        return textProcessor.GetProcessingCost();
     }
 }
 
@@ -165,17 +165,17 @@ public class ReverseDecorator : TextDecorator
 
 public class EncryptDecorator : TextDecorator
 {
-    private readonly string _key;
+    private readonly string key;
     
     public EncryptDecorator(ITextProcessor textProcessor, string key = "DefaultKey123") : base(textProcessor)
     {
-        _key = key ?? "DefaultKey123";
+        key = key ?? "DefaultKey123";
     }
     
     public override string Process(string text)
     {
         var processed = base.Process(text);
-        return SimpleEncrypt(processed, _key);
+        return SimpleEncrypt(processed, key);
     }
     
     public override string GetDescription()
@@ -245,16 +245,16 @@ public interface IBeverage
 
 public class Espresso : IBeverage
 {
-    private readonly string _size;
+    private readonly string size;
     
     public Espresso(string size = "Medium")
     {
-        _size = size;
+        size = size;
     }
     
-    public string GetDescription() => $"{_size} Espresso";
+    public string GetDescription() => $"{size} Espresso";
     
-    public decimal GetCost() => _size switch
+    public decimal GetCost() => size switch
     {
         "Small" => 1.99m,
         "Medium" => 2.49m,
@@ -262,7 +262,7 @@ public class Espresso : IBeverage
         _ => 2.49m
     };
     
-    public int GetCalories() => _size switch
+    public int GetCalories() => size switch
     {
         "Small" => 5,
         "Medium" => 8,
@@ -270,21 +270,21 @@ public class Espresso : IBeverage
         _ => 8
     };
     
-    public string GetSize() => _size;
+    public string GetSize() => size;
 }
 
 public class HouseBlend : IBeverage
 {
-    private readonly string _size;
+    private readonly string size;
     
     public HouseBlend(string size = "Medium")
     {
-        _size = size;
+        size = size;
     }
     
-    public string GetDescription() => $"{_size} House Blend Coffee";
+    public string GetDescription() => $"{size} House Blend Coffee";
     
-    public decimal GetCost() => _size switch
+    public decimal GetCost() => size switch
     {
         "Small" => 1.49m,
         "Medium" => 1.89m,
@@ -292,7 +292,7 @@ public class HouseBlend : IBeverage
         _ => 1.89m
     };
     
-    public int GetCalories() => _size switch
+    public int GetCalories() => size switch
     {
         "Small" => 2,
         "Medium" => 3,
@@ -300,21 +300,21 @@ public class HouseBlend : IBeverage
         _ => 3
     };
     
-    public string GetSize() => _size;
+    public string GetSize() => size;
 }
 
 public class DarkRoast : IBeverage
 {
-    private readonly string _size;
+    private readonly string size;
     
     public DarkRoast(string size = "Medium")
     {
-        _size = size;
+        size = size;
     }
     
-    public string GetDescription() => $"{_size} Dark Roast Coffee";
+    public string GetDescription() => $"{size} Dark Roast Coffee";
     
-    public decimal GetCost() => _size switch
+    public decimal GetCost() => size switch
     {
         "Small" => 1.69m,
         "Medium" => 2.09m,
@@ -322,7 +322,7 @@ public class DarkRoast : IBeverage
         _ => 2.09m
     };
     
-    public int GetCalories() => _size switch
+    public int GetCalories() => size switch
     {
         "Small" => 3,
         "Medium" => 5,
@@ -330,24 +330,24 @@ public class DarkRoast : IBeverage
         _ => 5
     };
     
-    public string GetSize() => _size;
+    public string GetSize() => size;
 }
 
 // Beverage decorators
 public abstract class CondimentDecorator : IBeverage
 {
-    protected IBeverage _beverage;
+    protected IBeverage beverage;
     
     protected CondimentDecorator(IBeverage beverage)
     {
-        _beverage = beverage ?? throw new ArgumentNullException(nameof(beverage));
+        beverage = beverage ?? throw new ArgumentNullException(nameof(beverage));
     }
     
     public abstract string GetDescription();
     public abstract decimal GetCost();
     public abstract int GetCalories();
     
-    public string GetSize() => _beverage.GetSize();
+    public string GetSize() => beverage.GetSize();
 }
 
 public class Milk : CondimentDecorator
@@ -356,17 +356,17 @@ public class Milk : CondimentDecorator
     
     public override string GetDescription()
     {
-        return $"{_beverage.GetDescription()} + Milk";
+        return $"{beverage.GetDescription()} + Milk";
     }
     
     public override decimal GetCost()
     {
-        return _beverage.GetCost() + 0.60m;
+        return beverage.GetCost() + 0.60m;
     }
     
     public override int GetCalories()
     {
-        return _beverage.GetCalories() + 20;
+        return beverage.GetCalories() + 20;
     }
 }
 
@@ -376,17 +376,17 @@ public class Mocha : CondimentDecorator
     
     public override string GetDescription()
     {
-        return $"{_beverage.GetDescription()} + Mocha";
+        return $"{beverage.GetDescription()} + Mocha";
     }
     
     public override decimal GetCost()
     {
-        return _beverage.GetCost() + 0.80m;
+        return beverage.GetCost() + 0.80m;
     }
     
     public override int GetCalories()
     {
-        return _beverage.GetCalories() + 35;
+        return beverage.GetCalories() + 35;
     }
 }
 
@@ -396,17 +396,17 @@ public class Whip : CondimentDecorator
     
     public override string GetDescription()
     {
-        return $"{_beverage.GetDescription()} + Whipped Cream";
+        return $"{beverage.GetDescription()} + Whipped Cream";
     }
     
     public override decimal GetCost()
     {
-        return _beverage.GetCost() + 0.70m;
+        return beverage.GetCost() + 0.70m;
     }
     
     public override int GetCalories()
     {
-        return _beverage.GetCalories() + 50;
+        return beverage.GetCalories() + 50;
     }
 }
 
@@ -416,17 +416,17 @@ public class Soy : CondimentDecorator
     
     public override string GetDescription()
     {
-        return $"{_beverage.GetDescription()} + Soy";
+        return $"{beverage.GetDescription()} + Soy";
     }
     
     public override decimal GetCost()
     {
-        return _beverage.GetCost() + 0.55m;
+        return beverage.GetCost() + 0.55m;
     }
     
     public override int GetCalories()
     {
-        return _beverage.GetCalories() + 15;
+        return beverage.GetCalories() + 15;
     }
 }
 
@@ -436,17 +436,17 @@ public class ExtraShot : CondimentDecorator
     
     public override string GetDescription()
     {
-        return $"{_beverage.GetDescription()} + Extra Shot";
+        return $"{beverage.GetDescription()} + Extra Shot";
     }
     
     public override decimal GetCost()
     {
-        return _beverage.GetCost() + 0.75m;
+        return beverage.GetCost() + 0.75m;
     }
     
     public override int GetCalories()
     {
-        return _beverage.GetCalories() + 5;
+        return beverage.GetCalories() + 5;
     }
 }
 
@@ -478,42 +478,42 @@ public class RawDataProcessor : IDataProcessor
 
 public abstract class DataProcessorDecorator : IDataProcessor
 {
-    protected IDataProcessor _processor;
+    protected IDataProcessor processor;
     
     protected DataProcessorDecorator(IDataProcessor processor)
     {
-        _processor = processor ?? throw new ArgumentNullException(nameof(processor));
+        processor = processor ?? throw new ArgumentNullException(nameof(processor));
     }
     
     public virtual byte[] ProcessData(byte[] data)
     {
-        return _processor.ProcessData(data);
+        return processor.ProcessData(data);
     }
     
     public virtual string GetProcessingSteps()
     {
-        return _processor.GetProcessingSteps();
+        return processor.GetProcessingSteps();
     }
     
     public virtual TimeSpan GetEstimatedTime(int dataSize)
     {
-        return _processor.GetEstimatedTime(dataSize);
+        return processor.GetEstimatedTime(dataSize);
     }
 }
 
 public class ValidationDecorator : DataProcessorDecorator
 {
-    private readonly Func<byte[], bool> _validator;
+    private readonly Func<byte[], bool> validator;
     
     public ValidationDecorator(IDataProcessor processor, Func<byte[], bool> validator = null) 
         : base(processor)
     {
-        _validator = validator ?? (data => data != null && data.Length > 0);
+        validator = validator ?? (data => data != null && data.Length > 0);
     }
     
     public override byte[] ProcessData(byte[] data)
     {
-        if (!_validator(data))
+        if (!validator(data))
         {
             throw new ArgumentException("Data validation failed");
         }
@@ -534,12 +534,12 @@ public class ValidationDecorator : DataProcessorDecorator
 
 public class EncryptionDecorator : DataProcessorDecorator
 {
-    private readonly string _algorithm;
+    private readonly string algorithm;
     
     public EncryptionDecorator(IDataProcessor processor, string algorithm = "AES") 
         : base(processor)
     {
-        _algorithm = algorithm;
+        algorithm = algorithm;
     }
     
     public override byte[] ProcessData(byte[] data)
@@ -558,7 +558,7 @@ public class EncryptionDecorator : DataProcessorDecorator
     
     public override string GetProcessingSteps()
     {
-        return $"{base.GetProcessingSteps()} → Encrypt({_algorithm})";
+        return $"{base.GetProcessingSteps()} → Encrypt({algorithm})";
     }
     
     public override TimeSpan GetEstimatedTime(int dataSize)
@@ -569,12 +569,12 @@ public class EncryptionDecorator : DataProcessorDecorator
 
 public class CompressionDecorator : DataProcessorDecorator
 {
-    private readonly string _algorithm;
+    private readonly string algorithm;
     
     public CompressionDecorator(IDataProcessor processor, string algorithm = "GZIP") 
         : base(processor)
     {
-        _algorithm = algorithm;
+        algorithm = algorithm;
     }
     
     public override byte[] ProcessData(byte[] data)
@@ -592,7 +592,7 @@ public class CompressionDecorator : DataProcessorDecorator
     
     public override string GetProcessingSteps()
     {
-        return $"{base.GetProcessingSteps()} → Compress({_algorithm})";
+        return $"{base.GetProcessingSteps()} → Compress({algorithm})";
     }
     
     public override TimeSpan GetEstimatedTime(int dataSize)
@@ -603,30 +603,30 @@ public class CompressionDecorator : DataProcessorDecorator
 
 public class LoggingDecorator : DataProcessorDecorator
 {
-    private readonly string _logLevel;
+    private readonly string logLevel;
     
     public LoggingDecorator(IDataProcessor processor, string logLevel = "INFO") 
         : base(processor)
     {
-        _logLevel = logLevel;
+        logLevel = logLevel;
     }
     
     public override byte[] ProcessData(byte[] data)
     {
-        Console.WriteLine($"[{_logLevel}] Processing {data?.Length ?? 0} bytes of data");
+        Console.WriteLine($"[{logLevel}] Processing {data?.Length ?? 0} bytes of data");
         var start = DateTime.Now;
         
         var result = base.ProcessData(data);
         
         var duration = DateTime.Now - start;
-        Console.WriteLine($"[{_logLevel}] Processed {result?.Length ?? 0} bytes in {duration.TotalMilliseconds:F2}ms");
+        Console.WriteLine($"[{logLevel}] Processed {result?.Length ?? 0} bytes in {duration.TotalMilliseconds:F2}ms");
         
         return result;
     }
     
     public override string GetProcessingSteps()
     {
-        return $"{base.GetProcessingSteps()} → Log({_logLevel})";
+        return $"{base.GetProcessingSteps()} → Log({logLevel})";
     }
     
     public override TimeSpan GetEstimatedTime(int dataSize)

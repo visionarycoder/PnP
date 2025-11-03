@@ -51,11 +51,11 @@ public interface IAdvancedMediaPlayer
 // Adapter that implements the target interface
 public class MediaAdapter : IMediaPlayer
 {
-    private readonly IAdvancedMediaPlayer _advancedPlayer;
+    private readonly IAdvancedMediaPlayer advancedPlayer;
     
     public MediaAdapter(string audioType)
     {
-        _advancedPlayer = audioType.ToLower() switch
+        advancedPlayer = audioType.ToLower() switch
         {
             "vlc" => new VlcPlayerAdapter(),
             "mp4" => new Mp4PlayerAdapter(),
@@ -68,10 +68,10 @@ public class MediaAdapter : IMediaPlayer
         switch (audioType.ToLower())
         {
             case "vlc":
-                _advancedPlayer.PlayVlc(fileName);
+                advancedPlayer.PlayVlc(fileName);
                 break;
             case "mp4":
-                _advancedPlayer.PlayMp4(fileName);
+                advancedPlayer.PlayMp4(fileName);
                 break;
             default:
                 throw new ArgumentException($"Unsupported audio type: {audioType}");
@@ -82,11 +82,11 @@ public class MediaAdapter : IMediaPlayer
 // Adapters for specific players
 public class VlcPlayerAdapter : IAdvancedMediaPlayer
 {
-    private readonly VlcPlayer _vlcPlayer = new();
+    private readonly VlcPlayer vlcPlayer = new();
     
     public void PlayVlc(string fileName)
     {
-        _vlcPlayer.PlayVlc(fileName);
+        vlcPlayer.PlayVlc(fileName);
     }
     
     public void PlayMp4(string fileName)
@@ -98,7 +98,7 @@ public class VlcPlayerAdapter : IAdvancedMediaPlayer
 
 public class Mp4PlayerAdapter : IAdvancedMediaPlayer
 {
-    private readonly Mp4Player _mp4Player = new();
+    private readonly Mp4Player mp4Player = new();
     
     public void PlayVlc(string fileName)
     {
@@ -108,27 +108,27 @@ public class Mp4PlayerAdapter : IAdvancedMediaPlayer
     
     public void PlayMp4(string fileName)
     {
-        _mp4Player.PlayMp4(fileName);
+        mp4Player.PlayMp4(fileName);
     }
 }
 
 // Main audio player that can play different formats
 public class AudioPlayer : IMediaPlayer
 {
-    private MediaAdapter _mediaAdapter;
-    private readonly Mp3Player _mp3Player = new();
+    private MediaAdapter mediaAdapter;
+    private readonly Mp3Player mp3Player = new();
     
     public void Play(string audioType, string fileName)
     {
         switch (audioType.ToLower())
         {
             case "mp3":
-                _mp3Player.PlayMp3(fileName);
+                mp3Player.PlayMp3(fileName);
                 break;
             case "vlc":
             case "mp4":
-                _mediaAdapter = new MediaAdapter(audioType);
-                _mediaAdapter.Play(audioType, fileName);
+                mediaAdapter = new MediaAdapter(audioType);
+                mediaAdapter.Play(audioType, fileName);
                 break;
             default:
                 Console.WriteLine($"Invalid media. {audioType} format not supported");
@@ -140,24 +140,24 @@ public class AudioPlayer : IMediaPlayer
 // Object Adapter Pattern Example (Composition)
 public class DatabaseAdapter : IMediaPlayer
 {
-    private readonly LegacyDatabase _legacyDatabase;
+    private readonly LegacyDatabase legacyDatabase;
     
     public DatabaseAdapter(LegacyDatabase legacyDatabase)
     {
-        _legacyDatabase = legacyDatabase;
+        legacyDatabase = legacyDatabase;
     }
     
     public void Play(string audioType, string fileName)
     {
         // Adapt the legacy database interface to media player interface
-        var fileData = _legacyDatabase.GetFileData(fileName);
+        var fileData = legacyDatabase.GetFileData(fileName);
         Console.WriteLine($"Playing {audioType} from database: {fileData}");
     }
 }
 
 public class LegacyDatabase
 {
-    private readonly Dictionary<string, string> _files = new()
+    private readonly Dictionary<string, string> files = new()
     {
         { "song1.mp3", "MP3 Data for Song 1" },
         { "video1.mp4", "MP4 Data for Video 1" },
@@ -166,7 +166,7 @@ public class LegacyDatabase
     
     public string GetFileData(string fileName)
     {
-        return _files.TryGetValue(fileName, out var data) ? data : "File not found";
+        return files.TryGetValue(fileName, out var data) ? data : "File not found";
     }
 }
 
@@ -189,9 +189,9 @@ public class Mp3Adapter : Mp3Player, IMediaPlayer
 // Two-way adapter (implements both interfaces)
 public class TwoWayMediaAdapter : IMediaPlayer, IAdvancedMediaPlayer
 {
-    private readonly Mp3Player _mp3Player = new();
-    private readonly Mp4Player _mp4Player = new();
-    private readonly VlcPlayer _vlcPlayer = new();
+    private readonly Mp3Player mp3Player = new();
+    private readonly Mp4Player mp4Player = new();
+    private readonly VlcPlayer vlcPlayer = new();
     
     // IMediaPlayer implementation
     public void Play(string audioType, string fileName)
@@ -199,7 +199,7 @@ public class TwoWayMediaAdapter : IMediaPlayer, IAdvancedMediaPlayer
         switch (audioType.ToLower())
         {
             case "mp3":
-                _mp3Player.PlayMp3(fileName);
+                mp3Player.PlayMp3(fileName);
                 break;
             case "mp4":
                 PlayMp4(fileName);
@@ -216,12 +216,12 @@ public class TwoWayMediaAdapter : IMediaPlayer, IAdvancedMediaPlayer
     // IAdvancedMediaPlayer implementation
     public void PlayVlc(string fileName)
     {
-        _vlcPlayer.PlayVlc(fileName);
+        vlcPlayer.PlayVlc(fileName);
     }
     
     public void PlayMp4(string fileName)
     {
-        _mp4Player.PlayMp4(fileName);
+        mp4Player.PlayMp4(fileName);
     }
 }
 
@@ -230,18 +230,18 @@ public class GenericAdapter<TTarget, TAdaptee>
     where TTarget : class 
     where TAdaptee : class
 {
-    private readonly TAdaptee _adaptee;
-    private readonly Func<TAdaptee, TTarget> _adapter;
+    private readonly TAdaptee adaptee;
+    private readonly Func<TAdaptee, TTarget> adapter;
     
     public GenericAdapter(TAdaptee adaptee, Func<TAdaptee, TTarget> adapter)
     {
-        _adaptee = adaptee;
-        _adapter = adapter;
+        adaptee = adaptee;
+        adapter = adapter;
     }
     
     public TTarget GetTarget()
     {
-        return _adapter(_adaptee);
+        return _adapter(adaptee);
     }
 }
 ```

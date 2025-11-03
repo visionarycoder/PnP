@@ -102,7 +102,7 @@ public class AuthResponse
 // IP Whitelist Handler
 public class IpWhitelistHandler : BaseHandler<AuthRequest, AuthResponse>
 {
-    private readonly HashSet<string> _allowedIps = new()
+    private readonly HashSet<string> allowedIps = new()
     {
         "127.0.0.1", "192.168.1.0", "10.0.0.0"
     };
@@ -113,7 +113,7 @@ public class IpWhitelistHandler : BaseHandler<AuthRequest, AuthResponse>
         
         Console.WriteLine($"[IP Whitelist] Checking IP: {request.IpAddress}");
         
-        if (!_allowedIps.Contains(request.IpAddress))
+        if (!allowedIps.Contains(request.IpAddress))
         {
             Console.WriteLine($"[IP Whitelist] IP {request.IpAddress} not in whitelist");
             return AuthResponse.Failure($"IP address {request.IpAddress} not allowed", nameof(IpWhitelistHandler));
@@ -127,9 +127,9 @@ public class IpWhitelistHandler : BaseHandler<AuthRequest, AuthResponse>
 // Rate Limiting Handler
 public class RateLimitHandler : BaseHandler<AuthRequest, AuthResponse>
 {
-    private readonly Dictionary<string, List<DateTime>> _requestHistory = new();
-    private readonly TimeSpan _timeWindow = TimeSpan.FromMinutes(1);
-    private readonly int _maxRequests = 5;
+    private readonly Dictionary<string, List<DateTime>> requestHistory = new();
+    private readonly TimeSpan timeWindow = TimeSpan.FromMinutes(1);
+    private readonly int maxRequests = 5;
     
     protected override async Task<AuthResponse?> ProcessRequestAsync(AuthRequest request)
     {
@@ -140,15 +140,15 @@ public class RateLimitHandler : BaseHandler<AuthRequest, AuthResponse>
         
         Console.WriteLine($"[Rate Limit] Checking rate limit for: {key}");
         
-        if (!_requestHistory.ContainsKey(key))
+        if (!requestHistory.ContainsKey(key))
         {
             _requestHistory[key] = new List<DateTime>();
         }
         
         var requests = _requestHistory[key];
-        requests.RemoveAll(r => now - r > _timeWindow);
+        requests.RemoveAll(r => now - r > timeWindow);
         
-        if (requests.Count >= _maxRequests)
+        if (requests.Count >= maxRequests)
         {
             Console.WriteLine($"[Rate Limit] Rate limit exceeded for {key}");
             return AuthResponse.Failure($"Rate limit exceeded. Try again later.", nameof(RateLimitHandler));
@@ -163,7 +163,7 @@ public class RateLimitHandler : BaseHandler<AuthRequest, AuthResponse>
 // Basic Authentication Handler
 public class BasicAuthHandler : BaseHandler<AuthRequest, AuthResponse>
 {
-    private readonly Dictionary<string, (string Password, string UserId, List<string> Roles)> _users = new()
+    private readonly Dictionary<string, (string Password, string UserId, List<string> Roles)> users = new()
     {
         ["admin"] = ("admin123", "usr_001", new List<string> { "admin", "user" }),
         ["user1"] = ("password", "usr_002", new List<string> { "user" }),
@@ -182,7 +182,7 @@ public class BasicAuthHandler : BaseHandler<AuthRequest, AuthResponse>
             return null; // Let another handler try (e.g., token auth)
         }
         
-        if (!_users.TryGetValue(request.Username, out var userData))
+        if (!users.TryGetValue(request.Username, out var userData))
         {
             Console.WriteLine($"[Basic Auth] User {request.Username} not found");
             return AuthResponse.Failure($"Invalid username", nameof(BasicAuthHandler));
@@ -202,7 +202,7 @@ public class BasicAuthHandler : BaseHandler<AuthRequest, AuthResponse>
 // Token Authentication Handler
 public class TokenAuthHandler : BaseHandler<AuthRequest, AuthResponse>
 {
-    private readonly Dictionary<string, (string UserId, List<string> Roles, DateTime Expiry)> _tokens = new()
+    private readonly Dictionary<string, (string UserId, List<string> Roles, DateTime Expiry)> tokens = new()
     {
         ["token_admin_123"] = ("usr_001", new List<string> { "admin", "user" }, DateTime.UtcNow.AddHours(1)),
         ["token_user_456"] = ("usr_002", new List<string> { "user" }, DateTime.UtcNow.AddHours(1)),
@@ -221,7 +221,7 @@ public class TokenAuthHandler : BaseHandler<AuthRequest, AuthResponse>
             return null;
         }
         
-        if (!_tokens.TryGetValue(request.Token, out var tokenData))
+        if (!tokens.TryGetValue(request.Token, out var tokenData))
         {
             Console.WriteLine($"[Token Auth] Invalid token");
             return AuthResponse.Failure("Invalid token", nameof(TokenAuthHandler));
@@ -362,7 +362,7 @@ public class CorsHandler : BaseHandler<HttpRequest, HttpResponse>
 // Static File Handler
 public class StaticFileHandler : BaseHandler<HttpRequest, HttpResponse>
 {
-    private readonly Dictionary<string, string> _staticFiles = new()
+    private readonly Dictionary<string, string> staticFiles = new()
     {
         ["/index.html"] = "<html><body><h1>Welcome</h1></body></html>",
         ["/about.html"] = "<html><body><h1>About Us</h1></body></html>",
@@ -382,7 +382,7 @@ public class StaticFileHandler : BaseHandler<HttpRequest, HttpResponse>
             return null;
         }
         
-        if (_staticFiles.TryGetValue(request.Url, out var content))
+        if (staticFiles.TryGetValue(request.Url, out var content))
         {
             Console.WriteLine($"[Static File] Serving static file: {request.Url}");
             return HttpResponse.Ok(content, nameof(StaticFileHandler));
@@ -396,7 +396,7 @@ public class StaticFileHandler : BaseHandler<HttpRequest, HttpResponse>
 // API Handler
 public class ApiHandler : BaseHandler<HttpRequest, HttpResponse>
 {
-    private readonly Dictionary<string, Func<HttpRequest, Task<HttpResponse>>> _endpoints = new();
+    private readonly Dictionary<string, Func<HttpRequest, Task<HttpResponse>>> endpoints = new();
     
     public ApiHandler()
     {
@@ -417,7 +417,7 @@ public class ApiHandler : BaseHandler<HttpRequest, HttpResponse>
         
         var endpoint = request.Url.Split('?')[0]; // Remove query parameters
         
-        if (_endpoints.TryGetValue(endpoint, out var handler))
+        if (endpoints.TryGetValue(endpoint, out var handler))
         {
             Console.WriteLine($"[API] Handling endpoint: {endpoint}");
             return await handler(request);
@@ -493,30 +493,30 @@ public class FallbackHandler : BaseHandler<HttpRequest, HttpResponse>
 ```csharp
 public class ChainBuilder<TRequest, TResponse>
 {
-    private readonly List<IRequestHandler<TRequest, TResponse>> _handlers = new();
+    private readonly List<IRequestHandler<TRequest, TResponse>> handlers = new();
     
     public ChainBuilder<TRequest, TResponse> AddHandler(IRequestHandler<TRequest, TResponse> handler)
     {
-        _handlers.Add(handler);
+        handlers.Add(handler);
         return this;
     }
     
     public ChainBuilder<TRequest, TResponse> AddHandler<THandler>() 
         where THandler : IRequestHandler<TRequest, TResponse>, new()
     {
-        _handlers.Add(new THandler());
+        handlers.Add(new THandler());
         return this;
     }
     
     public IRequestHandler<TRequest, TResponse> Build()
     {
-        if (_handlers.Count == 0)
+        if (handlers.Count == 0)
         {
             throw new InvalidOperationException("At least one handler must be added to the chain");
         }
         
         // Link handlers together
-        for (int i = 0; i < _handlers.Count - 1; i++)
+        for (int i = 0; i < handlers.Count - 1; i++)
         {
             _handlers[i].SetNext(_handlers[i + 1]);
         }
@@ -534,19 +534,19 @@ public class ChainBuilder<TRequest, TResponse>
 // Chain with conditional handlers
 public class ConditionalChain<TRequest, TResponse>
 {
-    private readonly List<(Func<TRequest, bool> Condition, IRequestHandler<TRequest, TResponse> Handler)> _conditionalHandlers = new();
+    private readonly List<(Func<TRequest, bool> Condition, IRequestHandler<TRequest, TResponse> Handler)> conditionalHandlers = new();
     
     public ConditionalChain<TRequest, TResponse> AddConditionalHandler(
         Func<TRequest, bool> condition, 
         IRequestHandler<TRequest, TResponse> handler)
     {
-        _conditionalHandlers.Add((condition, handler));
+        conditionalHandlers.Add((condition, handler));
         return this;
     }
     
     public async Task<TResponse?> ProcessAsync(TRequest request)
     {
-        foreach (var (condition, handler) in _conditionalHandlers)
+        foreach (var (condition, handler) in conditionalHandlers)
         {
             if (condition(request))
             {
@@ -565,22 +565,22 @@ public class ConditionalChain<TRequest, TResponse>
 // Parallel Chain (runs handlers in parallel and returns first successful result)
 public class ParallelChain<TRequest, TResponse>
 {
-    private readonly List<IRequestHandler<TRequest, TResponse>> _handlers = new();
+    private readonly List<IRequestHandler<TRequest, TResponse>> handlers = new();
     
     public ParallelChain<TRequest, TResponse> AddHandler(IRequestHandler<TRequest, TResponse> handler)
     {
-        _handlers.Add(handler);
+        handlers.Add(handler);
         return this;
     }
     
     public async Task<TResponse?> ProcessAsync(TRequest request)
     {
-        if (_handlers.Count == 0)
+        if (handlers.Count == 0)
         {
             return default(TResponse);
         }
         
-        var tasks = _handlers.Select(h => h.HandleAsync(request));
+        var tasks = handlers.Select(h => h.HandleAsync(request));
         
         while (tasks.Any())
         {
@@ -602,12 +602,12 @@ public class ParallelChain<TRequest, TResponse>
 // Chain Statistics and Monitoring
 public class MonitoringChain<TRequest, TResponse>
 {
-    private readonly IRequestHandler<TRequest, TResponse> _chain;
-    private readonly Dictionary<string, ChainStatistics> _statistics = new();
+    private readonly IRequestHandler<TRequest, TResponse> chain;
+    private readonly Dictionary<string, ChainStatistics> statistics = new();
     
     public MonitoringChain(IRequestHandler<TRequest, TResponse> chain)
     {
-        _chain = chain;
+        chain = chain;
     }
     
     public async Task<TResponse?> ProcessAsync(TRequest request)
@@ -619,7 +619,7 @@ public class MonitoringChain<TRequest, TResponse>
         
         try
         {
-            var result = await _chain.HandleAsync(request);
+            var result = await chain.HandleAsync(request);
             stopwatch.Stop();
             
             RecordStatistics("Success", stopwatch.ElapsedMilliseconds);
@@ -638,7 +638,7 @@ public class MonitoringChain<TRequest, TResponse>
     
     private void RecordStatistics(string outcome, long duration)
     {
-        if (!_statistics.ContainsKey(outcome))
+        if (!statistics.ContainsKey(outcome))
         {
             _statistics[outcome] = new ChainStatistics();
         }
@@ -659,7 +659,7 @@ public class MonitoringChain<TRequest, TResponse>
         }
     }
     
-    public Dictionary<string, ChainStatistics> GetStatistics() => _statistics.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+    public Dictionary<string, ChainStatistics> GetStatistics() => statistics.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 }
 
 public class ChainStatistics

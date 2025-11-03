@@ -2,7 +2,7 @@
 
 **Description**: Implements a retry pattern with exponential backoff for operations that may fail temporarily.
 
-**Language/Technology**: C# / .NET
+**Language/Technology**: C# / .NET 8.0
 
 **Code**:
 
@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 
 public static class RetryHelper
 {
-
     /// <summary>
     /// Executes an async function with retry logic and exponential backoff
     /// </summary>
@@ -23,19 +22,19 @@ public static class RetryHelper
     /// <returns>Result of the operation</returns>
     public static async Task<T> RetryAsync<T>(Func<Task<T>> operation, int maxRetries = 3, int delayMilliseconds = 1000)
     {
-        for (int attempt = 0; attempt <= maxRetries; attempt++)
+        for (var attempt = 0; attempt <= maxRetries; attempt++)
         {
             try
             {
-                return await operation();
+                return await operation().ConfigureAwait(false);
             }
             catch (Exception ex) when (attempt < maxRetries)
             {
                 // Calculate exponential backoff delay
-                int delay = delayMilliseconds * (int)Math.Pow(2, attempt);
+                var delay = delayMilliseconds * (int)Math.Pow(2, attempt);
                 Console.WriteLine($"Attempt {attempt + 1} failed: {ex.Message}");
                 Console.WriteLine($"Retrying in {delay}ms...");
-                await Task.Delay(delay);
+                await Task.Delay(delay).ConfigureAwait(false);
             }
             catch (Exception lastEx)
             {
@@ -54,9 +53,9 @@ public static class RetryHelper
     {
         await RetryAsync(async () =>
         {
-            await operation();
+            await operation().ConfigureAwait(false);
             return true;
-        }, maxRetries, delayMilliseconds);
+        }, maxRetries, delayMilliseconds).ConfigureAwait(false);
     }
 }
 ```
@@ -97,8 +96,10 @@ class Program
 
 ## Notes
 
+- Targets .NET 8.0 SDK with modern C# features
 - Uses exponential backoff (delay doubles with each retry)
-- Works with async/await pattern
+- Works with async/await pattern and includes `ConfigureAwait(false)`
+- Uses `var` for obvious types (attempt, delay variables)
 - Generic implementation works with any return type
 - Includes overload for void operations
 - Delay formula: initialDelay × 2^attemptNumber

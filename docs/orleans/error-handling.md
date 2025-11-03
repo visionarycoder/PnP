@@ -1,8 +1,8 @@
-# Error Handling
+# Enterprise Orleans Fault Tolerance & Resilience
 
-**Description**: Orleans error handling patterns for resilience, fault tolerance, and recovery in distributed grain applications.
+**Description**: Mission-critical Orleans error handling with advanced circuit breakers, intelligent retry policies, automated recovery strategies, distributed health checks, and comprehensive monitoring for zero-downtime distributed systems.
 
-**Language/Technology**: C# 12, Orleans
+**Language/Technology**: C# (.NET 9.0), Orleans 8.0+, Polly, Application Insights
 
 ## Table of Contents
 

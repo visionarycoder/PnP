@@ -12,8 +12,8 @@
 // Expression context for variable storage
 public class ExpressionContext
 {
-    private readonly Dictionary<string, double> _variables = new();
-    private readonly Dictionary<string, Func<double[], double>> _functions = new();
+    private readonly Dictionary<string, double> variables = new();
+    private readonly Dictionary<string, Func<double[], double>> functions = new();
     
     public ExpressionContext()
     {
@@ -40,7 +40,7 @@ public class ExpressionContext
     
     public double GetVariable(string name)
     {
-        if (_variables.TryGetValue(name, out var value))
+        if (variables.TryGetValue(name, out var value))
         {
             return value;
         }
@@ -49,7 +49,7 @@ public class ExpressionContext
     
     public bool HasVariable(string name)
     {
-        return _variables.ContainsKey(name);
+        return variables.ContainsKey(name);
     }
     
     public void SetFunction(string name, Func<double[], double> function)
@@ -59,7 +59,7 @@ public class ExpressionContext
     
     public double CallFunction(string name, params double[] arguments)
     {
-        if (_functions.TryGetValue(name, out var function))
+        if (functions.TryGetValue(name, out var function))
         {
             return function(arguments);
         }
@@ -68,20 +68,20 @@ public class ExpressionContext
     
     public bool HasFunction(string name)
     {
-        return _functions.ContainsKey(name);
+        return functions.ContainsKey(name);
     }
     
-    public IReadOnlyDictionary<string, double> Variables => _variables;
-    public IReadOnlyCollection<string> FunctionNames => _functions.Keys;
+    public IReadOnlyDictionary<string, double> Variables => variables;
+    public IReadOnlyCollection<string> FunctionNames => functions.Keys;
     
     public ExpressionContext Clone()
     {
         var clone = new ExpressionContext();
-        foreach (var (name, value) in _variables)
+        foreach (var (name, value) in variables)
         {
             clone.SetVariable(name, value);
         }
-        foreach (var (name, func) in _functions)
+        foreach (var (name, func) in functions)
         {
             clone.SetFunction(name, func);
         }
@@ -102,23 +102,23 @@ public abstract class Expression
 // Terminal expressions (leaf nodes)
 public class NumberExpression : Expression
 {
-    private readonly double _value;
+    private readonly double value;
     
     public NumberExpression(double value)
     {
-        _value = value;
+        value = value;
     }
     
-    public double Value => _value;
+    public double Value => value;
     
     public override double Interpret(ExpressionContext context)
     {
-        return _value;
+        return value;
     }
     
     public override string ToString()
     {
-        return _value.ToString("G");
+        return value.ToString("G");
     }
     
     public override TResult Accept<TResult>(IExpressionVisitor<TResult> visitor)
@@ -129,23 +129,23 @@ public class NumberExpression : Expression
 
 public class VariableExpression : Expression
 {
-    private readonly string _name;
+    private readonly string name;
     
     public VariableExpression(string name)
     {
-        _name = name ?? throw new ArgumentNullException(nameof(name));
+        name = name ?? throw new ArgumentNullException(nameof(name));
     }
     
-    public string Name => _name;
+    public string Name => name;
     
     public override double Interpret(ExpressionContext context)
     {
-        return context.GetVariable(_name);
+        return context.GetVariable(name);
     }
     
     public override string ToString()
     {
-        return _name;
+        return name;
     }
     
     public override TResult Accept<TResult>(IExpressionVisitor<TResult> visitor)
@@ -157,23 +157,23 @@ public class VariableExpression : Expression
 // Non-terminal expressions (internal nodes)
 public abstract class BinaryExpression : Expression
 {
-    protected readonly Expression _left;
-    protected readonly Expression _right;
+    protected readonly Expression left;
+    protected readonly Expression right;
     
     protected BinaryExpression(Expression left, Expression right)
     {
-        _left = left ?? throw new ArgumentNullException(nameof(left));
-        _right = right ?? throw new ArgumentNullException(nameof(right));
+        left = left ?? throw new ArgumentNullException(nameof(left));
+        right = right ?? throw new ArgumentNullException(nameof(right));
     }
     
-    public Expression Left => _left;
-    public Expression Right => _right;
+    public Expression Left => left;
+    public Expression Right => right;
     
     protected abstract string OperatorSymbol { get; }
     
     public override string ToString()
     {
-        return $"({_left} {OperatorSymbol} {_right})";
+        return $"({left} {OperatorSymbol} {right})";
     }
 }
 
@@ -185,7 +185,7 @@ public class AddExpression : BinaryExpression
     
     public override double Interpret(ExpressionContext context)
     {
-        return _left.Interpret(context) + _right.Interpret(context);
+        return left.Interpret(context) + right.Interpret(context);
     }
     
     public override TResult Accept<TResult>(IExpressionVisitor<TResult> visitor)
@@ -202,7 +202,7 @@ public class SubtractExpression : BinaryExpression
     
     public override double Interpret(ExpressionContext context)
     {
-        return _left.Interpret(context) - _right.Interpret(context);
+        return left.Interpret(context) - right.Interpret(context);
     }
     
     public override TResult Accept<TResult>(IExpressionVisitor<TResult> visitor)
@@ -219,7 +219,7 @@ public class MultiplyExpression : BinaryExpression
     
     public override double Interpret(ExpressionContext context)
     {
-        return _left.Interpret(context) * _right.Interpret(context);
+        return left.Interpret(context) * right.Interpret(context);
     }
     
     public override TResult Accept<TResult>(IExpressionVisitor<TResult> visitor)
@@ -236,12 +236,12 @@ public class DivideExpression : BinaryExpression
     
     public override double Interpret(ExpressionContext context)
     {
-        var rightValue = _right.Interpret(context);
+        var rightValue = right.Interpret(context);
         if (Math.Abs(rightValue) < double.Epsilon)
         {
             throw new DivideByZeroException("Division by zero");
         }
-        return _left.Interpret(context) / rightValue;
+        return left.Interpret(context) / rightValue;
     }
     
     public override TResult Accept<TResult>(IExpressionVisitor<TResult> visitor)
@@ -258,7 +258,7 @@ public class PowerExpression : BinaryExpression
     
     public override double Interpret(ExpressionContext context)
     {
-        return Math.Pow(_left.Interpret(context), _right.Interpret(context));
+        return Math.Pow(left.Interpret(context), right.Interpret(context));
     }
     
     public override TResult Accept<TResult>(IExpressionVisitor<TResult> visitor)
@@ -275,7 +275,7 @@ public class ModuloExpression : BinaryExpression
     
     public override double Interpret(ExpressionContext context)
     {
-        return _left.Interpret(context) % _right.Interpret(context);
+        return left.Interpret(context) % right.Interpret(context);
     }
     
     public override TResult Accept<TResult>(IExpressionVisitor<TResult> visitor)
@@ -287,20 +287,20 @@ public class ModuloExpression : BinaryExpression
 // Unary expressions
 public abstract class UnaryExpression : Expression
 {
-    protected readonly Expression _operand;
+    protected readonly Expression operand;
     
     protected UnaryExpression(Expression operand)
     {
-        _operand = operand ?? throw new ArgumentNullException(nameof(operand));
+        operand = operand ?? throw new ArgumentNullException(nameof(operand));
     }
     
-    public Expression Operand => _operand;
+    public Expression Operand => operand;
     
     protected abstract string OperatorSymbol { get; }
     
     public override string ToString()
     {
-        return $"{OperatorSymbol}({_operand})";
+        return $"{OperatorSymbol}({operand})";
     }
 }
 
@@ -312,7 +312,7 @@ public class NegateExpression : UnaryExpression
     
     public override double Interpret(ExpressionContext context)
     {
-        return -_operand.Interpret(context);
+        return -operand.Interpret(context);
     }
     
     public override TResult Accept<TResult>(IExpressionVisitor<TResult> visitor)
@@ -324,28 +324,28 @@ public class NegateExpression : UnaryExpression
 // Function call expression
 public class FunctionExpression : Expression
 {
-    private readonly string _functionName;
-    private readonly List<Expression> _arguments;
+    private readonly string functionName;
+    private readonly List<Expression> arguments;
     
     public FunctionExpression(string functionName, params Expression[] arguments)
     {
-        _functionName = functionName ?? throw new ArgumentNullException(nameof(functionName));
-        _arguments = new List<Expression>(arguments ?? Array.Empty<Expression>());
+        functionName = functionName ?? throw new ArgumentNullException(nameof(functionName));
+        arguments = new List<Expression>(arguments ?? Array.Empty<Expression>());
     }
     
-    public string FunctionName => _functionName;
-    public IReadOnlyList<Expression> Arguments => _arguments;
+    public string FunctionName => functionName;
+    public IReadOnlyList<Expression> Arguments => arguments;
     
     public override double Interpret(ExpressionContext context)
     {
-        var args = _arguments.Select(arg => arg.Interpret(context)).ToArray();
-        return context.CallFunction(_functionName, args);
+        var args = arguments.Select(arg => arg.Interpret(context)).ToArray();
+        return context.CallFunction(functionName, args);
     }
     
     public override string ToString()
     {
-        var args = string.Join(", ", _arguments.Select(arg => arg.ToString()));
-        return $"{_functionName}({args})";
+        var args = string.Join(", ", arguments.Select(arg => arg.ToString()));
+        return $"{functionName}({args})";
     }
     
     public override TResult Accept<TResult>(IExpressionVisitor<TResult> visitor)
@@ -357,32 +357,32 @@ public class FunctionExpression : Expression
 // Conditional expression
 public class ConditionalExpression : Expression
 {
-    private readonly Expression _condition;
-    private readonly Expression _trueExpression;
-    private readonly Expression _falseExpression;
+    private readonly Expression condition;
+    private readonly Expression trueExpression;
+    private readonly Expression falseExpression;
     
     public ConditionalExpression(Expression condition, Expression trueExpression, Expression falseExpression)
     {
-        _condition = condition ?? throw new ArgumentNullException(nameof(condition));
-        _trueExpression = trueExpression ?? throw new ArgumentNullException(nameof(trueExpression));
-        _falseExpression = falseExpression ?? throw new ArgumentNullException(nameof(falseExpression));
+        condition = condition ?? throw new ArgumentNullException(nameof(condition));
+        trueExpression = trueExpression ?? throw new ArgumentNullException(nameof(trueExpression));
+        falseExpression = falseExpression ?? throw new ArgumentNullException(nameof(falseExpression));
     }
     
-    public Expression Condition => _condition;
-    public Expression TrueExpression => _trueExpression;
-    public Expression FalseExpression => _falseExpression;
+    public Expression Condition => condition;
+    public Expression TrueExpression => trueExpression;
+    public Expression FalseExpression => falseExpression;
     
     public override double Interpret(ExpressionContext context)
     {
-        var conditionValue = _condition.Interpret(context);
+        var conditionValue = condition.Interpret(context);
         return Math.Abs(conditionValue) > double.Epsilon 
-            ? _trueExpression.Interpret(context) 
-            : _falseExpression.Interpret(context);
+            ? trueExpression.Interpret(context) 
+            : falseExpression.Interpret(context);
     }
     
     public override string ToString()
     {
-        return $"({_condition} ? {_trueExpression} : {_falseExpression})";
+        return $"({condition} ? {trueExpression} : {falseExpression})";
     }
     
     public override TResult Accept<TResult>(IExpressionVisitor<TResult> visitor)
@@ -446,23 +446,23 @@ public class Token
 // Lexical analyzer (tokenizer)
 public class ExpressionLexer
 {
-    private readonly string _input;
-    private int _position = 0;
+    private readonly string input;
+    private int position = 0;
     
     public ExpressionLexer(string input)
     {
-        _input = input ?? throw new ArgumentNullException(nameof(input));
+        input = input ?? throw new ArgumentNullException(nameof(input));
     }
     
     public List<Token> Tokenize()
     {
         var tokens = new List<Token>();
         
-        while (_position < _input.Length)
+        while (position < input.Length)
         {
             SkipWhitespace();
             
-            if (_position >= _input.Length)
+            if (position >= input.Length)
                 break;
             
             var token = ReadNextToken();
@@ -472,13 +472,13 @@ public class ExpressionLexer
             }
         }
         
-        tokens.Add(new Token { Type = TokenType.EOF, Position = _position });
+        tokens.Add(new Token { Type = TokenType.EOF, Position = position });
         return tokens;
     }
     
     private Token? ReadNextToken()
     {
-        var startPosition = _position;
+        var startPosition = position;
         var currentChar = _input[_position];
         
         if (char.IsDigit(currentChar) || currentChar == '.')
@@ -515,7 +515,7 @@ public class ExpressionLexer
         var value = "";
         bool hasDecimalPoint = false;
         
-        while (_position < _input.Length)
+        while (position < input.Length)
         {
             var ch = _input[_position];
             
@@ -543,7 +543,7 @@ public class ExpressionLexer
     {
         var value = "";
         
-        while (_position < _input.Length && (char.IsLetterOrDigit(_input[_position]) || _input[_position] == '_'))
+        while (position < input.Length && (char.IsLetterOrDigit(_input[_position]) || _input[_position] == '_'))
         {
             value += _input[_position];
             _position++;
@@ -551,7 +551,7 @@ public class ExpressionLexer
         
         // Check if it's followed by '(' to determine if it's a function
         SkipWhitespace();
-        var tokenType = _position < _input.Length && _input[_position] == '(' 
+        var tokenType = position < input.Length && _input[_position] == '(' 
             ? TokenType.Function 
             : TokenType.Variable;
         
@@ -560,7 +560,7 @@ public class ExpressionLexer
     
     private void SkipWhitespace()
     {
-        while (_position < _input.Length && char.IsWhiteSpace(_input[_position]))
+        while (position < input.Length && char.IsWhiteSpace(_input[_position]))
         {
             _position++;
         }
@@ -570,21 +570,21 @@ public class ExpressionLexer
 // Recursive descent parser
 public class ExpressionParser
 {
-    private readonly List<Token> _tokens;
-    private int _position = 0;
+    private readonly List<Token> tokens;
+    private int position = 0;
     
     public ExpressionParser(List<Token> tokens)
     {
-        _tokens = tokens ?? throw new ArgumentNullException(nameof(tokens));
+        tokens = tokens ?? throw new ArgumentNullException(nameof(tokens));
     }
     
     public Expression Parse()
     {
         var expression = ParseConditional();
         
-        if (_position < _tokens.Count - 1) // -1 for EOF token
+        if (position < tokens.Count - 1) // -1 for EOF token
         {
-            throw new ArgumentException($"Unexpected token {CurrentToken} at position {_position}");
+            throw new ArgumentException($"Unexpected token {CurrentToken} at position {position}");
         }
         
         return expression;
@@ -749,22 +749,22 @@ public class ExpressionParser
     {
         if (CurrentToken.Type != expectedType)
         {
-            throw new ArgumentException($"Expected {expectedType}, got {CurrentToken.Type} at position {_position}");
+            throw new ArgumentException($"Expected {expectedType}, got {CurrentToken.Type} at position {position}");
         }
         _position++;
     }
     
-    private Token CurrentToken => _position < _tokens.Count ? _tokens[_position] : _tokens[^1];
+    private Token CurrentToken => position < tokens.Count ? _tokens[_position] : _tokens[^1];
 }
 
 // Expression evaluator that combines lexer and parser
 public class ExpressionEvaluator
 {
-    private readonly ExpressionContext _context;
+    private readonly ExpressionContext context;
     
     public ExpressionEvaluator(ExpressionContext? context = null)
     {
-        _context = context ?? new ExpressionContext();
+        context = context ?? new ExpressionContext();
     }
     
     public double Evaluate(string expression)
@@ -775,7 +775,7 @@ public class ExpressionEvaluator
         var parser = new ExpressionParser(tokens);
         var expressionTree = parser.Parse();
         
-        return expressionTree.Interpret(_context);
+        return expressionTree.Interpret(context);
     }
     
     public Expression Parse(string expression)
@@ -787,7 +787,7 @@ public class ExpressionEvaluator
         return parser.Parse();
     }
     
-    public ExpressionContext Context => _context;
+    public ExpressionContext Context => context;
 }
 ```
 
@@ -804,8 +804,8 @@ public interface IRule
 
 public class RuleContext
 {
-    private readonly Dictionary<string, object> _facts = new();
-    private readonly List<string> _executedActions = new();
+    private readonly Dictionary<string, object> facts = new();
+    private readonly List<string> executedActions = new();
     
     public void SetFact(string name, object value)
     {
@@ -814,7 +814,7 @@ public class RuleContext
     
     public T GetFact<T>(string name)
     {
-        if (_facts.TryGetValue(name, out var value))
+        if (facts.TryGetValue(name, out var value))
         {
             if (value is T typedValue)
             {
@@ -835,21 +835,21 @@ public class RuleContext
     
     public bool HasFact(string name)
     {
-        return _facts.ContainsKey(name);
+        return facts.ContainsKey(name);
     }
     
     public void AddExecutedAction(string action)
     {
-        _executedActions.Add(action);
+        executedActions.Add(action);
     }
     
-    public IReadOnlyList<string> ExecutedActions => _executedActions;
-    public IReadOnlyDictionary<string, object> Facts => _facts;
+    public IReadOnlyList<string> ExecutedActions => executedActions;
+    public IReadOnlyDictionary<string, object> Facts => facts;
     
     public override string ToString()
     {
-        var facts = string.Join(", ", _facts.Select(kv => $"{kv.Key}={kv.Value}"));
-        var actions = string.Join(", ", _executedActions);
+        var facts = string.Join(", ", facts.Select(kv => $"{kv.Key}={kv.Value}"));
+        var actions = string.Join(", ", executedActions);
         return $"RuleContext(Facts: [{facts}], Actions: [{actions}])";
     }
 }
@@ -868,14 +868,14 @@ public abstract class Rule : IRule
 // Composite rule for combining multiple rules
 public abstract class CompositeRule : Rule
 {
-    protected readonly List<IRule> _rules = new();
+    protected readonly List<IRule> rules = new();
     
     public void AddRule(IRule rule)
     {
-        _rules.Add(rule);
+        rules.Add(rule);
     }
     
-    public IReadOnlyList<IRule> Rules => _rules;
+    public IReadOnlyList<IRule> Rules => rules;
 }
 
 public class AndRule : CompositeRule
@@ -883,19 +883,19 @@ public class AndRule : CompositeRule
     public AndRule(string name, params IRule[] rules)
     {
         Name = name;
-        _rules.AddRange(rules);
+        rules.AddRange(rules);
     }
     
     public override bool Evaluate(RuleContext context)
     {
-        return _rules.All(rule => rule.Evaluate(context));
+        return rules.All(rule => rule.Evaluate(context));
     }
     
     public override void Execute(RuleContext context)
     {
         if (Evaluate(context))
         {
-            foreach (var rule in _rules)
+            foreach (var rule in rules)
             {
                 rule.Execute(context);
             }
@@ -909,22 +909,22 @@ public class OrRule : CompositeRule
     public OrRule(string name, params IRule[] rules)
     {
         Name = name;
-        _rules.AddRange(rules);
+        rules.AddRange(rules);
     }
     
     public override bool Evaluate(RuleContext context)
     {
-        return _rules.Any(rule => rule.Evaluate(context));
+        return rules.Any(rule => rule.Evaluate(context));
     }
     
     public override void Execute(RuleContext context)
     {
-        foreach (var rule in _rules.Where(r => r.Evaluate(context)))
+        foreach (var rule in rules.Where(r => r.Evaluate(context)))
         {
             rule.Execute(context);
         }
         
-        if (_rules.Any(r => r.Evaluate(context)))
+        if (rules.Any(r => r.Evaluate(context)))
         {
             context.AddExecutedAction($"Executed OR rule: {Name}");
         }
@@ -933,17 +933,17 @@ public class OrRule : CompositeRule
 
 public class NotRule : Rule
 {
-    private readonly IRule _rule;
+    private readonly IRule rule;
     
     public NotRule(string name, IRule rule)
     {
         Name = name;
-        _rule = rule;
+        rule = rule;
     }
     
     public override bool Evaluate(RuleContext context)
     {
-        return !_rule.Evaluate(context);
+        return !rule.Evaluate(context);
     }
     
     public override void Execute(RuleContext context)
@@ -958,26 +958,26 @@ public class NotRule : Rule
 // Conditional rule
 public class ConditionalRule : Rule
 {
-    private readonly Func<RuleContext, bool> _condition;
-    private readonly Action<RuleContext> _action;
+    private readonly Func<RuleContext, bool> condition;
+    private readonly Action<RuleContext> action;
     
     public ConditionalRule(string name, Func<RuleContext, bool> condition, Action<RuleContext> action)
     {
         Name = name;
-        _condition = condition;
-        _action = action;
+        condition = condition;
+        action = action;
     }
     
     public override bool Evaluate(RuleContext context)
     {
-        return _condition(context);
+        return condition(context);
     }
     
     public override void Execute(RuleContext context)
     {
         if (Evaluate(context))
         {
-            _action(context);
+            action(context);
             context.AddExecutedAction($"Executed conditional rule: {Name}");
         }
     }
@@ -986,21 +986,21 @@ public class ConditionalRule : Rule
 // Rule engine
 public class RuleEngine
 {
-    private readonly List<IRule> _rules = new();
+    private readonly List<IRule> rules = new();
     
     public void AddRule(IRule rule)
     {
-        _rules.Add(rule);
+        rules.Add(rule);
     }
     
     public void RemoveRule(string name)
     {
-        _rules.RemoveAll(r => r.Name == name);
+        rules.RemoveAll(r => r.Name == name);
     }
     
     public void ExecuteRules(RuleContext context)
     {
-        foreach (var rule in _rules)
+        foreach (var rule in rules)
         {
             try
             {
@@ -1015,10 +1015,10 @@ public class RuleEngine
     
     public List<IRule> GetMatchingRules(RuleContext context)
     {
-        return _rules.Where(rule => rule.Evaluate(context)).ToList();
+        return rules.Where(rule => rule.Evaluate(context)).ToList();
     }
     
-    public IReadOnlyList<IRule> Rules => _rules;
+    public IReadOnlyList<IRule> Rules => rules;
 }
 ```
 
@@ -1122,7 +1122,7 @@ public class CompositeCondition : IQueryCondition
 
 public class QueryEngine
 {
-    private readonly Dictionary<string, List<Dictionary<string, object>>> _tables = new();
+    private readonly Dictionary<string, List<Dictionary<string, object>>> tables = new();
     
     public void CreateTable(string name, List<Dictionary<string, object>> data)
     {
@@ -1131,7 +1131,7 @@ public class QueryEngine
     
     public List<Dictionary<string, object>> ExecuteQuery(Query query)
     {
-        if (!_tables.TryGetValue(query.Table, out var tableData))
+        if (!tables.TryGetValue(query.Table, out var tableData))
         {
             throw new ArgumentException($"Table '{query.Table}' not found");
         }
@@ -1184,7 +1184,7 @@ public class QueryEngine
         return record.TryGetValue(fieldName, out var value) ? value : "";
     }
     
-    public IReadOnlyDictionary<string, List<Dictionary<string, object>>> Tables => _tables;
+    public IReadOnlyDictionary<string, List<Dictionary<string, object>>> Tables => tables;
 }
 
 // Simple query parser

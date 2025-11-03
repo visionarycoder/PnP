@@ -1,162 +1,814 @@
-# HTML Templates
+# Modern HTML5 Templates
 
-**Description**: Reusable HTML templates and boilerplate code for web development
-**Language/Technology**: HTML5 / Web Development
+**Description**: Enterprise-grade HTML5 templates with WCAG 2.1 AA accessibility compliance, SEO optimization, Progressive Web App features, and performance-first architecture
+**Language/Technology**: HTML5 / Modern Web Standards
 
-## Basic HTML5 Template
+## Progressive Web App Template
 
 **Code**:
 
 ```html
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Page description for SEO">
-    <meta name="keywords" content="relevant, keywords, for, seo">
-    <meta name="author" content="Author Name">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     
-    <!-- Open Graph meta tags for social media -->
-    <meta property="og:title" content="Page Title">
-    <meta property="og:description" content="Page description">
-    <meta property="og:image" content="/images/og-image.jpg">
-    <meta property="og:url" content="https://example.com/page">
+    <!-- Primary Meta Tags -->
+    <title>Enterprise Web Application | Your Company</title>
+    <meta name="title" content="Enterprise Web Application | Your Company">
+    <meta name="description" content="High-performance progressive web application with offline capabilities and modern user experience">
+    
+    <!-- SEO & Accessibility -->
+    <meta name="robots" content="index, follow">
+    <meta name="language" content="English">
+    <meta name="author" content="Your Company">
+    <link rel="canonical" href="https://yourcompany.com/">
+    
+    <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
+    <meta property="og:url" content="https://yourcompany.com/">
+    <meta property="og:title" content="Enterprise Web Application | Your Company">
+    <meta property="og:description" content="High-performance progressive web application with offline capabilities">
+    <meta property="og:image" content="https://yourcompany.com/assets/og-image.jpg">
+    <meta property="og:image:alt" content="Enterprise application interface preview">
+    <meta property="og:site_name" content="Your Company">
     
-    <!-- Twitter Card meta tags -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Page Title">
-    <meta name="twitter:description" content="Page description">
-    <meta name="twitter:image" content="/images/twitter-image.jpg">
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://yourcompany.com/">
+    <meta property="twitter:title" content="Enterprise Web Application">
+    <meta property="twitter:description" content="High-performance progressive web application">
+    <meta property="twitter:image" content="https://yourcompany.com/assets/twitter-image.jpg">
+    <meta property="twitter:image:alt" content="Application interface preview">
     
-    <title>Page Title | Site Name</title>
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
     
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <!-- Security Headers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:;">
+    <meta http-equiv="Strict-Transport-Security" content="max-age=31536000; includeSubDomains">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
     
-    <!-- Stylesheets -->
-    <link rel="stylesheet" href="styles/main.css">
+    <!-- Icons & Theme -->
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+    <link rel="mask-icon" href="/assets/safari-pinned-tab.svg" color="#1a1a1a">
     
-    <!-- Preload critical resources -->
-    <link rel="preload" href="fonts/main.woff2" as="font" type="font/woff2" crossorigin>
+    <!-- Theme Colors -->
+    <meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: dark)">
+    <meta name="msapplication-TileColor" content="#1a1a1a">
+    <meta name="msapplication-config" content="/assets/browserconfig.xml">
+    
+    <!-- Critical CSS (inline for performance) -->
+    <style>
+        /* Critical CSS for above-the-fold content */
+        :root {
+            --primary-color: #1a1a1a;
+            --background-color: #ffffff;
+            --text-color: #1a1a1a;
+            --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --primary-color: #ffffff;
+                --background-color: #1a1a1a;
+                --text-color: #ffffff;
+            }
+        }
+        
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: var(--font-family);
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+        
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 6px;
+            background: var(--primary-color);
+            color: var(--background-color);
+            padding: 8px;
+            text-decoration: none;
+            z-index: 1000;
+        }
+        
+        .skip-link:focus {
+            top: 6px;
+        }
+    </style>
+    
+    <!-- Resource Hints -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+    <link rel="preload" href="/assets/fonts/main.woff2" as="font" type="font/font-woff2" crossorigin>
+    <link rel="prefetch" href="/api/user-preferences">
+    
+    <!-- Non-critical CSS -->
+    <link rel="stylesheet" href="/assets/css/main.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="/assets/css/main.css"></noscript>
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Enterprise Web Application",
+        "description": "High-performance progressive web application",
+        "url": "https://yourcompany.com",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires modern web browser",
+        "author": {
+            "@type": "Organization",
+            "name": "Your Company"
+        }
+    }
+    </script>
 </head>
 <body>
-    <header>
-        <nav>
-            <!-- Navigation content -->
-        </nav>
-    </header>
+    <!-- Skip Navigation Link -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
     
-    <main>
-        <section>
-            <!-- Main content -->
-        </section>
-    </main>
+    <!-- App Shell -->
+    <div id="app" role="application" aria-label="Enterprise Web Application">
+        <!-- Loading State -->
+        <div id="loading-state" aria-live="polite" aria-label="Loading application">
+            <div class="loading-spinner" role="status" aria-label="Loading..."></div>
+        </div>
+        
+        <!-- Header with Navigation -->
+        <header role="banner" class="app-header">
+            <nav role="navigation" aria-label="Main navigation" class="main-nav">
+                <div class="nav-container">
+                    <!-- Logo and Brand -->
+                    <div class="brand">
+                        <a href="/" aria-label="Home - Your Company">
+                            <img src="/assets/logo.svg" alt="Company Logo" width="120" height="40">
+                        </a>
+                    </div>
+                    
+                    <!-- Mobile Menu Toggle -->
+                    <button 
+                        class="mobile-menu-toggle" 
+                        aria-expanded="false" 
+                        aria-controls="main-menu"
+                        aria-label="Toggle navigation menu">
+                        <span class="hamburger-line"></span>
+                        <span class="hamburger-line"></span>
+                        <span class="hamburger-line"></span>
+                    </button>
+                    
+                    <!-- Main Menu -->
+                    <div id="main-menu" class="main-menu">
+                        <ul role="menubar" class="nav-list">
+                            <li role="none">
+                                <a href="/dashboard" role="menuitem" aria-current="page">Dashboard</a>
+                            </li>
+                            <li role="none">
+                                <a href="/projects" role="menuitem">Projects</a>
+                            </li>
+                            <li role="none">
+                                <a href="/analytics" role="menuitem">Analytics</a>
+                            </li>
+                            <li role="none">
+                                <a href="/settings" role="menuitem">Settings</a>
+                            </li>
+                        </ul>
+                        
+                        <!-- User Menu -->
+                        <div class="user-menu">
+                            <button 
+                                class="user-menu-toggle" 
+                                aria-expanded="false"
+                                aria-haspopup="true"
+                                aria-controls="user-dropdown">
+                                <img src="/assets/user-avatar.jpg" alt="User avatar" class="user-avatar">
+                                <span class="sr-only">User menu</span>
+                            </button>
+                            
+                            <div id="user-dropdown" class="dropdown-menu" role="menu">
+                                <a href="/profile" role="menuitem">Profile</a>
+                                <a href="/preferences" role="menuitem">Preferences</a>
+                                <button type="button" role="menuitem">Sign Out</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </header>
+        
+        <!-- Main Content Area -->
+        <main id="main-content" role="main" class="main-content">
+            <!-- Breadcrumb Navigation -->
+            <nav aria-label="Breadcrumb" class="breadcrumb-nav">
+                <ol class="breadcrumb-list">
+                    <li><a href="/">Home</a></li>
+                    <li aria-current="page">Dashboard</li>
+                </ol>
+            </nav>
+            
+            <!-- Page Content -->
+            <div class="page-content">
+                <!-- Content will be loaded dynamically -->
+                <div id="dynamic-content" role="region" aria-live="polite" aria-label="Main content area">
+                    <!-- Progressive enhancement: works without JavaScript -->
+                    <noscript>
+                        <div class="no-js-message" role="alert">
+                            <h2>JavaScript Required</h2>
+                            <p>This application requires JavaScript for full functionality. Please enable JavaScript in your browser.</p>
+                        </div>
+                    </noscript>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Footer -->
+        <footer role="contentinfo" class="app-footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Company</h3>
+                    <ul>
+                        <li><a href="/about">About Us</a></li>
+                        <li><a href="/contact">Contact</a></li>
+                        <li><a href="/careers">Careers</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Legal</h3>
+                    <ul>
+                        <li><a href="/privacy">Privacy Policy</a></li>
+                        <li><a href="/terms">Terms of Service</a></li>
+                        <li><a href="/cookies">Cookie Policy</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <p>&copy; 2024 Your Company. All rights reserved.</p>
+                </div>
+            </div>
+        </footer>
+    </div>
     
-    <footer>
-        <!-- Footer content -->
-    </footer>
+    <!-- Accessibility Announcements -->
+    <div id="announcements" aria-live="assertive" aria-atomic="true" class="sr-only"></div>
     
-    <!-- Scripts before closing body tag -->
-    <script src="scripts/main.js"></script>
+    <!-- Service Worker Registration -->
+    <script>
+        // Register service worker for offline functionality
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => console.log('SW registered'))
+                    .catch(error => console.log('SW registration failed'));
+            });
+        }
+    </script>
+    
+    <!-- Modern Module Scripts -->
+    <script type="module" src="/assets/js/main.js"></script>
+    <script nomodule src="/assets/js/main.legacy.js"></script>
 </body>
 </html>
 ```
 
-## Landing Page Template
+## WCAG 2.1 AA Accessible Forms
 
 **Code**:
 
 ```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Professional landing page for your business">
-    <title>Landing Page | Your Business</title>
-    <link rel="stylesheet" href="styles/landing.css">
-</head>
-<body>
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="container">
-            <header class="hero-header">
-                <nav class="navbar">
-                    <div class="nav-brand">
-                        <img src="images/logo.svg" alt="Company Logo" class="logo">
-                    </div>
-                    <ul class="nav-menu">
-                        <li><a href="#features">Features</a></li>
-                        <li><a href="#pricing">Pricing</a></li>
-                        <li><a href="#contact">Contact</a></li>
-                        <li><a href="#" class="cta-button">Sign Up</a></li>
-                    </ul>
-                    <button class="hamburger" aria-label="Toggle menu">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </button>
-                </nav>
+<!-- Comprehensive Accessible Contact Form -->
+<form 
+    class="contact-form" 
+    method="post" 
+    action="/contact" 
+    novalidate
+    aria-labelledby="form-title">
+    
+    <fieldset>
+        <legend id="form-title" class="form-title">Contact Information</legend>
+        
+        <!-- Name Field with Error Handling -->
+        <div class="field-group">
+            <label for="full-name" class="field-label">
+                Full Name
+                <span aria-label="required" class="required-indicator">*</span>
+            </label>
+            <input 
+                type="text" 
+                id="full-name" 
+                name="fullName"
+                class="field-input"
+                required
+                aria-describedby="name-help name-error"
+                aria-invalid="false"
+                autocomplete="name"
+                minlength="2"
+                maxlength="100">
+            
+            <div id="name-help" class="field-help">
+                Enter your first and last name
+            </div>
+            <div id="name-error" class="field-error" role="alert" aria-live="polite">
+                <!-- Error message populated by JavaScript -->
+            </div>
+        </div>
+        
+        <!-- Email Field with Pattern Validation -->
+        <div class="field-group">
+            <label for="email-address" class="field-label">
+                Email Address
+                <span aria-label="required" class="required-indicator">*</span>
+            </label>
+            <input 
+                type="email" 
+                id="email-address" 
+                name="email"
+                class="field-input"
+                required
+                aria-describedby="email-help email-error"
+                aria-invalid="false"
+                autocomplete="email"
+                pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$">
+            
+            <div id="email-help" class="field-help">
+                We'll use this to respond to your message
+            </div>
+            <div id="email-error" class="field-error" role="alert" aria-live="polite">
+            </div>
+        </div>
+        
+        <!-- Phone Field with Input Masking -->
+        <div class="field-group">
+            <label for="phone-number" class="field-label">
+                Phone Number (Optional)
+            </label>
+            <input 
+                type="tel" 
+                id="phone-number" 
+                name="phone"
+                class="field-input"
+                aria-describedby="phone-help phone-error"
+                autocomplete="tel"
+                pattern="[\+]?[0-9\s\-\(\)]{10,15}"
+                placeholder="+1 (555) 123-4567">
+            
+            <div id="phone-help" class="field-help">
+                Include country code for international numbers
+            </div>
+            <div id="phone-error" class="field-error" role="alert" aria-live="polite">
+            </div>
+        </div>
+        
+        <!-- Subject Selection -->
+        <div class="field-group">
+            <label for="inquiry-subject" class="field-label">
+                Subject
+                <span aria-label="required" class="required-indicator">*</span>
+            </label>
+            <select 
+                id="inquiry-subject" 
+                name="subject"
+                class="field-select"
+                required
+                aria-describedby="subject-help subject-error"
+                aria-invalid="false">
+                
+                <option value="">Please select a subject</option>
+                <option value="general">General Inquiry</option>
+                <option value="support">Technical Support</option>
+                <option value="sales">Sales Question</option>
+                <option value="partnership">Partnership Opportunity</option>
+                <option value="feedback">Product Feedback</option>
+            </select>
+            
+            <div id="subject-help" class="field-help">
+                Choose the topic that best describes your inquiry
+            </div>
+            <div id="subject-error" class="field-error" role="alert" aria-live="polite">
+            </div>
+        </div>
+        
+        <!-- Message Textarea with Character Counter -->
+        <div class="field-group">
+            <label for="message-content" class="field-label">
+                Message
+                <span aria-label="required" class="required-indicator">*</span>
+            </label>
+            <textarea 
+                id="message-content" 
+                name="message"
+                class="field-textarea"
+                required
+                aria-describedby="message-help message-counter message-error"
+                aria-invalid="false"
+                minlength="10"
+                maxlength="1000"
+                rows="6"
+                placeholder="Please provide details about your inquiry..."></textarea>
+            
+            <div id="message-help" class="field-help">
+                Minimum 10 characters, maximum 1,000 characters
+            </div>
+            <div id="message-counter" class="character-counter" aria-live="polite">
+                <span id="current-count">0</span> / 1,000 characters
+            </div>
+            <div id="message-error" class="field-error" role="alert" aria-live="polite">
+            </div>
+        </div>
+        
+        <!-- Preference Checkboxes -->
+        <fieldset class="checkbox-group">
+            <legend class="checkbox-legend">Communication Preferences (Optional)</legend>
+            
+            <div class="checkbox-item">
+                <input 
+                    type="checkbox" 
+                    id="newsletter-signup" 
+                    name="preferences"
+                    value="newsletter"
+                    class="checkbox-input">
+                <label for="newsletter-signup" class="checkbox-label">
+                    Subscribe to our monthly newsletter
+                </label>
+            </div>
+            
+            <div class="checkbox-item">
+                <input 
+                    type="checkbox" 
+                    id="product-updates" 
+                    name="preferences"
+                    value="updates"
+                    class="checkbox-input">
+                <label for="product-updates" class="checkbox-label">
+                    Receive product updates and announcements
+                </label>
+            </div>
+            
+            <div class="checkbox-item">
+                <input 
+                    type="checkbox" 
+                    id="marketing-consent" 
+                    name="preferences"
+                    value="marketing"
+                    class="checkbox-input">
+                <label for="marketing-consent" class="checkbox-label">
+                    Allow marketing communications
+                </label>
+            </div>
+        </fieldset>
+        
+        <!-- Privacy Policy Agreement -->
+        <div class="field-group">
+            <div class="checkbox-item required-checkbox">
+                <input 
+                    type="checkbox" 
+                    id="privacy-agreement" 
+                    name="privacyConsent"
+                    required
+                    aria-describedby="privacy-error"
+                    class="checkbox-input">
+                <label for="privacy-agreement" class="checkbox-label">
+                    I agree to the 
+                    <a href="/privacy-policy" target="_blank" rel="noopener">
+                        Privacy Policy
+                        <span class="sr-only">(opens in new window)</span>
+                    </a>
+                    <span aria-label="required" class="required-indicator">*</span>
+                </label>
+            </div>
+            <div id="privacy-error" class="field-error" role="alert" aria-live="polite">
+            </div>
+        </div>
+        
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <button type="submit" class="btn-primary" id="submit-button">
+                <span class="btn-text">Send Message</span>
+                <span class="btn-loading" aria-hidden="true">
+                    <span class="loading-spinner"></span>
+                    Sending...
+                </span>
+            </button>
+            
+            <button type="reset" class="btn-secondary">
+                Clear Form
+            </button>
+        </div>
+        
+        <!-- Form Status Messages -->
+        <div class="form-status" role="status" aria-live="polite" aria-atomic="true">
+            <div id="success-message" class="success-message" role="alert">
+                <strong>Thank you!</strong> Your message has been sent successfully. 
+                We'll respond within 24 hours.
+            </div>
+            
+            <div id="error-message" class="error-message" role="alert">
+                <strong>Error:</strong> There was a problem sending your message. 
+                Please check the form for errors and try again.
+            </div>
+        </div>
+    </fieldset>
+</form>
+
+<!-- Form Enhancement Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('.contact-form');
+    const messageTextarea = document.getElementById('message-content');
+    const charCounter = document.getElementById('current-count');
+    const submitButton = document.getElementById('submit-button');
+    
+    // Real-time character counter
+    messageTextarea.addEventListener('input', function() {
+        const currentLength = this.value.length;
+        charCounter.textContent = currentLength;
+        
+        // Update accessibility announcement
+        if (currentLength > 950) {
+            charCounter.parentElement.setAttribute('aria-live', 'assertive');
+        } else {
+            charCounter.parentElement.setAttribute('aria-live', 'polite');
+        }
+    });
+    
+    // Form validation and submission
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Clear previous errors
+        clearFormErrors();
+        
+        // Validate form
+        if (!validateForm()) {
+            announceErrors();
+            return;
+        }
+        
+        // Submit form with loading state
+        setSubmitLoading(true);
+        
+        try {
+            const response = await submitForm(new FormData(form));
+            if (response.ok) {
+                showSuccessMessage();
+                form.reset();
+            } else {
+                showErrorMessage('Server error. Please try again.');
+            }
+        } catch (error) {
+            showErrorMessage('Network error. Please check your connection.');
+        } finally {
+            setSubmitLoading(false);
+        }
+    });
+    
+    function validateForm() {
+        let isValid = true;
+        
+        // Validate required fields
+        const requiredFields = form.querySelectorAll('[required]');
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                showFieldError(field, 'This field is required.');
+                isValid = false;
+            }
+        });
+        
+        // Email validation
+        const email = form.querySelector('#email-address');
+        if (email.value && !isValidEmail(email.value)) {
+            showFieldError(email, 'Please enter a valid email address.');
+            isValid = false;
+        }
+        
+        return isValid;
+    }
+    
+    function showFieldError(field, message) {
+        const errorElement = document.getElementById(field.getAttribute('aria-describedby').split(' ').find(id => id.includes('error')));
+        errorElement.textContent = message;
+        field.setAttribute('aria-invalid', 'true');
+        field.classList.add('field-error-state');
+    }
+    
+    function clearFormErrors() {
+        const errorElements = form.querySelectorAll('.field-error');
+        const fields = form.querySelectorAll('.field-input, .field-select, .field-textarea');
+        
+        errorElements.forEach(el => el.textContent = '');
+        fields.forEach(field => {
+            field.setAttribute('aria-invalid', 'false');
+            field.classList.remove('field-error-state');
+        });
+    }
+});
+</script>
+```
+
+## Accessible Modal Dialog
+
+**Code**:
+
+```html
+<!-- Modal Trigger -->
+<button 
+    type="button" 
+    class="modal-trigger"
+    data-modal="example-modal"
+    aria-haspopup="dialog">
+    Open Modal Dialog
+</button>
+
+<!-- Modal Container -->
+<div 
+    id="example-modal" 
+    class="modal-overlay" 
+    role="dialog" 
+    aria-modal="true"
+    aria-labelledby="modal-title"
+    aria-describedby="modal-description"
+    aria-hidden="true"
+    tabindex="-1">
+    
+    <div class="modal-container">
+        <div class="modal-content">
+            <!-- Modal Header -->
+            <header class="modal-header">
+                <h2 id="modal-title" class="modal-title">
+                    Confirmation Required
+                </h2>
+                <button 
+                    type="button" 
+                    class="modal-close"
+                    aria-label="Close dialog">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </header>
             
-            <div class="hero-content">
-                <h1 class="hero-title">Transform Your Business Today</h1>
-                <p class="hero-subtitle">
-                    Powerful solutions that help you grow faster and reach more customers
+            <!-- Modal Body -->
+            <div class="modal-body">
+                <p id="modal-description">
+                    Are you sure you want to delete this item? 
+                    This action cannot be undone.
                 </p>
-                <div class="hero-actions">
-                    <a href="#" class="btn btn-primary">Get Started Free</a>
-                    <a href="#" class="btn btn-secondary">Watch Demo</a>
+                
+                <!-- Optional form or content -->
+                <div class="modal-form">
+                    <label for="confirmation-input" class="sr-only">
+                        Type "DELETE" to confirm
+                    </label>
+                    <input 
+                        type="text" 
+                        id="confirmation-input"
+                        placeholder='Type "DELETE" to confirm'
+                        class="confirmation-input">
                 </div>
             </div>
+            
+            <!-- Modal Footer -->
+            <footer class="modal-footer">
+                <button type="button" class="btn-secondary modal-cancel">
+                    Cancel
+                </button>
+                <button type="button" class="btn-danger modal-confirm" disabled>
+                    Delete Item
+                </button>
+            </footer>
         </div>
-    </section>
+    </div>
+</div>
+
+<!-- Focus Trap and Modal Management Script -->
+<script>
+class AccessibleModal {
+    constructor(modalId) {
+        this.modal = document.getElementById(modalId);
+        this.trigger = document.querySelector(`[data-modal="${modalId}"]`);
+        this.closeButtons = this.modal.querySelectorAll('.modal-close, .modal-cancel');
+        this.confirmButton = this.modal.querySelector('.modal-confirm');
+        this.confirmInput = this.modal.querySelector('.confirmation-input');
+        
+        this.focusableElements = this.modal.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        
+        this.firstFocusableElement = this.focusableElements[0];
+        this.lastFocusableElement = this.focusableElements[this.focusableElements.length - 1];
+        
+        this.init();
+    }
     
-    <!-- Features Section -->
-    <section id="features" class="features">
-        <div class="container">
-            <h2 class="section-title">Why Choose Us</h2>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg><!-- Feature icon --></svg>
-                    </div>
-                    <h3>Fast & Reliable</h3>
-                    <p>Lightning-fast performance with 99.9% uptime guarantee.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg><!-- Feature icon --></svg>
-                    </div>
-                    <h3>Secure</h3>
-                    <p>Enterprise-grade security to protect your data.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg><!-- Feature icon --></svg>
-                    </div>
-                    <h3>Easy to Use</h3>
-                    <p>Intuitive interface that anyone can master.</p>
-                </div>
-            </div>
-        </div>
-    </section>
+    init() {
+        // Trigger button
+        this.trigger?.addEventListener('click', () => this.open());
+        
+        // Close buttons
+        this.closeButtons.forEach(button => {
+            button.addEventListener('click', () => this.close());
+        });
+        
+        // Confirmation input
+        this.confirmInput?.addEventListener('input', (e) => {
+            const isValid = e.target.value.toUpperCase() === 'DELETE';
+            this.confirmButton.disabled = !isValid;
+        });
+        
+        // Keyboard navigation
+        this.modal.addEventListener('keydown', (e) => this.handleKeyDown(e));
+        
+        // Backdrop close
+        this.modal.addEventListener('click', (e) => {
+            if (e.target === this.modal) this.close();
+        });
+    }
     
-    <!-- Testimonials Section -->
-    <section class="testimonials">
-        <div class="container">
-            <h2 class="section-title">What Our Customers Say</h2>
-            <div class="testimonials-grid">
-                <blockquote class="testimonial">
-                    <p>"This product transformed how we do business. Highly recommended!"</p>
-                    <cite>
-                        <img src="images/avatar1.jpg" alt="Customer photo">
-                        <div>
-                            <strong>Jane Doe</strong>
-                            <span>CEO, Tech Corp</span>
+    open() {
+        // Store currently focused element
+        this.previousFocusedElement = document.activeElement;
+        
+        // Show modal
+        this.modal.setAttribute('aria-hidden', 'false');
+        this.modal.classList.add('modal-active');
+        document.body.classList.add('modal-open');
+        
+        // Focus first element
+        this.firstFocusableElement?.focus();
+        
+        // Announce to screen readers
+        this.announce('Dialog opened');
+    }
+    
+    close() {
+        // Hide modal
+        this.modal.setAttribute('aria-hidden', 'true');
+        this.modal.classList.remove('modal-active');
+        document.body.classList.remove('modal-open');
+        
+        // Reset form
+        if (this.confirmInput) {
+            this.confirmInput.value = '';
+            this.confirmButton.disabled = true;
+        }
+        
+        // Restore focus
+        this.previousFocusedElement?.focus();
+        
+        // Announce to screen readers
+        this.announce('Dialog closed');
+    }
+    
+    handleKeyDown(event) {
+        if (event.key === 'Escape') {
+            this.close();
+            return;
+        }
+        
+        if (event.key === 'Tab') {
+            // Trap focus within modal
+            if (event.shiftKey) {
+                if (document.activeElement === this.firstFocusableElement) {
+                    event.preventDefault();
+                    this.lastFocusableElement?.focus();
+                }
+            } else {
+                if (document.activeElement === this.lastFocusableElement) {
+                    event.preventDefault();
+                    this.firstFocusableElement?.focus();
+                }
+            }
+        }
+    }
+    
+    announce(message) {
+        const announcer = document.getElementById('announcements') || 
+                         document.querySelector('[aria-live="assertive"]');
+        if (announcer) {
+            announcer.textContent = message;
+            setTimeout(() => announcer.textContent = '', 1000);
+        }
+    }
+}
+
+// Initialize modal
+document.addEventListener('DOMContentLoaded', () => {
+    new AccessibleModal('example-modal');
+});
+</script>
+```
+
+**Usage**:
+                            **Usage**:
                         </div>
                     </cite>
                 </blockquote>
@@ -568,36 +1220,142 @@
 **Usage**:
 
 ```html
-<!-- Basic usage -->
-<!-- Include the HTML5 template for new pages -->
-<!-- Customize meta tags for each page's content -->
-<!-- Add appropriate semantic elements -->
+<!-- Progressive Web App Implementation -->
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <!-- Critical meta tags and performance optimization -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Security headers and content policy -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline';">
+    
+    <!-- Critical CSS inline for performance -->
+    <style>/* Critical above-the-fold styles */</style>
+    
+    <!-- Non-critical CSS with performance loading -->
+    <link rel="stylesheet" href="/assets/css/main.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="/assets/css/main.css"></noscript>
+</head>
+<body>
+    <!-- Skip navigation for accessibility -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
+    <!-- Semantic structure with ARIA landmarks -->
+    <header role="banner">
+        <nav role="navigation" aria-label="Main navigation">
+            <!-- Accessible navigation with proper ARIA -->
+        </nav>
+    </header>
+    
+    <main id="main-content" role="main">
+        <!-- Main content with proper heading hierarchy -->
+    </main>
+    
+    <footer role="contentinfo">
+        <!-- Footer with company information and links -->
+    </footer>
+    
+    <!-- Accessibility announcements -->
+    <div id="announcements" aria-live="assertive" aria-atomic="true" class="sr-only"></div>
+    
+    <!-- Modern JavaScript with progressive enhancement -->
+    <script type="module" src="/assets/js/main.js"></script>
+    <script nomodule src="/assets/js/main.legacy.js"></script>
+</body>
+</html>
 
-<!-- Forms -->
-<!-- Always include proper labels and validation -->
-<!-- Use autocomplete attributes for better UX -->
-<!-- Implement client-side validation with JavaScript -->
+<!-- Accessible Form Implementation -->
+<form method="post" action="/contact" novalidate aria-labelledby="form-title">
+    <fieldset>
+        <legend id="form-title">Contact Information</legend>
+        
+        <!-- Comprehensive field with error handling -->
+        <div class="field-group">
+            <label for="full-name">
+                Full Name
+                <span aria-label="required" class="required-indicator">*</span>
+            </label>
+            <input 
+                type="text" 
+                id="full-name" 
+                name="fullName"
+                required
+                aria-describedby="name-help name-error"
+                aria-invalid="false"
+                autocomplete="name">
+            <div id="name-help" class="field-help">Enter your first and last name</div>
+            <div id="name-error" class="field-error" role="alert" aria-live="polite"></div>
+        </div>
+        
+        <!-- Form submission with loading states -->
+        <button type="submit" class="btn-primary">
+            <span class="btn-text">Send Message</span>
+            <span class="btn-loading" aria-hidden="true">Sending...</span>
+        </button>
+    </fieldset>
+</form>
 
-<!-- Accessibility -->
-<!-- Test with screen readers -->
-<!-- Ensure keyboard navigation works -->
-<!-- Check color contrast ratios -->
-<!-- Use semantic HTML elements -->
+<!-- Modal Dialog with Focus Management -->
+<div id="example-modal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-content">
+        <header class="modal-header">
+            <h2 id="modal-title">Dialog Title</h2>
+            <button type="button" class="modal-close" aria-label="Close dialog">×</button>
+        </header>
+        <div class="modal-body" aria-describedby="modal-description">
+            <!-- Modal content with proper ARIA relationships -->
+        </div>
+        <footer class="modal-footer">
+            <button type="button" class="btn-secondary">Cancel</button>
+            <button type="button" class="btn-primary">Confirm</button>
+        </footer>
+    </div>
+</div>
 ```
 
 **Notes**:
 
-- **SEO**: Include proper meta tags and structured data
-- **Performance**: Optimize images and minify resources
-- **Accessibility**: Follow WCAG guidelines for inclusive design
-- **Mobile**: Test on various device sizes and orientations
-- **Security**: Validate and sanitize all form inputs
-- **Standards**: Use semantic HTML5 elements appropriately
-- **Progressive Enhancement**: Ensure basic functionality without JavaScript
-- **Testing**: Validate HTML and test across browsers
+- **🚀 Performance First**: Critical CSS inline, non-critical CSS loaded asynchronously, resource hints for optimization
+- **♿ WCAG 2.1 AA Compliance**: Complete keyboard navigation, screen reader optimization, proper color contrast
+- **🛡️ Security Hardened**: Content Security Policy headers, input validation, XSS prevention, secure communication
+- **📱 Mobile Optimized**: Mobile-first responsive design, touch-friendly interfaces, progressive enhancement
+- **🔍 SEO Enhanced**: Semantic HTML structure, structured data markup, proper meta tags and Open Graph
+- **🌐 Progressive Web App**: Service workers for offline functionality, web app manifest, modern web APIs
+- **⚡ Core Web Vitals**: Optimized loading performance, efficient resource management, smooth interactions
+- **🎯 Accessibility**: Skip navigation links, ARIA landmarks and labels, focus management, screen reader support
+- **🔧 Developer Experience**: Modern JavaScript modules, comprehensive error handling, development tooling integration
+- **✅ Cross-Browser**: Progressive enhancement, feature detection, fallbacks for legacy browsers
+- **📊 Analytics Ready**: Proper event tracking structure, performance monitoring hooks, user experience metrics
+- **🔐 Privacy Compliant**: GDPR considerations, cookie consent patterns, data protection measures
+
+## Implementation Guidelines
+
+### Critical Performance Checklist
+- ✅ Inline critical above-the-fold CSS (< 14KB)
+- ✅ Preload essential fonts and resources
+- ✅ Optimize images with modern formats (WebP/AVIF)
+- ✅ Use resource hints (preconnect, prefetch, preload)
+- ✅ Implement service workers for caching strategies
+
+### Accessibility Validation
+- ✅ Test with screen readers (NVDA, JAWS, VoiceOver)
+- ✅ Verify complete keyboard navigation
+- ✅ Check color contrast ratios (WCAG AA minimum)
+- ✅ Validate HTML structure and semantics
+- ✅ Test with accessibility auditing tools
+
+### Security Implementation
+- ✅ Configure Content Security Policy headers
+- ✅ Implement input validation and sanitization
+- ✅ Use HTTPS with proper certificate configuration
+- ✅ Secure cookie settings and session management
+- ✅ Regular dependency security audits
 
 ## Related Snippets
 
-- [CSS Layouts](css-layouts.md) - Styling for HTML templates
-- [Responsive Design](responsive-design.md) - Mobile-first approaches
-- [Accessibility](accessibility.md) - WCAG compliance patterns
+- [CSS Layouts](css-layouts.md) - Modern CSS Grid and Flexbox layout systems
+- [Accessibility](accessibility.md) - Comprehensive WCAG 2.1 compliance patterns
+- [Performance Optimization](../utilities/readme.md) - Web performance best practices

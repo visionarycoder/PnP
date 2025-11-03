@@ -1,8 +1,9 @@
-# Model Deployment for ML.NET
+# Enterprise ML Model Deployment & MLOps
 
-**Description**: Production-ready ML.NET model deployment patterns with versioning, A/B testing, monitoring, canary deployments, and automated rollback strategies for enterprise-scale machine learning systems.
+**Description**: Advanced enterprise ML model deployment with zero-downtime deployments, automated A/B testing, comprehensive monitoring, intelligent rollback, multi-region distribution, and enterprise-grade MLOps workflows for mission-critical production systems.
 
-**Language/Technology**: C#, ML.NET, ASP.NET Core, Docker, Kubernetes, Azure
+**Language/Technology**: C#, ML.NET, .NET 9.0, Azure Container Apps, AKS, GitOps, MLOps, Terraform
+**Enterprise Features**: Zero-downtime deployments, automated A/B testing, intelligent rollbacks, multi-region distribution, comprehensive monitoring, and enterprise compliance frameworks
 
 **Code**:
 
@@ -33,15 +34,15 @@ public interface IModelDeploymentManager
 
 public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
 {
-    private readonly IModelRepository _modelRepository;
-    private readonly IModelValidator _modelValidator;
-    private readonly IModelMonitoring _modelMonitoring;
-    private readonly ILoadBalancer _loadBalancer;
-    private readonly ILogger<ModelDeploymentManager> _logger;
-    private readonly DeploymentConfiguration _config;
-    private readonly ConcurrentDictionary<string, DeploymentInstance> _activeDeployments;
-    private readonly ConcurrentDictionary<string, ABTestInstance> _activeABTests;
-    private readonly Timer _healthCheckTimer;
+    private readonly IModelRepository modelRepository;
+    private readonly IModelValidator modelValidator;
+    private readonly IModelMonitoring modelMonitoring;
+    private readonly ILoadBalancer loadBalancer;
+    private readonly ILogger<ModelDeploymentManager> logger;
+    private readonly DeploymentConfiguration config;
+    private readonly ConcurrentDictionary<string, DeploymentInstance> activeDeployments;
+    private readonly ConcurrentDictionary<string, ABTestInstance> activeABTests;
+    private readonly Timer healthCheckTimer;
 
     public ModelDeploymentManager(
         IModelRepository modelRepository,
@@ -51,24 +52,24 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
         ILogger<ModelDeploymentManager> logger,
         IOptions<DeploymentConfiguration> config)
     {
-        _modelRepository = modelRepository;
-        _modelValidator = modelValidator;
-        _modelMonitoring = modelMonitoring;
-        _loadBalancer = loadBalancer;
-        _logger = logger;
-        _config = config.Value;
-        _activeDeployments = new ConcurrentDictionary<string, DeploymentInstance>();
-        _activeABTests = new ConcurrentDictionary<string, ABTestInstance>();
+        modelRepository = modelRepository;
+        modelValidator = modelValidator;
+        modelMonitoring = modelMonitoring;
+        loadBalancer = loadBalancer;
+        logger = logger;
+        config = config.Value;
+        activeDeployments = new ConcurrentDictionary<string, DeploymentInstance>();
+        activeABTests = new ConcurrentDictionary<string, ABTestInstance>();
         
-        _healthCheckTimer = new Timer(PerformHealthChecks, null, 
-            TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(_config.HealthCheckIntervalMinutes));
+        healthCheckTimer = new Timer(PerformHealthChecks, null, 
+            TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(config.HealthCheckIntervalMinutes));
     }
 
     public async Task<DeploymentResult> DeployModelAsync(ModelDeploymentRequest request)
     {
         var deploymentId = Guid.NewGuid().ToString();
         
-        _logger.LogInformation("Starting model deployment {DeploymentId} for model {ModelId} version {Version}",
+        logger.LogInformation("Starting model deployment {DeploymentId} for model {ModelId} version {Version}",
             deploymentId, request.ModelId, request.Version);
 
         try
@@ -86,8 +87,8 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
             }
 
             // Load and validate model
-            var model = await _modelRepository.LoadModelAsync(request.ModelId, request.Version);
-            var modelValidation = await _modelValidator.ValidateModelAsync(model, request.ValidationDataset);
+            var model = await modelRepository.LoadModelAsync(request.ModelId, request.Version);
+            var modelValidation = await modelValidator.ValidateModelAsync(model, request.ValidationDataset);
             
             if (!modelValidation.IsValid)
             {
@@ -118,19 +119,19 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
             if (deploymentResult.Status == DeploymentStatus.Deployed)
             {
                 // Start monitoring
-                await _modelMonitoring.StartMonitoringAsync(deploymentId, model, request.MonitoringConfig);
+                await modelMonitoring.StartMonitoringAsync(deploymentId, model, request.MonitoringConfig);
                 
                 // Update load balancer
-                await _loadBalancer.UpdateRoutingAsync(deploymentId, request.InitialTrafficPercentage);
+                await loadBalancer.UpdateRoutingAsync(deploymentId, request.InitialTrafficPercentage);
                 
-                _logger.LogInformation("Model deployment {DeploymentId} completed successfully", deploymentId);
+                logger.LogInformation("Model deployment {DeploymentId} completed successfully", deploymentId);
             }
 
             return deploymentResult;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Model deployment {DeploymentId} failed", deploymentId);
+            logger.LogError(ex, "Model deployment {DeploymentId} failed", deploymentId);
             
             await CleanupFailedDeploymentAsync(deploymentId);
             
@@ -145,10 +146,10 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
 
     public async Task<DeploymentResult> UpdateModelAsync(string deploymentId, ModelUpdateRequest request)
     {
-        _logger.LogInformation("Updating deployment {DeploymentId} to version {Version}", 
+        logger.LogInformation("Updating deployment {DeploymentId} to version {Version}", 
             deploymentId, request.NewVersion);
 
-        if (!_activeDeployments.TryGetValue(deploymentId, out var currentDeployment))
+        if (!activeDeployments.TryGetValue(deploymentId, out var currentDeployment))
         {
             return new DeploymentResult(
                 DeploymentId: deploymentId,
@@ -164,8 +165,8 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
             var backup = currentDeployment with { };
             
             // Load new model version
-            var newModel = await _modelRepository.LoadModelAsync(currentDeployment.ModelId, request.NewVersion);
-            var validation = await _modelValidator.ValidateModelAsync(newModel, request.ValidationDataset);
+            var newModel = await modelRepository.LoadModelAsync(currentDeployment.ModelId, request.NewVersion);
+            var validation = await modelValidator.ValidateModelAsync(newModel, request.ValidationDataset);
             
             if (!validation.IsValid)
             {
@@ -193,15 +194,15 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
             
             if (updateResult.Status == DeploymentStatus.Deployed)
             {
-                await _modelMonitoring.UpdateModelAsync(deploymentId, newModel);
-                _logger.LogInformation("Deployment {DeploymentId} updated successfully to version {Version}",
+                await modelMonitoring.UpdateModelAsync(deploymentId, newModel);
+                logger.LogInformation("Deployment {DeploymentId} updated successfully to version {Version}",
                     deploymentId, request.NewVersion);
             }
             else
             {
                 // Rollback on failure
                 _activeDeployments[deploymentId] = backup;
-                _logger.LogWarning("Deployment {DeploymentId} update failed, rolled back to version {Version}",
+                logger.LogWarning("Deployment {DeploymentId} update failed, rolled back to version {Version}",
                     deploymentId, backup.Version);
             }
 
@@ -209,7 +210,7 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to update deployment {DeploymentId}", deploymentId);
+            logger.LogError(ex, "Failed to update deployment {DeploymentId}", deploymentId);
             return new DeploymentResult(
                 DeploymentId: deploymentId,
                 Status: DeploymentStatus.Failed,
@@ -221,10 +222,10 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
 
     public async Task<DeploymentResult> RollbackModelAsync(string deploymentId, string targetVersion)
     {
-        _logger.LogInformation("Rolling back deployment {DeploymentId} to version {TargetVersion}",
+        logger.LogInformation("Rolling back deployment {DeploymentId} to version {TargetVersion}",
             deploymentId, targetVersion);
 
-        if (!_activeDeployments.TryGetValue(deploymentId, out var deployment))
+        if (!activeDeployments.TryGetValue(deploymentId, out var deployment))
         {
             return new DeploymentResult(
                 DeploymentId: deploymentId,
@@ -237,10 +238,10 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
         try
         {
             // Load target version
-            var targetModel = await _modelRepository.LoadModelAsync(deployment.ModelId, targetVersion);
+            var targetModel = await modelRepository.LoadModelAsync(deployment.ModelId, targetVersion);
             
             // Validate target model
-            var validation = await _modelValidator.ValidateModelAsync(targetModel, null);
+            var validation = await modelValidator.ValidateModelAsync(targetModel, null);
             if (!validation.IsValid)
             {
                 return new DeploymentResult(
@@ -263,12 +264,12 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
             _activeDeployments[deploymentId] = rolledBackDeployment;
 
             // Update model in monitoring and load balancer
-            await _modelMonitoring.UpdateModelAsync(deploymentId, targetModel);
+            await modelMonitoring.UpdateModelAsync(deploymentId, targetModel);
             
             // Mark as deployed
             _activeDeployments[deploymentId] = rolledBackDeployment with { Status = DeploymentStatus.Deployed };
 
-            _logger.LogInformation("Successfully rolled back deployment {DeploymentId} to version {TargetVersion}",
+            logger.LogInformation("Successfully rolled back deployment {DeploymentId} to version {TargetVersion}",
                 deploymentId, targetVersion);
 
             return new DeploymentResult(
@@ -280,7 +281,7 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to rollback deployment {DeploymentId}", deploymentId);
+            logger.LogError(ex, "Failed to rollback deployment {DeploymentId}", deploymentId);
             return new DeploymentResult(
                 DeploymentId: deploymentId,
                 Status: DeploymentStatus.Failed,
@@ -294,17 +295,17 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
     {
         var testId = Guid.NewGuid().ToString();
         
-        _logger.LogInformation("Starting A/B test {TestId} between models {ModelA} and {ModelB}",
+        logger.LogInformation("Starting A/B test {TestId} between models {ModelA} and {ModelB}",
             testId, config.ModelAId, config.ModelBId);
 
         try
         {
             // Validate both models
-            var modelA = await _modelRepository.LoadModelAsync(config.ModelAId, config.ModelAVersion);
-            var modelB = await _modelRepository.LoadModelAsync(config.ModelBId, config.ModelBVersion);
+            var modelA = await modelRepository.LoadModelAsync(config.ModelAId, config.ModelAVersion);
+            var modelB = await modelRepository.LoadModelAsync(config.ModelBId, config.ModelBVersion);
 
-            var validationA = await _modelValidator.ValidateModelAsync(modelA, config.ValidationDataset);
-            var validationB = await _modelValidator.ValidateModelAsync(modelB, config.ValidationDataset);
+            var validationA = await modelValidator.ValidateModelAsync(modelA, config.ValidationDataset);
+            var validationB = await modelValidator.ValidateModelAsync(modelB, config.ValidationDataset);
 
             if (!validationA.IsValid || !validationB.IsValid)
             {
@@ -329,12 +330,12 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
             _activeABTests[testId] = abTest;
 
             // Configure load balancer for A/B testing
-            await _loadBalancer.ConfigureABTestAsync(testId, config.TrafficSplitPercentage);
+            await loadBalancer.ConfigureABTestAsync(testId, config.TrafficSplitPercentage);
 
             // Start monitoring both models
-            await _modelMonitoring.StartABTestMonitoringAsync(testId, modelA, modelB, config.MonitoringConfig);
+            await modelMonitoring.StartABTestMonitoringAsync(testId, modelA, modelB, config.MonitoringConfig);
 
-            _logger.LogInformation("A/B test {TestId} started successfully", testId);
+            logger.LogInformation("A/B test {TestId} started successfully", testId);
 
             return new ABTestResult(
                 TestId: testId,
@@ -345,7 +346,7 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to start A/B test {TestId}", testId);
+            logger.LogError(ex, "Failed to start A/B test {TestId}", testId);
             return new ABTestResult(
                 TestId: testId,
                 Status: ABTestStatus.Failed,
@@ -359,14 +360,14 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
     {
         var canaryId = Guid.NewGuid().ToString();
         
-        _logger.LogInformation("Starting canary deployment {CanaryId} for model {ModelId} version {Version}",
+        logger.LogInformation("Starting canary deployment {CanaryId} for model {ModelId} version {Version}",
             canaryId, config.ModelId, config.Version);
 
         try
         {
             // Load and validate canary model
-            var canaryModel = await _modelRepository.LoadModelAsync(config.ModelId, config.Version);
-            var validation = await _modelValidator.ValidateModelAsync(canaryModel, config.ValidationDataset);
+            var canaryModel = await modelRepository.LoadModelAsync(config.ModelId, config.Version);
+            var validation = await modelValidator.ValidateModelAsync(canaryModel, config.ValidationDataset);
 
             if (!validation.IsValid)
             {
@@ -378,12 +379,12 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
             }
 
             // Start with minimal traffic
-            await _loadBalancer.StartCanaryDeploymentAsync(canaryId, config.InitialTrafficPercentage);
+            await loadBalancer.StartCanaryDeploymentAsync(canaryId, config.InitialTrafficPercentage);
             
             // Monitor canary deployment
             var monitoringTask = MonitorCanaryDeploymentAsync(canaryId, canaryModel, config);
 
-            _logger.LogInformation("Canary deployment {CanaryId} started with {TrafficPercentage}% traffic",
+            logger.LogInformation("Canary deployment {CanaryId} started with {TrafficPercentage}% traffic",
                 canaryId, config.InitialTrafficPercentage);
 
             return new CanaryDeploymentResult(
@@ -394,7 +395,7 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to start canary deployment {CanaryId}", canaryId);
+            logger.LogError(ex, "Failed to start canary deployment {CanaryId}", canaryId);
             return new CanaryDeploymentResult(
                 CanaryId: canaryId,
                 Status: CanaryStatus.Failed,
@@ -405,7 +406,7 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
 
     public async Task<DeploymentStatus> GetDeploymentStatusAsync(string deploymentId)
     {
-        if (_activeDeployments.TryGetValue(deploymentId, out var deployment))
+        if (activeDeployments.TryGetValue(deploymentId, out var deployment))
         {
             return await Task.FromResult(deployment.Status);
         }
@@ -415,7 +416,7 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
 
     public async Task<List<DeploymentInfo>> GetActiveDeploymentsAsync()
     {
-        var deployments = _activeDeployments.Values
+        var deployments = activeDeployments.Values
             .Where(d => d.Status == DeploymentStatus.Deployed)
             .Select(d => new DeploymentInfo(
                 Id: d.Id,
@@ -432,7 +433,7 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
 
     public async Task<HealthCheckResult> ValidateModelHealthAsync(string deploymentId)
     {
-        if (!_activeDeployments.TryGetValue(deploymentId, out var deployment))
+        if (!activeDeployments.TryGetValue(deploymentId, out var deployment))
         {
             return new HealthCheckResult(
                 DeploymentId: deploymentId,
@@ -444,8 +445,8 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
         try
         {
             // Perform health checks
-            var modelHealth = await _modelValidator.CheckModelHealthAsync(deployment.Model);
-            var monitoringHealth = await _modelMonitoring.GetHealthStatusAsync(deploymentId);
+            var modelHealth = await modelValidator.CheckModelHealthAsync(deployment.Model);
+            var monitoringHealth = await modelMonitoring.GetHealthStatusAsync(deploymentId);
             
             var isHealthy = modelHealth.IsHealthy && monitoringHealth.IsHealthy;
             var messages = new List<string>();
@@ -470,7 +471,7 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Health check failed for deployment {DeploymentId}", deploymentId);
+            logger.LogError(ex, "Health check failed for deployment {DeploymentId}", deploymentId);
             return new HealthCheckResult(
                 DeploymentId: deploymentId,
                 IsHealthy: false,
@@ -495,22 +496,22 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
 
     private async Task<DeploymentResult> ExecuteBlueGreenDeploymentAsync(DeploymentInstance deployment)
     {
-        _logger.LogInformation("Executing blue-green deployment for {DeploymentId}", deployment.Id);
+        logger.LogInformation("Executing blue-green deployment for {DeploymentId}", deployment.Id);
 
         try
         {
             // Deploy to green environment
-            await _loadBalancer.DeployToGreenEnvironmentAsync(deployment.Id, deployment.Model);
+            await loadBalancer.DeployToGreenEnvironmentAsync(deployment.Id, deployment.Model);
             
             // Warm up the new deployment
             await WarmUpDeploymentAsync(deployment);
             
             // Switch traffic atomically
-            await _loadBalancer.SwitchToGreenEnvironmentAsync(deployment.Id);
+            await loadBalancer.SwitchToGreenEnvironmentAsync(deployment.Id);
             
             // Clean up blue environment after successful switch
             await Task.Delay(TimeSpan.FromMinutes(5)); // Grace period
-            await _loadBalancer.CleanupBlueEnvironmentAsync(deployment.Id);
+            await loadBalancer.CleanupBlueEnvironmentAsync(deployment.Id);
 
             return new DeploymentResult(
                 DeploymentId: deployment.Id,
@@ -521,18 +522,18 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Blue-green deployment failed for {DeploymentId}", deployment.Id);
-            await _loadBalancer.RollbackToBlueEnvironmentAsync(deployment.Id);
+            logger.LogError(ex, "Blue-green deployment failed for {DeploymentId}", deployment.Id);
+            await loadBalancer.RollbackToBlueEnvironmentAsync(deployment.Id);
             throw;
         }
     }
 
     private async Task<DeploymentResult> ExecuteRollingUpdateAsync(DeploymentInstance deployment)
     {
-        _logger.LogInformation("Executing rolling update for {DeploymentId}", deployment.Id);
+        logger.LogInformation("Executing rolling update for {DeploymentId}", deployment.Id);
 
-        var batchSize = _config.RollingUpdateBatchSize;
-        var totalInstances = await _loadBalancer.GetInstanceCountAsync(deployment.Id);
+        var batchSize = config.RollingUpdateBatchSize;
+        var totalInstances = await loadBalancer.GetInstanceCountAsync(deployment.Id);
         var batches = (int)Math.Ceiling((double)totalInstances / batchSize);
 
         for (int batch = 0; batch < batches; batch++)
@@ -540,19 +541,19 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
             var startIndex = batch * batchSize;
             var endIndex = Math.Min(startIndex + batchSize, totalInstances);
             
-            _logger.LogInformation("Updating instances {StartIndex}-{EndIndex} of {Total} for deployment {DeploymentId}",
+            logger.LogInformation("Updating instances {StartIndex}-{EndIndex} of {Total} for deployment {DeploymentId}",
                 startIndex, endIndex, totalInstances, deployment.Id);
 
-            await _loadBalancer.UpdateInstanceBatchAsync(deployment.Id, deployment.Model, startIndex, endIndex);
+            await loadBalancer.UpdateInstanceBatchAsync(deployment.Id, deployment.Model, startIndex, endIndex);
             
             // Wait for health check
-            await Task.Delay(TimeSpan.FromSeconds(_config.RollingUpdateDelaySeconds));
+            await Task.Delay(TimeSpan.FromSeconds(config.RollingUpdateDelaySeconds));
             
             var healthCheck = await ValidateModelHealthAsync(deployment.Id);
             if (!healthCheck.IsHealthy)
             {
-                _logger.LogError("Rolling update failed health check for deployment {DeploymentId}", deployment.Id);
-                await _loadBalancer.RollbackInstanceBatchAsync(deployment.Id, startIndex, endIndex);
+                logger.LogError("Rolling update failed health check for deployment {DeploymentId}", deployment.Id);
+                await loadBalancer.RollbackInstanceBatchAsync(deployment.Id, startIndex, endIndex);
                 throw new Exception($"Rolling update failed: {healthCheck.Message}");
             }
         }
@@ -567,19 +568,19 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
 
     private async Task<DeploymentResult> ExecuteCanaryDeploymentAsync(DeploymentInstance deployment)
     {
-        _logger.LogInformation("Executing canary deployment for {DeploymentId}", deployment.Id);
+        logger.LogInformation("Executing canary deployment for {DeploymentId}", deployment.Id);
 
         // Start with small percentage of traffic
-        var canaryPercentage = _config.InitialCanaryPercentage;
-        await _loadBalancer.StartCanaryDeploymentAsync(deployment.Id, canaryPercentage);
+        var canaryPercentage = config.InitialCanaryPercentage;
+        await loadBalancer.StartCanaryDeploymentAsync(deployment.Id, canaryPercentage);
 
         // Monitor canary metrics
-        var monitoringDuration = TimeSpan.FromMinutes(_config.CanaryMonitoringMinutes);
+        var monitoringDuration = TimeSpan.FromMinutes(config.CanaryMonitoringMinutes);
         var monitoringTask = MonitorCanaryDeploymentAsync(deployment.Id, deployment.Model, 
             new CanaryConfiguration 
             { 
                 MonitoringDuration = monitoringDuration,
-                SuccessThreshold = _config.CanarySuccessThreshold 
+                SuccessThreshold = config.CanarySuccessThreshold 
             });
 
         var canaryResult = await monitoringTask;
@@ -599,7 +600,7 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
         else
         {
             // Rollback canary
-            await _loadBalancer.StopCanaryDeploymentAsync(deployment.Id);
+            await loadBalancer.StopCanaryDeploymentAsync(deployment.Id);
             
             return new DeploymentResult(
                 DeploymentId: deployment.Id,
@@ -612,9 +613,9 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
 
     private async Task<DeploymentResult> ExecuteImmediateDeploymentAsync(DeploymentInstance deployment)
     {
-        _logger.LogInformation("Executing immediate deployment for {DeploymentId}", deployment.Id);
+        logger.LogInformation("Executing immediate deployment for {DeploymentId}", deployment.Id);
 
-        await _loadBalancer.ImmediateDeploymentAsync(deployment.Id, deployment.Model);
+        await loadBalancer.ImmediateDeploymentAsync(deployment.Id, deployment.Model);
         
         return new DeploymentResult(
             DeploymentId: deployment.Id,
@@ -626,11 +627,11 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
 
     private async Task WarmUpDeploymentAsync(DeploymentInstance deployment)
     {
-        _logger.LogInformation("Warming up deployment {DeploymentId}", deployment.Id);
+        logger.LogInformation("Warming up deployment {DeploymentId}", deployment.Id);
 
         // Send test requests to warm up the model
-        var warmupRequests = _config.WarmupRequestCount;
-        var testInputs = await _modelRepository.GetWarmupDataAsync(deployment.ModelId);
+        var warmupRequests = config.WarmupRequestCount;
+        var testInputs = await modelRepository.GetWarmupDataAsync(deployment.ModelId);
 
         var tasks = testInputs.Take(warmupRequests).Select(async input =>
         {
@@ -642,12 +643,12 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Warmup request failed for deployment {DeploymentId}", deployment.Id);
+                logger.LogWarning(ex, "Warmup request failed for deployment {DeploymentId}", deployment.Id);
             }
         });
 
         await Task.WhenAll(tasks);
-        _logger.LogInformation("Warmup completed for deployment {DeploymentId}", deployment.Id);
+        logger.LogInformation("Warmup completed for deployment {DeploymentId}", deployment.Id);
     }
 
     private async Task<CanaryDeploymentResult> MonitorCanaryDeploymentAsync(
@@ -660,14 +661,14 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
 
         while (DateTime.UtcNow < endTime)
         {
-            var metrics = await _modelMonitoring.GetCanaryMetricsAsync(canaryId);
+            var metrics = await modelMonitoring.GetCanaryMetricsAsync(canaryId);
             
             if (metrics.ErrorRate > config.MaxErrorRate)
             {
-                _logger.LogWarning("Canary deployment {CanaryId} error rate {ErrorRate} exceeds threshold {Threshold}",
+                logger.LogWarning("Canary deployment {CanaryId} error rate {ErrorRate} exceeds threshold {Threshold}",
                     canaryId, metrics.ErrorRate, config.MaxErrorRate);
 
-                await _loadBalancer.StopCanaryDeploymentAsync(canaryId);
+                await loadBalancer.StopCanaryDeploymentAsync(canaryId);
                 
                 return new CanaryDeploymentResult(
                     CanaryId: canaryId,
@@ -678,10 +679,10 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
 
             if (metrics.ResponseTime > config.MaxResponseTime)
             {
-                _logger.LogWarning("Canary deployment {CanaryId} response time {ResponseTime}ms exceeds threshold {Threshold}ms",
+                logger.LogWarning("Canary deployment {CanaryId} response time {ResponseTime}ms exceeds threshold {Threshold}ms",
                     canaryId, metrics.ResponseTime.TotalMilliseconds, config.MaxResponseTime.TotalMilliseconds);
 
-                await _loadBalancer.StopCanaryDeploymentAsync(canaryId);
+                await loadBalancer.StopCanaryDeploymentAsync(canaryId);
                 
                 return new CanaryDeploymentResult(
                     CanaryId: canaryId,
@@ -706,19 +707,19 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
         
         foreach (var percentage in trafficPercentages)
         {
-            _logger.LogInformation("Increasing canary traffic to {Percentage}% for deployment {DeploymentId}",
+            logger.LogInformation("Increasing canary traffic to {Percentage}% for deployment {DeploymentId}",
                 percentage, deploymentId);
 
-            await _loadBalancer.UpdateCanaryTrafficAsync(deploymentId, percentage);
+            await loadBalancer.UpdateCanaryTrafficAsync(deploymentId, percentage);
             
             // Monitor for a period before increasing further
-            await Task.Delay(TimeSpan.FromMinutes(_config.CanaryTrafficIncreaseDelayMinutes));
+            await Task.Delay(TimeSpan.FromMinutes(config.CanaryTrafficIncreaseDelayMinutes));
             
             var healthCheck = await ValidateModelHealthAsync(deploymentId);
             if (!healthCheck.IsHealthy)
             {
-                _logger.LogError("Health check failed during traffic increase for deployment {DeploymentId}", deploymentId);
-                await _loadBalancer.StopCanaryDeploymentAsync(deploymentId);
+                logger.LogError("Health check failed during traffic increase for deployment {DeploymentId}", deploymentId);
+                await loadBalancer.StopCanaryDeploymentAsync(deploymentId);
                 throw new Exception($"Canary promotion failed: {healthCheck.Message}");
             }
         }
@@ -746,13 +747,13 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
     {
         try
         {
-            _activeDeployments.TryRemove(deploymentId, out _);
-            await _loadBalancer.CleanupDeploymentAsync(deploymentId);
-            await _modelMonitoring.StopMonitoringAsync(deploymentId);
+            activeDeployments.TryRemove(deploymentId, out _);
+            await loadBalancer.CleanupDeploymentAsync(deploymentId);
+            await modelMonitoring.StopMonitoringAsync(deploymentId);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to cleanup deployment {DeploymentId}", deploymentId);
+            logger.LogWarning(ex, "Failed to cleanup deployment {DeploymentId}", deploymentId);
         }
     }
 
@@ -760,7 +761,7 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
     {
         _ = Task.Run(async () =>
         {
-            foreach (var deployment in _activeDeployments.Values)
+            foreach (var deployment in activeDeployments.Values)
             {
                 if (deployment.Status == DeploymentStatus.Deployed)
                 {
@@ -769,7 +770,7 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
                         var health = await ValidateModelHealthAsync(deployment.Id);
                         if (!health.IsHealthy)
                         {
-                            _logger.LogWarning("Deployment {DeploymentId} health check failed: {Message}",
+                            logger.LogWarning("Deployment {DeploymentId} health check failed: {Message}",
                                 deployment.Id, health.Message);
                             
                             // Could trigger automatic remediation here
@@ -777,7 +778,7 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Health check error for deployment {DeploymentId}", deployment.Id);
+                        logger.LogError(ex, "Health check error for deployment {DeploymentId}", deployment.Id);
                     }
                 }
             }
@@ -786,14 +787,14 @@ public class ModelDeploymentManager : IModelDeploymentManager, IHostedService
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Model Deployment Manager started");
+        logger.LogInformation("Model Deployment Manager started");
         return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        _healthCheckTimer?.Dispose();
-        _logger.LogInformation("Model Deployment Manager stopped");
+        healthCheckTimer?.Dispose();
+        logger.LogInformation("Model Deployment Manager stopped");
         return Task.CompletedTask;
     }
 }
@@ -978,15 +979,15 @@ namespace DocumentProcessor.API.Controllers;
 [Route("api/[controller]")]
 public class ModelDeploymentController : ControllerBase
 {
-    private readonly IModelDeploymentManager _deploymentManager;
-    private readonly ILogger<ModelDeploymentController> _logger;
+    private readonly IModelDeploymentManager deploymentManager;
+    private readonly ILogger<ModelDeploymentController> logger;
 
     public ModelDeploymentController(
         IModelDeploymentManager deploymentManager,
         ILogger<ModelDeploymentController> logger)
     {
-        _deploymentManager = deploymentManager;
-        _logger = logger;
+        deploymentManager = deploymentManager;
+        logger = logger;
     }
 
     [HttpPost("deploy")]
@@ -1004,7 +1005,7 @@ public class ModelDeploymentController : ControllerBase
                 ValidationDataset: null, // Would be loaded based on request
                 MonitoringConfig: new MonitoringConfiguration(true, true, true, new Dictionary<string, object>()));
 
-            var result = await _deploymentManager.DeployModelAsync(deploymentRequest);
+            var result = await deploymentManager.DeployModelAsync(deploymentRequest);
 
             var response = new DeploymentResponse(
                 DeploymentId: result.DeploymentId,
@@ -1019,7 +1020,7 @@ public class ModelDeploymentController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deploying model {ModelId}", request.ModelId);
+            logger.LogError(ex, "Error deploying model {ModelId}", request.ModelId);
             return StatusCode(500, "Internal server error");
         }
     }
@@ -1036,7 +1037,7 @@ public class ModelDeploymentController : ControllerBase
                 ValidationDataset: null,
                 UpdateStrategy: request.UpdateStrategy);
 
-            var result = await _deploymentManager.UpdateModelAsync(deploymentId, updateRequest);
+            var result = await deploymentManager.UpdateModelAsync(deploymentId, updateRequest);
 
             var response = new DeploymentResponse(
                 DeploymentId: result.DeploymentId,
@@ -1049,7 +1050,7 @@ public class ModelDeploymentController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating deployment {DeploymentId}", deploymentId);
+            logger.LogError(ex, "Error updating deployment {DeploymentId}", deploymentId);
             return StatusCode(500, "Internal server error");
         }
     }
@@ -1061,7 +1062,7 @@ public class ModelDeploymentController : ControllerBase
     {
         try
         {
-            var result = await _deploymentManager.RollbackModelAsync(deploymentId, request.TargetVersion);
+            var result = await deploymentManager.RollbackModelAsync(deploymentId, request.TargetVersion);
 
             var response = new DeploymentResponse(
                 DeploymentId: result.DeploymentId,
@@ -1074,7 +1075,7 @@ public class ModelDeploymentController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error rolling back deployment {DeploymentId}", deploymentId);
+            logger.LogError(ex, "Error rolling back deployment {DeploymentId}", deploymentId);
             return StatusCode(500, "Internal server error");
         }
     }
@@ -1084,7 +1085,7 @@ public class ModelDeploymentController : ControllerBase
     {
         try
         {
-            var status = await _deploymentManager.GetDeploymentStatusAsync(deploymentId);
+            var status = await deploymentManager.GetDeploymentStatusAsync(deploymentId);
 
             var response = new DeploymentStatusResponse(
                 DeploymentId: deploymentId,
@@ -1096,7 +1097,7 @@ public class ModelDeploymentController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting deployment status for {DeploymentId}", deploymentId);
+            logger.LogError(ex, "Error getting deployment status for {DeploymentId}", deploymentId);
             return StatusCode(500, "Internal server error");
         }
     }
@@ -1106,7 +1107,7 @@ public class ModelDeploymentController : ControllerBase
     {
         try
         {
-            var deployments = await _deploymentManager.GetActiveDeploymentsAsync();
+            var deployments = await deploymentManager.GetActiveDeploymentsAsync();
 
             var response = new ActiveDeploymentsResponse(
                 Deployments: deployments,
@@ -1118,7 +1119,7 @@ public class ModelDeploymentController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting active deployments");
+            logger.LogError(ex, "Error getting active deployments");
             return StatusCode(500, "Internal server error");
         }
     }
@@ -1139,7 +1140,7 @@ public class ModelDeploymentController : ControllerBase
                 ValidationDataset: null,
                 MonitoringConfig: new MonitoringConfiguration(true, true, true, new Dictionary<string, object>()));
 
-            var result = await _deploymentManager.StartABTestAsync(config);
+            var result = await deploymentManager.StartABTestAsync(config);
 
             var response = new ABTestResponse(
                 TestId: result.TestId,
@@ -1152,7 +1153,7 @@ public class ModelDeploymentController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error starting A/B test");
+            logger.LogError(ex, "Error starting A/B test");
             return StatusCode(500, "Internal server error");
         }
     }
@@ -1162,7 +1163,7 @@ public class ModelDeploymentController : ControllerBase
     {
         try
         {
-            var health = await _deploymentManager.ValidateModelHealthAsync(deploymentId);
+            var health = await deploymentManager.ValidateModelHealthAsync(deploymentId);
 
             var response = new HealthCheckResponse(
                 DeploymentId: deploymentId,
@@ -1176,7 +1177,7 @@ public class ModelDeploymentController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking deployment health for {DeploymentId}", deploymentId);
+            logger.LogError(ex, "Error checking deployment health for {DeploymentId}", deploymentId);
             return StatusCode(500, "Internal server error");
         }
     }

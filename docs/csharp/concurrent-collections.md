@@ -2,7 +2,7 @@
 
 **Description**: Comprehensive thread-safe collections and concurrent data structures including lock-free algorithms, atomic operations, high-performance concurrent access patterns, custom concurrent collections, and synchronization-free data structures for scalable multi-threaded applications.
 
-**Language/Technology**: C# / .NET
+**Language/Technology**: C# / .NET 8.0
 
 **Code**:
 
@@ -28,15 +28,12 @@ public class LockFreeStack<T> : IEnumerable<T> where T : class
         public T Value { get; }
         public Node Next { get; set; }
 
-        public Node(T value)
-        {
-            Value = value;
-        }
+        public Node(T value) => Value = value;
     }
 
     public void Push(T item)
     {
-        if (item == null) throw new ArgumentNullException(nameof(item));
+        ArgumentNullException.ThrowIfNull(item);
 
         var newNode = new Node(item);
         

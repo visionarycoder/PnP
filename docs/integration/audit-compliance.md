@@ -87,12 +87,12 @@ public interface IAuditService
 
 public class AuditService : IAuditService
 {
-    private readonly IAuditRepository _auditRepository;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IDigitalSignatureService _signatureService;
-    private readonly IAuditEncryptionService _encryptionService;
-    private readonly ILogger<AuditService> _logger;
-    private readonly AuditConfiguration _config;
+    private readonly IAuditRepository auditRepository;
+    private readonly IHttpContextAccessor httpContextAccessor;
+    private readonly IDigitalSignatureService signatureService;
+    private readonly IAuditEncryptionService encryptionService;
+    private readonly ILogger<AuditService> logger;
+    private readonly AuditConfiguration config;
 
     public AuditService(
         IAuditRepository auditRepository,
@@ -101,13 +101,7 @@ public class AuditService : IAuditService
         IAuditEncryptionService encryptionService,
         ILogger<AuditService> logger,
         IOptions<AuditConfiguration> config)
-    {
-        _auditRepository = auditRepository;
-        _httpContextAccessor = httpContextAccessor;
-        _signatureService = signatureService;
-        _encryptionService = encryptionService;
-        _logger = logger;
-        _config = config.Value;
+    {auditRepository = auditRepository;httpContextAccessor = httpContextAccessor;signatureService = signatureService;encryptionService = encryptionService;logger = logger;config = config.Value;
     }
 
     public async Task LogEventAsync(AuditEvent auditEvent)
@@ -115,39 +109,36 @@ public class AuditService : IAuditService
         try
         {
             // Encrypt sensitive details if required
-            if (_config.SensitiveEntities.Contains(auditEvent.EntityType))
+            if (config.SensitiveEntities.Contains(auditEvent.EntityType))
             {
                 auditEvent = await EncryptSensitiveDataAsync(auditEvent);
             }
 
             // Add digital signature for critical events
-            if (_config.RequireDigitalSignatures && _config.CriticalEvents.Contains(auditEvent.EventType))
+            if (config.RequireDigitalSignatures && config.CriticalEvents.Contains(auditEvent.EventType))
             {
                 auditEvent = await AddDigitalSignatureAsync(auditEvent);
             }
 
             // Store audit event
-            await _auditRepository.SaveAuditEventAsync(auditEvent);
+            await auditRepository.SaveAuditEventAsync(auditEvent);
 
             // Real-time compliance monitoring
-            if (_config.EnableComplianceAuditing)
+            if (config.EnableComplianceAuditing)
             {
                 await CheckComplianceRulesAsync(auditEvent);
-            }
-
-            _logger.LogDebug("Audit event logged: {EventType} for {EntityType}/{EntityId}", 
+            }logger.LogDebug("Audit event logged: {EventType} for {EntityType}/{EntityId}", 
                 auditEvent.EventType, auditEvent.EntityType, auditEvent.EntityId);
         }
         catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to log audit event: {EventType}", auditEvent.EventType);
+        {logger.LogError(ex, "Failed to log audit event: {EventType}", auditEvent.EventType);
             // Never throw from audit logging to avoid breaking business operations
         }
     }
 
     public async Task LogUserActionAsync(int userId, string action, string entityType, string? entityId = null, object? details = null)
     {
-        var httpContext = _httpContextAccessor.HttpContext;
+        var httpContext =httpContextAccessor.HttpContext;
         
         var auditEvent = new AuditEvent(
             Guid.NewGuid(),
@@ -201,7 +192,7 @@ public class AuditService : IAuditService
 
     public async Task LogSecurityEventAsync(string action, AuditSeverity severity, object? details = null)
     {
-        var httpContext = _httpContextAccessor.HttpContext;
+        var httpContext =httpContextAccessor.HttpContext;
         
         var auditEvent = new AuditEvent(
             Guid.NewGuid(),
@@ -270,7 +261,7 @@ public class AuditService : IAuditService
 
     public async Task<List<AuditEvent>> GetAuditTrailAsync(string entityType, string entityId, DateTime? from = null, DateTime? to = null)
     {
-        var events = await _auditRepository.GetAuditEventsAsync(
+        var events = await auditRepository.GetAuditEventsAsync(
             entityType, 
             entityId, 
             from ?? DateTime.UtcNow.AddDays(-90), 
@@ -281,7 +272,7 @@ public class AuditService : IAuditService
 
     public async Task<List<AuditEvent>> GetUserAuditTrailAsync(int userId, DateTime? from = null, DateTime? to = null)
     {
-        var events = await _auditRepository.GetUserAuditEventsAsync(
+        var events = await auditRepository.GetUserAuditEventsAsync(
             userId, 
             from ?? DateTime.UtcNow.AddDays(-90), 
             to ?? DateTime.UtcNow);
@@ -291,7 +282,7 @@ public class AuditService : IAuditService
 
     public async Task<ComplianceReport> GenerateComplianceReportAsync(string framework, DateTime from, DateTime to)
     {
-        var events = await _auditRepository.GetComplianceEventsAsync(framework, from, to);
+        var events = await auditRepository.GetComplianceEventsAsync(framework, from, to);
         
         var totalEvents = events.Count;
         var violations = events.Count(e => e.EventType == AuditEventType.ComplianceViolation);
@@ -350,7 +341,7 @@ public class AuditService : IAuditService
             if (IsSensitiveField(detail.Key))
             {
                 encryptedDetails[detail.Key] = detail.Value != null 
-                    ? await _encryptionService.EncryptAsync(detail.Value.ToString()!)
+                    ? await encryptionService.EncryptAsync(detail.Value.ToString()!)
                     : null;
             }
             else
@@ -364,7 +355,7 @@ public class AuditService : IAuditService
 
     private async Task<AuditEvent> AddDigitalSignatureAsync(AuditEvent auditEvent)
     {
-        var signature = await _signatureService.SignAsync(auditEvent);
+        var signature = await signatureService.SignAsync(auditEvent);
         var signedDetails = new Dictionary<string, object?>(auditEvent.Details)
         {
             ["DigitalSignature"] = signature
@@ -379,7 +370,7 @@ public class AuditService : IAuditService
 
         foreach (var auditEvent in events)
         {
-            if (_config.SensitiveEntities.Contains(auditEvent.EntityType))
+            if (config.SensitiveEntities.Contains(auditEvent.EntityType))
             {
                 var decryptedDetails = new Dictionary<string, object?>();
                 
@@ -389,7 +380,7 @@ public class AuditService : IAuditService
                     {
                         try
                         {
-                            decryptedDetails[detail.Key] = await _encryptionService.DecryptAsync(encryptedValue);
+                            decryptedDetails[detail.Key] = await encryptionService.DecryptAsync(encryptedValue);
                         }
                         catch
                         {
@@ -419,8 +410,7 @@ public class AuditService : IAuditService
         // This would typically involve checking against various regulatory requirements
         
         // Example: GDPR data access logging
-        if (auditEvent.EventType == AuditEventType.DataAccess && 
-            _config.SensitiveEntities.Contains(auditEvent.EntityType))
+        if (auditEvent.EventType == AuditEventType.DataAccess && config.SensitiveEntities.Contains(auditEvent.EntityType))
         {
             await LogComplianceEventAsync("GDPR", "Article 30", true, 
                 new { AccessLogged = true, Purpose = "Data Access Audit" });
@@ -429,8 +419,7 @@ public class AuditService : IAuditService
 
     private async Task NotifySecurityTeamAsync(AuditEvent auditEvent)
     {
-        // Implement security team notification logic
-        _logger.LogCritical("Critical security event: {EventType} - {Action}", 
+        // Implement security team notification logiclogger.LogCritical("Critical security event: {EventType} - {Action}", 
             auditEvent.EventType, auditEvent.Action);
     }
 
@@ -506,18 +495,15 @@ public record ComplianceReport(
 // SOX Compliance Implementation
 public class SoxComplianceService : IComplianceService
 {
-    private readonly IAuditService _auditService;
-    private readonly IFinancialDataService _financialDataService;
-    private readonly IAccessControlService _accessControlService;
+    private readonly IAuditService auditService;
+    private readonly IFinancialDataService financialDataService;
+    private readonly IAccessControlService accessControlService;
 
     public SoxComplianceService(
         IAuditService auditService,
         IFinancialDataService financialDataService,
         IAccessControlService accessControlService)
-    {
-        _auditService = auditService;
-        _financialDataService = financialDataService;
-        _accessControlService = accessControlService;
+    {auditService = auditService;financialDataService = financialDataService;accessControlService = accessControlService;
     }
 
     public async Task<ComplianceStatus> CheckSoxComplianceAsync(int userId, string action, string entityType)
@@ -527,14 +513,14 @@ public class SoxComplianceService : IComplianceService
         // SOX 302: CEO/CFO Certification
         if (IsFinancialData(entityType))
         {
-            var isAuthorized = await _accessControlService.HasFinancialAccessAsync(userId);
+            var isAuthorized = await accessControlService.HasFinancialAccessAsync(userId);
             complianceChecks.Add(new ComplianceCheck(
                 "SOX-302",
                 "Financial Data Access Authorization",
                 isAuthorized,
                 isAuthorized ? null : "User not authorized for financial data access"));
 
-            await _auditService.LogComplianceEventAsync("SOX", "Section 302", isAuthorized,
+            await auditService.LogComplianceEventAsync("SOX", "Section 302", isAuthorized,
                 new { UserId = userId, Action = action, EntityType = entityType });
         }
 
@@ -548,7 +534,7 @@ public class SoxComplianceService : IComplianceService
                 hasInternalControls,
                 hasInternalControls ? null : "Inadequate internal controls"));
 
-            await _auditService.LogComplianceEventAsync("SOX", "Section 404", hasInternalControls,
+            await auditService.LogComplianceEventAsync("SOX", "Section 404", hasInternalControls,
                 new { UserId = userId, Action = action, ControlsVerified = hasInternalControls });
         }
 
@@ -562,7 +548,7 @@ public class SoxComplianceService : IComplianceService
                 isTimely,
                 isTimely ? null : "Material change disclosure not timely"));
 
-            await _auditService.LogComplianceEventAsync("SOX", "Section 409", isTimely,
+            await auditService.LogComplianceEventAsync("SOX", "Section 409", isTimely,
                 new { Action = action, EntityType = entityType, IsTimely = isTimely });
         }
 
@@ -594,8 +580,8 @@ public class SoxComplianceService : IComplianceService
     private async Task<bool> CheckInternalControlsAsync(int userId, string action)
     {
         // Implement internal control verification
-        var hasSegregationOfDuties = await _accessControlService.CheckSegregationOfDutiesAsync(userId, action);
-        var hasApprovalProcess = await _accessControlService.CheckApprovalProcessAsync(userId, action);
+        var hasSegregationOfDuties = await accessControlService.CheckSegregationOfDutiesAsync(userId, action);
+        var hasApprovalProcess = await accessControlService.CheckApprovalProcessAsync(userId, action);
         var hasDocumentation = await CheckDocumentationRequirementsAsync(action);
 
         return hasSegregationOfDuties && hasApprovalProcess && hasDocumentation;
@@ -617,18 +603,15 @@ public class SoxComplianceService : IComplianceService
 // HIPAA Compliance Implementation
 public class HipaaComplianceService : IComplianceService
 {
-    private readonly IAuditService _auditService;
-    private readonly IAccessControlService _accessControlService;
-    private readonly IEncryptionService _encryptionService;
+    private readonly IAuditService auditService;
+    private readonly IAccessControlService accessControlService;
+    private readonly IEncryptionService encryptionService;
 
     public HipaaComplianceService(
         IAuditService auditService,
         IAccessControlService accessControlService,
         IEncryptionService encryptionService)
-    {
-        _auditService = auditService;
-        _accessControlService = accessControlService;
-        _encryptionService = encryptionService;
+    {auditService = auditService;accessControlService = accessControlService;encryptionService = encryptionService;
     }
 
     public async Task<ComplianceStatus> CheckHipaaComplianceAsync(int userId, string action, string entityType)
@@ -662,7 +645,7 @@ public class HipaaComplianceService : IComplianceService
                 hasTechnicalSafeguards ? null : "Insufficient technical safeguards"));
 
             // Audit and Accountability
-            await _auditService.LogComplianceEventAsync("HIPAA", "Access Control", true,
+            await auditService.LogComplianceEventAsync("HIPAA", "Access Control", true,
                 new { 
                     UserId = userId, 
                     Action = action, 
@@ -689,7 +672,7 @@ public class HipaaComplianceService : IComplianceService
     private async Task<bool> CheckMinimumNecessaryAsync(int userId, string action, string entityType)
     {
         // Verify user has legitimate need for specific PHI access
-        var userRole = await _accessControlService.GetUserRoleAsync(userId);
+        var userRole = await accessControlService.GetUserRoleAsync(userId);
         var requiredAccess = GetRequiredAccessLevel(action, entityType);
         var authorizedAccess = GetAuthorizedAccessLevel(userRole, entityType);
 
@@ -699,7 +682,7 @@ public class HipaaComplianceService : IComplianceService
     private async Task<bool> CheckPhysicalSafeguardsAsync(int userId)
     {
         // Verify physical access controls (secure workstations, facility access controls, etc.)
-        return await _accessControlService.HasSecureWorkstationAsync(userId);
+        return await accessControlService.HasSecureWorkstationAsync(userId);
     }
 
     private async Task<bool> CheckTechnicalSafeguardsAsync(string entityType)
@@ -707,7 +690,7 @@ public class HipaaComplianceService : IComplianceService
         // Verify technical safeguards (encryption, access control, transmission security)
         if (IsProtectedHealthInformation(entityType))
         {
-            return await _encryptionService.IsEncryptionEnabledAsync(entityType);
+            return await encryptionService.IsEncryptionEnabledAsync(entityType);
         }
 
         return true;
@@ -747,21 +730,17 @@ public enum AccessLevel
 // PCI DSS Compliance Implementation
 public class PciDssComplianceService : IComplianceService
 {
-    private readonly IAuditService _auditService;
-    private readonly IEncryptionService _encryptionService;
-    private readonly INetworkSecurityService _networkSecurityService;
-    private readonly IVulnerabilityService _vulnerabilityService;
+    private readonly IAuditService auditService;
+    private readonly IEncryptionService encryptionService;
+    private readonly INetworkSecurityService networkSecurityService;
+    private readonly IVulnerabilityService vulnerabilityService;
 
     public PciDssComplianceService(
         IAuditService auditService,
         IEncryptionService encryptionService,
         INetworkSecurityService networkSecurityService,
         IVulnerabilityService vulnerabilityService)
-    {
-        _auditService = auditService;
-        _encryptionService = encryptionService;
-        _networkSecurityService = networkSecurityService;
-        _vulnerabilityService = vulnerabilityService;
+    {auditService = auditService;encryptionService = encryptionService;networkSecurityService = networkSecurityService;vulnerabilityService = vulnerabilityService;
     }
 
     public async Task<ComplianceStatus> CheckPciDssComplianceAsync(int userId, string action, string entityType)
@@ -771,7 +750,7 @@ public class PciDssComplianceService : IComplianceService
         if (IsCardholderData(entityType))
         {
             // Requirement 3: Protect stored cardholder data
-            var isEncrypted = await _encryptionService.IsCardDataEncryptedAsync(entityType);
+            var isEncrypted = await encryptionService.IsCardDataEncryptedAsync(entityType);
             complianceChecks.Add(new ComplianceCheck(
                 "PCI-DSS-3",
                 "Protect Stored Cardholder Data",
@@ -795,7 +774,7 @@ public class PciDssComplianceService : IComplianceService
                 hasRestrictedAccess ? null : "Access not restricted by business need"));
 
             // Requirement 10: Track and monitor access to network resources and cardholder data
-            await _auditService.LogComplianceEventAsync("PCI-DSS", "Requirement 10", true,
+            await auditService.LogComplianceEventAsync("PCI-DSS", "Requirement 10", true,
                 new { 
                     UserId = userId, 
                     Action = action, 
@@ -821,12 +800,12 @@ public class PciDssComplianceService : IComplianceService
 
     private async Task<bool> CheckSecureTransmissionAsync()
     {
-        return await _networkSecurityService.IsTlsEnabledAsync();
+        return await networkSecurityService.IsTlsEnabledAsync();
     }
 
     private async Task<bool> CheckBusinessNeedToKnowAsync(int userId, string entityType)
     {
-        var userRole = await _networkSecurityService.GetUserRoleAsync(userId);
+        var userRole = await networkSecurityService.GetUserRoleAsync(userId);
         var requiresCardAccess = GetCardDataAccessRoles();
         
         return requiresCardAccess.Contains(userRole, StringComparer.OrdinalIgnoreCase);
@@ -878,44 +857,37 @@ public record ComplianceStatus(
 
 public class ComplianceMonitoringService : IComplianceMonitoringService
 {
-    private readonly Dictionary<string, IComplianceService> _complianceServices;
-    private readonly IComplianceViolationRepository _violationRepository;
-    private readonly IAuditService _auditService;
-    private readonly ILogger<ComplianceMonitoringService> _logger;
-    private readonly Timer? _monitoringTimer;
-    private readonly TimeSpan _monitoringInterval = TimeSpan.FromHours(1);
+    private readonly Dictionary<string, IComplianceService> complianceServices;
+    private readonly IComplianceViolationRepository violationRepository;
+    private readonly IAuditService auditService;
+    private readonly ILogger<ComplianceMonitoringService> logger;
+    private readonly Timer? monitoringTimer;
+    private readonly TimeSpan monitoringInterval = TimeSpan.FromHours(1);
 
     public ComplianceMonitoringService(
         IEnumerable<IComplianceService> complianceServices,
         IComplianceViolationRepository violationRepository,
         IAuditService auditService,
         ILogger<ComplianceMonitoringService> logger)
-    {
-        _complianceServices = complianceServices.ToDictionary(s => s.FrameworkName, s => s);
-        _violationRepository = violationRepository;
-        _auditService = auditService;
-        _logger = logger;
+    {complianceServices = complianceServices.ToDictionary(s => s.FrameworkName, s => s);violationRepository = violationRepository;auditService = auditService;logger = logger;
     }
 
     public Task StartContinuousMonitoringAsync()
     {
-        var timer = new Timer(async _ => await RunAllComplianceChecksAsync(), null, TimeSpan.Zero, _monitoringInterval);
-        _logger.LogInformation("Compliance monitoring started with interval: {Interval}", _monitoringInterval);
+        var timer = new Timer(async _ => await RunAllComplianceChecksAsync(), null, TimeSpan.Zero, monitoringInterval);logger.LogInformation("Compliance monitoring started with interval: {Interval}", monitoringInterval);
         return Task.CompletedTask;
     }
 
     public Task StopContinuousMonitoringAsync()
     {
-        _monitoringTimer?.Dispose();
-        _logger.LogInformation("Compliance monitoring stopped");
+        _monitoringTimer?.Dispose();logger.LogInformation("Compliance monitoring stopped");
         return Task.CompletedTask;
     }
 
     public async Task RunComplianceCheckAsync(string framework)
     {
         if (!_complianceServices.ContainsKey(framework))
-        {
-            _logger.LogWarning("Compliance service not found for framework: {Framework}", framework);
+        {logger.LogWarning("Compliance service not found for framework: {Framework}", framework);
             return;
         }
 
@@ -935,19 +907,16 @@ public class ComplianceMonitoringService : IComplianceMonitoringService
 
                     await ProcessComplianceStatusAsync(status, auditEvent);
                 }
-            }
-
-            _logger.LogInformation("Compliance check completed for framework: {Framework}", framework);
+            }logger.LogInformation("Compliance check completed for framework: {Framework}", framework);
         }
         catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error running compliance check for framework: {Framework}", framework);
+        {logger.LogError(ex, "Error running compliance check for framework: {Framework}", framework);
         }
     }
 
     public async Task<ComplianceReport> GenerateComplianceReportAsync(string framework, DateTime from, DateTime to)
     {
-        var violations = await _violationRepository.GetViolationsAsync(framework, from, to);
+        var violations = await violationRepository.GetViolationsAsync(framework, from, to);
         var totalChecks = await GetTotalComplianceChecksAsync(framework, from, to);
         var violationCount = violations.Count;
         var complianceRate = totalChecks > 0 ? (double)(totalChecks - violationCount) / totalChecks * 100 : 100;
@@ -971,15 +940,14 @@ public class ComplianceMonitoringService : IComplianceMonitoringService
 
     public async Task<List<ComplianceViolation>> GetActiveViolationsAsync()
     {
-        return await _violationRepository.GetActiveViolationsAsync();
+        return await violationRepository.GetActiveViolationsAsync();
     }
 
     public async Task ResolveViolationAsync(Guid violationId, string resolution, int resolvedBy)
     {
-        var violation = await _violationRepository.GetViolationAsync(violationId);
+        var violation = await violationRepository.GetViolationAsync(violationId);
         if (violation == null)
-        {
-            _logger.LogWarning("Violation not found: {ViolationId}", violationId);
+        {logger.LogWarning("Violation not found: {ViolationId}", violationId);
             return;
         }
 
@@ -990,9 +958,9 @@ public class ComplianceMonitoringService : IComplianceMonitoringService
             ResolvedBy = resolvedBy
         };
 
-        await _violationRepository.UpdateViolationAsync(resolvedViolation);
+        await violationRepository.UpdateViolationAsync(resolvedViolation);
 
-        await _auditService.LogComplianceEventAsync(
+        await auditService.LogComplianceEventAsync(
             violation.Framework, 
             "Violation Resolution", 
             true,
@@ -1002,14 +970,12 @@ public class ComplianceMonitoringService : IComplianceMonitoringService
                 Requirement = violation.Requirement,
                 Resolution = resolution,
                 ResolvedBy = resolvedBy
-            });
-
-        _logger.LogInformation("Compliance violation resolved: {ViolationId} by user {ResolvedBy}", violationId, resolvedBy);
+            });logger.LogInformation("Compliance violation resolved: {ViolationId} by user {ResolvedBy}", violationId, resolvedBy);
     }
 
     private async Task RunAllComplianceChecksAsync()
     {
-        foreach (var framework in _complianceServices.Keys)
+        foreach (var framework in complianceServices.Keys)
         {
             await RunComplianceCheckAsync(framework);
         }
@@ -1040,9 +1006,9 @@ public class ComplianceMonitoringService : IComplianceMonitoringService
                         ["EntityId"] = auditEvent.EntityId ?? string.Empty
                     });
 
-                await _violationRepository.SaveViolationAsync(complianceViolation);
+                await violationRepository.SaveViolationAsync(complianceViolation);
 
-                await _auditService.LogComplianceEventAsync(
+                await auditService.LogComplianceEventAsync(
                     status.Framework, 
                     violation.Requirement, 
                     false,
@@ -1068,19 +1034,19 @@ public class ComplianceMonitoringService : IComplianceMonitoringService
     private async Task<List<AuditEvent>> GetRecentAuditEventsAsync()
     {
         // Get audit events from the last monitoring period
-        var from = DateTime.UtcNow.Subtract(_monitoringInterval);
-        return await _auditService.GetAuditTrailAsync("All", "All", from, DateTime.UtcNow);
+        var from = DateTime.UtcNow.Subtract(monitoringInterval);
+        return await auditService.GetAuditTrailAsync("All", "All", from, DateTime.UtcNow);
     }
 
     private async Task<int> GetTotalComplianceChecksAsync(string framework, DateTime from, DateTime to)
     {
         // Count total compliance checks performed in the time period
-        return await _violationRepository.GetComplianceCheckCountAsync(framework, from, to);
+        return await violationRepository.GetComplianceCheckCountAsync(framework, from, to);
     }
 
     private async Task<List<AuditEvent>> GetComplianceAuditEventsAsync(string framework, DateTime from, DateTime to)
     {
-        return await _auditService.GetAuditTrailAsync("Compliance", framework, from, to);
+        return await auditService.GetAuditTrailAsync("Compliance", framework, from, to);
     }
 }
 
@@ -1120,11 +1086,10 @@ public static class ComplianceServiceCollectionExtensions
 // 1. Basic Audit Logging
 public class DocumentController : ControllerBase
 {
-    private readonly IAuditService _auditService;
+    private readonly IAuditService auditService;
 
     public DocumentController(IAuditService auditService)
-    {
-        _auditService = auditService;
+    {auditService = auditService;
     }
 
     [HttpGet("{id}")]
@@ -1133,7 +1098,7 @@ public class DocumentController : ControllerBase
         var userId = GetCurrentUserId();
         
         // Log document access
-        await _auditService.LogUserActionAsync(userId, "read", "Document", id.ToString());
+        await auditService.LogUserActionAsync(userId, "read", "Document", id.ToString());
         
         var document = await GetDocumentById(id);
         return Ok(document);
@@ -1149,7 +1114,7 @@ public class DocumentController : ControllerBase
             var updatedDocument = await UpdateDocumentById(id, request);
             
             // Log successful update
-            await _auditService.LogUserActionAsync(userId, "update", "Document", id.ToString(), 
+            await auditService.LogUserActionAsync(userId, "update", "Document", id.ToString(), 
                 new { Changes = request, Success = true });
             
             return Ok(updatedDocument);
@@ -1157,7 +1122,7 @@ public class DocumentController : ControllerBase
         catch (Exception ex)
         {
             // Log failed update
-            await _auditService.LogUserActionAsync(userId, "update_failed", "Document", id.ToString(), 
+            await auditService.LogUserActionAsync(userId, "update_failed", "Document", id.ToString(), 
                 new { Changes = request, Error = ex.Message });
             
             throw;
@@ -1171,24 +1136,23 @@ public class DocumentController : ControllerBase
 // 2. Compliance Monitoring
 public class ComplianceController : ControllerBase
 {
-    private readonly IComplianceMonitoringService _complianceService;
+    private readonly IComplianceMonitoringService complianceService;
 
     public ComplianceController(IComplianceMonitoringService complianceService)
-    {
-        _complianceService = complianceService;
+    {complianceService = complianceService;
     }
 
     [HttpPost("check/{framework}")]
     public async Task<IActionResult> RunComplianceCheck(string framework)
     {
-        await _complianceService.RunComplianceCheckAsync(framework);
+        await complianceService.RunComplianceCheckAsync(framework);
         return Ok(new { Message = $"Compliance check initiated for {framework}" });
     }
 
     [HttpGet("report/{framework}")]
     public async Task<IActionResult> GetComplianceReport(string framework, DateTime? from = null, DateTime? to = null)
     {
-        var report = await _complianceService.GenerateComplianceReportAsync(
+        var report = await complianceService.GenerateComplianceReportAsync(
             framework, 
             from ?? DateTime.UtcNow.AddDays(-30), 
             to ?? DateTime.UtcNow);
@@ -1199,7 +1163,7 @@ public class ComplianceController : ControllerBase
     [HttpGet("violations")]
     public async Task<IActionResult> GetActiveViolations()
     {
-        var violations = await _complianceService.GetActiveViolationsAsync();
+        var violations = await complianceService.GetActiveViolationsAsync();
         return Ok(violations);
     }
 
@@ -1207,7 +1171,7 @@ public class ComplianceController : ControllerBase
     public async Task<IActionResult> ResolveViolation(Guid violationId, [FromBody] ResolveViolationRequest request)
     {
         var userId = GetCurrentUserId();
-        await _complianceService.ResolveViolationAsync(violationId, request.Resolution, userId);
+        await complianceService.ResolveViolationAsync(violationId, request.Resolution, userId);
         return Ok();
     }
 
@@ -1244,13 +1208,11 @@ public class Startup
 // 4. Audit Middleware for Automatic Logging
 public class AuditMiddleware
 {
-    private readonly RequestDelegate _next;
-    private readonly IAuditService _auditService;
+    private readonly RequestDelegate next;
+    private readonly IAuditService auditService;
 
     public AuditMiddleware(RequestDelegate next, IAuditService auditService)
-    {
-        _next = next;
-        _auditService = auditService;
+    {next = next;auditService = auditService;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -1277,7 +1239,7 @@ public class AuditMiddleware
         var userId = GetCurrentUserId(context);
         if (userId == null) return; // Don't audit anonymous requests
 
-        await _auditService.LogUserActionAsync(
+        await auditService.LogUserActionAsync(
             userId.Value,
             $"{context.Request.Method} {context.Request.Path}",
             "HttpRequest",

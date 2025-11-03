@@ -1,8 +1,9 @@
-# .NET Aspire Production Deployment Strategies
+# Enterprise Production Deployment with .NET Aspire
 
-**Description**: Comprehensive deployment patterns for .NET Aspire applications in production environments, including cloud deployment, container orchestration, infrastructure as code, and production-ready configurations.
+**Description**: Enterprise-grade deployment strategies for .NET Aspire applications including zero-downtime deployments, multi-region disaster recovery, advanced security compliance, infrastructure as code with GitOps, comprehensive monitoring, and automated rollback capabilities for mission-critical production environments.
 
-**Language/Technology**: C#, .NET Aspire, .NET 9.0, Azure Container Apps, Kubernetes, Docker, Bicep
+**Language/Technology**: C#, .NET Aspire, .NET 9.0, Azure Container Apps, AKS, Bicep, Terraform, GitOps
+**Enterprise Features**: Blue-green deployments, canary releases, disaster recovery, compliance auditing, security scanning, and automated infrastructure provisioning
 
 **Code**:
 
@@ -253,7 +254,7 @@ resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
   location: location
   kind: 'web'
   properties: {
-    Application_Type: 'web'
+    ApplicationType: 'web'
     WorkspaceResourceId: logAnalyticsWorkspace.id
     IngestionMode: 'LogAnalytics'
   }
@@ -368,10 +369,10 @@ metadata:
   name: app-config
   namespace: document-processor
 data:
-  ASPNETCORE_ENVIRONMENT: "Production"
-  ORLEANS_CLUSTERING_PROVIDER: "Kubernetes"
-  ORLEANS_SERVICE_ID: "DocumentProcessor"
-  ORLEANS_CLUSTER_ID: "DocumentProcessorCluster"
+  ASPNETCOREENVIRONMENT: "Production"
+  ORLEANSCLUSTERINGPROVIDER: "Kubernetes"
+  ORLEANSSERVICEID: "DocumentProcessor"
+  ORLEANSCLUSTERID: "DocumentProcessorCluster"
 
 ---
 # orleans-deployment.yaml
@@ -871,12 +872,12 @@ name: Deploy to Production
 on:
   push:
     branches: [main]
-  workflow_dispatch:
+  workflowdispatch:
 
 env:
   REGISTRY: myregistry.azurecr.io
-  RESOURCE_GROUP: rg-documentprocessor-prod
-  CONTAINER_APP_ENV: cae-documentprocessor-prod
+  RESOURCEGROUP: rg-documentprocessor-prod
+  CONTAINERAPPENV: cae-documentprocessor-prod
 
 jobs:
   build-and-deploy:

@@ -2,7 +2,7 @@
 
 **Description**: Asynchronous lazy initialization patterns using AsyncLazy and custom implementations. Essential for expensive async operations that should only execute once and be awaitable by multiple consumers simultaneously.
 
-**Language/Technology**: C# / .NET
+**Language/Technology**: C# / .NET 8.0
 
 **Code**:
 
@@ -43,7 +43,7 @@ public class AsyncLazyCancellable<T>(Func<CancellationToken, Task<T>> taskFactor
     {
         lock (lockObj)
         {
-            if (cachedTask == null)
+            if (cachedTask is null)
             {
                 cachedTask = taskFactory(cancellationToken);
             }
@@ -92,7 +92,7 @@ public class AsyncLazyWithExpiration<T>(Func<Task<T>> taskFactory, TimeSpan expi
         {
             var now = DateTime.UtcNow;
 
-            if (cachedTask == null || 
+            if (cachedTask is null || 
                 cachedTask.IsFaulted || 
                 now - creationTime > expiration)
             {
@@ -110,7 +110,7 @@ public class AsyncLazyWithExpiration<T>(Func<Task<T>> taskFactory, TimeSpan expi
         {
             lock (lockObj)
             {
-                return cachedTask != null && DateTime.UtcNow - creationTime > expiration;
+                return cachedTask is not null && DateTime.UtcNow - creationTime > expiration;
             }
         }
     }

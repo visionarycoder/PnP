@@ -195,20 +195,20 @@ using System.Text.Json;
 // Local text analysis using ML.NET and rule-based approaches
 public class LocalTextAnalysisProvider : ITextAnalysisProvider
 {
-    private readonly MLContext _mlContext;
-    private readonly ILogger<LocalTextAnalysisProvider> _logger;
-    private readonly LocalProvidersConfiguration _configuration;
-    private readonly Dictionary<string, ITransformer> _loadedModels;
+    private readonly MLContext mlContext;
+    private readonly ILogger<LocalTextAnalysisProvider> logger;
+    private readonly LocalProvidersConfiguration configuration;
+    private readonly Dictionary<string, ITransformer> loadedModels;
 
     public LocalTextAnalysisProvider(
         MLContext mlContext,
         IOptions<MLProvidersConfiguration> options,
         ILogger<LocalTextAnalysisProvider> logger)
     {
-        _mlContext = mlContext;
-        _configuration = options.Value.Local;
-        _logger = logger;
-        _loadedModels = new Dictionary<string, ITransformer>();
+        mlContext = mlContext;
+        configuration = options.Value.Local;
+        logger = logger;
+        loadedModels = new Dictionary<string, ITransformer>();
         
         _ = Task.Run(LoadModelsAsync);
     }
@@ -217,10 +217,10 @@ public class LocalTextAnalysisProvider : ITextAnalysisProvider
     {
         try
         {
-            if (_loadedModels.TryGetValue("sentiment", out var sentimentModel))
+            if (loadedModels.TryGetValue("sentiment", out var sentimentModel))
             {
                 // Use ML.NET model for sentiment analysis
-                var predictionEngine = _mlContext.Model.CreatePredictionEngine<TextInput, SentimentPrediction>(sentimentModel);
+                var predictionEngine = mlContext.Model.CreatePredictionEngine<TextInput, SentimentPrediction>(sentimentModel);
                 var prediction = predictionEngine.Predict(new TextInput { Text = text });
                 
                 return new SentimentResult(
@@ -236,7 +236,7 @@ public class LocalTextAnalysisProvider : ITextAnalysisProvider
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to analyze sentiment for text");
+            logger.LogError(ex, "Failed to analyze sentiment for text");
             return new SentimentResult(SentimentClass.Neutral, 0.5f, 0.0f);
         }
     }
@@ -259,7 +259,7 @@ public class LocalTextAnalysisProvider : ITextAnalysisProvider
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to extract key phrases");
+            logger.LogError(ex, "Failed to extract key phrases");
             return new KeyPhraseResult(Array.Empty<string>(), 0.0f);
         }
     }
@@ -290,7 +290,7 @@ public class LocalTextAnalysisProvider : ITextAnalysisProvider
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to recognize entities");
+            logger.LogError(ex, "Failed to recognize entities");
             return new EntityResult(Array.Empty<EntityInfo>(), 0.0f);
         }
     }
@@ -316,7 +316,7 @@ public class LocalTextAnalysisProvider : ITextAnalysisProvider
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to detect language");
+            logger.LogError(ex, "Failed to detect language");
             return new LanguageResult("en", "English", 0.5f);
         }
     }
@@ -326,7 +326,7 @@ public class LocalTextAnalysisProvider : ITextAnalysisProvider
         try
         {
             // Check if ML.NET models are loaded
-            return _loadedModels.Any();
+            return loadedModels.Any();
         }
         catch
         {
@@ -338,31 +338,31 @@ public class LocalTextAnalysisProvider : ITextAnalysisProvider
     {
         try
         {
-            var modelsPath = _configuration.MLNetModelsPath;
+            var modelsPath = configuration.MLNetModelsPath;
             if (Directory.Exists(modelsPath))
             {
                 // Load sentiment model if it exists
                 var sentimentModelPath = Path.Combine(modelsPath, "sentiment-model.zip");
                 if (File.Exists(sentimentModelPath))
                 {
-                    var sentimentModel = _mlContext.Model.Load(sentimentModelPath, out _);
+                    var sentimentModel = mlContext.Model.Load(sentimentModelPath, out _);
                     _loadedModels["sentiment"] = sentimentModel;
-                    _logger.LogInformation("Loaded sentiment model from {Path}", sentimentModelPath);
+                    logger.LogInformation("Loaded sentiment model from {Path}", sentimentModelPath);
                 }
 
                 // Load other models as needed
                 var classificationModelPath = Path.Combine(modelsPath, "classification-model.zip");
                 if (File.Exists(classificationModelPath))
                 {
-                    var classificationModel = _mlContext.Model.Load(classificationModelPath, out _);
+                    var classificationModel = mlContext.Model.Load(classificationModelPath, out _);
                     _loadedModels["classification"] = classificationModel;
-                    _logger.LogInformation("Loaded classification model from {Path}", classificationModelPath);
+                    logger.LogInformation("Loaded classification model from {Path}", classificationModelPath);
                 }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to load ML.NET models");
+            logger.LogError(ex, "Failed to load ML.NET models");
         }
     }
 
@@ -440,26 +440,26 @@ public class LocalTextAnalysisProvider : ITextAnalysisProvider
 // Local embedding provider using Ollama
 public class LocalTextEmbeddingProvider : ITextEmbeddingProvider
 {
-    private readonly HttpClient _httpClient;
-    private readonly LocalProvidersConfiguration _configuration;
-    private readonly ILogger<LocalTextEmbeddingProvider> _logger;
-    private readonly JsonSerializerOptions _jsonOptions;
+    private readonly HttpClient httpClient;
+    private readonly LocalProvidersConfiguration configuration;
+    private readonly ILogger<LocalTextEmbeddingProvider> logger;
+    private readonly JsonSerializerOptions jsonOptions;
 
     public LocalTextEmbeddingProvider(
         HttpClient httpClient,
         IOptions<MLProvidersConfiguration> options,
         ILogger<LocalTextEmbeddingProvider> logger)
     {
-        _httpClient = httpClient;
-        _configuration = options.Value.Local;
-        _logger = logger;
-        _jsonOptions = new JsonSerializerOptions
+        httpClient = httpClient;
+        configuration = options.Value.Local;
+        logger = logger;
+        jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
         
-        _httpClient.BaseAddress = new Uri(_configuration.OllamaEndpoint);
-        _httpClient.Timeout = _configuration.RequestTimeout;
+        httpClient.BaseAddress = new Uri(configuration.OllamaEndpoint);
+        httpClient.Timeout = configuration.RequestTimeout;
     }
 
     public async Task<EmbeddingResult> GenerateEmbeddingAsync(string text, CancellationToken cancellationToken = default)
@@ -468,26 +468,26 @@ public class LocalTextEmbeddingProvider : ITextEmbeddingProvider
         {
             var request = new
             {
-                model = _configuration.DefaultEmbeddingModel,
+                model = configuration.DefaultEmbeddingModel,
                 prompt = text
             };
 
-            var response = await _httpClient.PostAsJsonAsync("/api/embeddings", request, _jsonOptions, cancellationToken);
+            var response = await httpClient.PostAsJsonAsync("/api/embeddings", request, jsonOptions, cancellationToken);
             
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("Ollama embedding request failed with status {StatusCode}", response.StatusCode);
+                logger.LogError("Ollama embedding request failed with status {StatusCode}", response.StatusCode);
                 return new EmbeddingResult(Array.Empty<float>(), 0.0f);
             }
 
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
-            var embeddingResponse = JsonSerializer.Deserialize<OllamaEmbeddingResponse>(content, _jsonOptions);
+            var embeddingResponse = JsonSerializer.Deserialize<OllamaEmbeddingResponse>(content, jsonOptions);
             
             return new EmbeddingResult(embeddingResponse?.Embedding ?? Array.Empty<float>(), 1.0f);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to generate embedding using Ollama");
+            logger.LogError(ex, "Failed to generate embedding using Ollama");
             return new EmbeddingResult(Array.Empty<float>(), 0.0f);
         }
     }
@@ -519,7 +519,7 @@ public class LocalTextEmbeddingProvider : ITextEmbeddingProvider
     {
         try
         {
-            var response = await _httpClient.GetAsync("/api/tags", cancellationToken);
+            var response = await httpClient.GetAsync("/api/tags", cancellationToken);
             return response.IsSuccessStatusCode;
         }
         catch
@@ -534,26 +534,26 @@ public class LocalTextEmbeddingProvider : ITextEmbeddingProvider
 // Local text generation using Ollama
 public class LocalTextGenerationProvider : ITextGenerationProvider
 {
-    private readonly HttpClient _httpClient;
-    private readonly LocalProvidersConfiguration _configuration;
-    private readonly ILogger<LocalTextGenerationProvider> _logger;
-    private readonly JsonSerializerOptions _jsonOptions;
+    private readonly HttpClient httpClient;
+    private readonly LocalProvidersConfiguration configuration;
+    private readonly ILogger<LocalTextGenerationProvider> logger;
+    private readonly JsonSerializerOptions jsonOptions;
 
     public LocalTextGenerationProvider(
         HttpClient httpClient,
         IOptions<MLProvidersConfiguration> options,
         ILogger<LocalTextGenerationProvider> logger)
     {
-        _httpClient = httpClient;
-        _configuration = options.Value.Local;
-        _logger = logger;
-        _jsonOptions = new JsonSerializerOptions
+        httpClient = httpClient;
+        configuration = options.Value.Local;
+        logger = logger;
+        jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
         
-        _httpClient.BaseAddress = new Uri(_configuration.OllamaEndpoint);
-        _httpClient.Timeout = _configuration.RequestTimeout;
+        httpClient.BaseAddress = new Uri(configuration.OllamaEndpoint);
+        httpClient.Timeout = configuration.RequestTimeout;
     }
 
     public async Task<GenerationResult> GenerateTextAsync(string prompt, GenerationOptions? options = null, CancellationToken cancellationToken = default)
@@ -564,7 +564,7 @@ public class LocalTextGenerationProvider : ITextGenerationProvider
             
             var request = new
             {
-                model = _configuration.DefaultGenerationModel,
+                model = configuration.DefaultGenerationModel,
                 prompt = prompt,
                 options = new
                 {
@@ -574,11 +574,11 @@ public class LocalTextGenerationProvider : ITextGenerationProvider
                 }
             };
 
-            var response = await _httpClient.PostAsJsonAsync("/api/generate", request, _jsonOptions, cancellationToken);
+            var response = await httpClient.PostAsJsonAsync("/api/generate", request, jsonOptions, cancellationToken);
             
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("Ollama generation request failed with status {StatusCode}", response.StatusCode);
+                logger.LogError("Ollama generation request failed with status {StatusCode}", response.StatusCode);
                 return new GenerationResult(string.Empty, 0.0f, "Generation failed");
             }
 
@@ -590,7 +590,7 @@ public class LocalTextGenerationProvider : ITextGenerationProvider
             {
                 if (string.IsNullOrWhiteSpace(line)) continue;
                 
-                var generationResponse = JsonSerializer.Deserialize<OllamaGenerationResponse>(line, _jsonOptions);
+                var generationResponse = JsonSerializer.Deserialize<OllamaGenerationResponse>(line, jsonOptions);
                 if (generationResponse?.Response != null)
                 {
                     generatedText += generationResponse.Response;
@@ -606,7 +606,7 @@ public class LocalTextGenerationProvider : ITextGenerationProvider
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to generate text using Ollama");
+            logger.LogError(ex, "Failed to generate text using Ollama");
             return new GenerationResult(string.Empty, 0.0f, ex.Message);
         }
     }
@@ -658,7 +658,7 @@ public class LocalTextGenerationProvider : ITextGenerationProvider
         
         var request = new
         {
-            model = _configuration.DefaultGenerationModel,
+            model = configuration.DefaultGenerationModel,
             prompt = prompt,
             stream = true,
             options = new
@@ -671,10 +671,10 @@ public class LocalTextGenerationProvider : ITextGenerationProvider
 
         using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/generate")
         {
-            Content = JsonContent.Create(request, options: _jsonOptions)
+            Content = JsonContent.Create(request, options: jsonOptions)
         };
 
-        using var response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        using var response = await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         
         if (!response.IsSuccessStatusCode)
         {
@@ -690,7 +690,7 @@ public class LocalTextGenerationProvider : ITextGenerationProvider
             
             if (string.IsNullOrWhiteSpace(line)) continue;
             
-            var generationResponse = JsonSerializer.Deserialize<OllamaGenerationResponse>(line, _jsonOptions);
+            var generationResponse = JsonSerializer.Deserialize<OllamaGenerationResponse>(line, jsonOptions);
             if (generationResponse?.Response != null)
             {
                 yield return new GenerationChunk(generationResponse.Response, !generationResponse.Done);
@@ -707,7 +707,7 @@ public class LocalTextGenerationProvider : ITextGenerationProvider
     {
         try
         {
-            var response = await _httpClient.GetAsync("/api/tags", cancellationToken);
+            var response = await httpClient.GetAsync("/api/tags", cancellationToken);
             return response.IsSuccessStatusCode;
         }
         catch
@@ -793,46 +793,46 @@ public static class MLServicesExtensions
 
 public class LocalMLProviderFactory : IMLProviderFactory
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IServiceProvider serviceProvider;
 
     public LocalMLProviderFactory(IServiceProvider serviceProvider)
     {
-        _serviceProvider = serviceProvider;
+        serviceProvider = serviceProvider;
     }
 
     public ITextAnalysisProvider CreateTextAnalysisProvider() =>
-        _serviceProvider.GetRequiredService<LocalTextAnalysisProvider>();
+        serviceProvider.GetRequiredService<LocalTextAnalysisProvider>();
 
     public ITextEmbeddingProvider CreateTextEmbeddingProvider() =>
-        _serviceProvider.GetRequiredService<LocalTextEmbeddingProvider>();
+        serviceProvider.GetRequiredService<LocalTextEmbeddingProvider>();
 
     public ITextGenerationProvider CreateTextGenerationProvider() =>
-        _serviceProvider.GetRequiredService<LocalTextGenerationProvider>();
+        serviceProvider.GetRequiredService<LocalTextGenerationProvider>();
 
     public ICustomModelProvider CreateCustomModelProvider() =>
-        _serviceProvider.GetRequiredService<LocalCustomModelProvider>();
+        serviceProvider.GetRequiredService<LocalCustomModelProvider>();
 }
 
 public class AzureMLProviderFactory : IMLProviderFactory
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IServiceProvider serviceProvider;
 
     public AzureMLProviderFactory(IServiceProvider serviceProvider)
     {
-        _serviceProvider = serviceProvider;
+        serviceProvider = serviceProvider;
     }
 
     public ITextAnalysisProvider CreateTextAnalysisProvider() =>
-        _serviceProvider.GetRequiredService<AzureTextAnalysisProvider>();
+        serviceProvider.GetRequiredService<AzureTextAnalysisProvider>();
 
     public ITextEmbeddingProvider CreateTextEmbeddingProvider() =>
-        _serviceProvider.GetRequiredService<AzureTextEmbeddingProvider>();
+        serviceProvider.GetRequiredService<AzureTextEmbeddingProvider>();
 
     public ITextGenerationProvider CreateTextGenerationProvider() =>
-        _serviceProvider.GetRequiredService<AzureTextGenerationProvider>();
+        serviceProvider.GetRequiredService<AzureTextGenerationProvider>();
 
     public ICustomModelProvider CreateCustomModelProvider() =>
-        _serviceProvider.GetRequiredService<AzureCustomModelProvider>();
+        serviceProvider.GetRequiredService<AzureCustomModelProvider>();
 }
 ```
 
@@ -977,7 +977,7 @@ services:
       - ./data/text-gen-ui:/app/text-generation-webui
     environment:
       - CLI_ARGS=--listen --api --model-dir /app/models
-    depends_on:
+    dependson:
       - ollama
 ```
 

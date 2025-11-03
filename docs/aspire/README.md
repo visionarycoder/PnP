@@ -1,40 +1,66 @@
-# .NET Aspire Patterns
+# Enterprise .NET Aspire Cloud-Native Architecture
 
-**Description**: Comprehensive .NET Aspire patterns for orchestrating distributed applications, with focus on Orleans integration and ML document processing pipelines.
+**Description**: Production-ready .NET Aspire patterns for enterprise-scale cloud-native applications with advanced orchestration, observability, security, and distributed system resilience patterns.
 
-**.NET Aspire** is a cloud-ready stack for building observable, production-ready, distributed applications. It provides service orchestration, configuration management, and local development tooling optimized for microservices and distributed systems.
+**.NET Aspire** is Microsoft's opinionated cloud-ready stack for building observable, production-ready, distributed applications. It provides comprehensive service orchestration, configuration management, and enterprise development tooling optimized for cloud-native microservices and distributed systems with built-in security, monitoring, and scalability.
 
-## Key Capabilities for Document Processing
+## Enterprise Cloud-Native Capabilities
 
-- **Service Orchestration**: Coordinate Orleans silos, ML services, and databases
-- **Configuration Management**: Centralized config with automatic reloading
-- **Service Discovery**: Automatic registration and health monitoring
-- **Local Development**: Integrated dashboard, logging, and distributed tracing
-- **Resource Management**: Handle databases, message queues, and external services
-- **Observability**: Built-in OpenTelemetry integration
+### 🏗️ **Advanced Service Orchestration**
 
-## Index
+- **Multi-Cluster Coordination**: Orchestrate Orleans silos, Kubernetes workloads, and Azure services
+- **Cross-Cloud Integration**: Hybrid and multi-cloud service coordination patterns
+- **Resilience Patterns**: Circuit breakers, bulkhead isolation, and graceful degradation
+- **Traffic Management**: Advanced load balancing, canary deployments, and blue-green strategies
 
-### Core Patterns
+### ⚙️ **Enterprise Configuration Management**
 
-- [Orleans Integration](orleans-integration.md) - Integrating Orleans clusters with Aspire orchestration
-- [Service Orchestration](service-orchestration.md) - Coordinating ML pipelines and document services
-- [Configuration Management](configuration-management.md) - Managing settings across environments
-- [Local Development Workflow](local-development.md) - Development dashboard and debugging
+- **Hierarchical Configuration**: Environment-specific overrides with strong typing and validation
+- **Secret Management**: Azure Key Vault integration with automatic rotation
+- **Feature Flags**: Dynamic configuration with gradual rollout capabilities
+- **Configuration as Code**: GitOps workflows with configuration versioning
 
-### ML & Document Processing
+### 🔍 **Production Observability**
 
-- [ML Service Coordination](ml-service-orchestration.md) - Orchestrating machine learning workflows
-- [Local ML Development](local-ml-development.md) - Local ML setup with Azure emulators and provider patterns
-- [Document Pipeline Architecture](document-pipeline-architecture.md) - End-to-end document processing flow
-- [Resource Dependencies](resource-dependencies.md) - Managing databases, queues, and external APIs
+- **Distributed Tracing**: Full-stack observability with OpenTelemetry and Application Insights
+- **Real-Time Monitoring**: Custom metrics, dashboards, and intelligent alerting
+- **Performance Profiling**: APM integration with bottleneck identification
+- **Security Monitoring**: Threat detection and compliance reporting
 
-### Advanced Patterns
+### 🛡️ **Enterprise Security & Compliance**
 
-- [Health Monitoring](health-monitoring.md) - Service health checks and diagnostics
-- [Scaling Strategies](scaling-strategies.md) - Horizontal scaling and resource allocation
-- [Deployment Strategies](deployment-strategies.md) - Strategic deployment patterns and decision frameworks
-- [Production Deployment](production-deployment.md) - Moving from local to cloud environments
+- **Zero-Trust Architecture**: mTLS, service mesh integration, and identity-based authorization
+- **Compliance Framework**: GDPR, SOX, HIPAA compliance patterns with audit trails
+- **Threat Mitigation**: DDoS protection, rate limiting, and security scanning integration
+- **Identity Federation**: Azure AD, OAuth 2.0, and enterprise SSO integration
+
+## Enterprise Pattern Index
+
+### 🏗️ **Cloud-Native Architecture Foundations**
+
+- [Service Orchestration](service-orchestration.md) - Advanced multi-service coordination with resilience patterns
+- [Orleans Integration](orleans-integration.md) - Enterprise-scale actor model integration with Aspire orchestration
+- [Configuration Management](configuration-management.md) - Hierarchical configuration with security and compliance
+- [Resource Dependencies](resource-dependencies.md) - Advanced dependency management with health monitoring
+
+### 🚀 **Production Deployment & Operations**
+
+- [Production Deployment](production-deployment.md) - Enterprise cloud deployment with zero-downtime strategies
+- [Deployment Strategies](deployment-strategies.md) - Blue-green, canary, and rolling deployment patterns
+- [Scaling Strategies](scaling-strategies.md) - Auto-scaling, load balancing, and performance optimization
+- [Health Monitoring](health-monitoring.md) - Comprehensive observability and alerting frameworks
+
+### 🤖 **AI/ML & Real-Time Processing**
+
+- [ML Service Orchestration](ml-service-orchestration.md) - Enterprise ML pipeline coordination with MLOps
+- [Document Pipeline Architecture](document-pipeline-architecture.md) - Scalable document processing with AI integration
+- [Realtime Processing](realtime-processing.md) - Stream processing and event-driven architectures
+- [Local ML Development](local-ml-development.md) - Development workflows for ML services
+
+### 💻 **Development Experience & Compliance**
+
+- [Local Development](local-development.md) - Enterprise development workflows with container orchestration
+- [Audit Compliance](audit-compliance.md) - Enterprise compliance patterns for regulated industries
 
 ## Architecture Overview
 

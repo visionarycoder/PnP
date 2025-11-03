@@ -57,15 +57,15 @@ public abstract class AlgorithmTemplate
 // Base data processor
 public abstract class DataProcessor<T>
 {
-    protected List<string> _logs = new();
-    protected DateTime _startTime;
+    protected List<string> logs = new();
+    protected DateTime startTime;
     
     // Template method
     public ProcessingResult ProcessData(IEnumerable<T> inputData, ProcessingOptions options)
     {
         try
         {
-            _startTime = DateTime.UtcNow;
+            startTime = DateTime.UtcNow;
             LogMessage("Starting data processing");
             
             // Step 1: Initialize
@@ -104,7 +104,7 @@ public abstract class DataProcessor<T>
             // Step 7: Finalize
             Finalize(options);
             
-            var duration = DateTime.UtcNow - _startTime;
+            var duration = DateTime.UtcNow - startTime;
             LogMessage($"Processing completed in {duration.TotalMilliseconds:F0}ms");
             
             return CreateResult(finalData, ProcessingStatus.Success);
@@ -173,7 +173,7 @@ public abstract class DataProcessor<T>
     {
         var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
         var logEntry = $"[{timestamp}] {GetType().Name}: {message}";
-        _logs.Add(logEntry);
+        logs.Add(logEntry);
         Console.WriteLine(logEntry);
     }
     
@@ -184,8 +184,8 @@ public abstract class DataProcessor<T>
             Data = data.Cast<object>().ToList(),
             Status = status,
             Error = error,
-            ProcessingTime = DateTime.UtcNow - _startTime,
-            Logs = new List<string>(_logs)
+            ProcessingTime = DateTime.UtcNow - startTime,
+            Logs = new List<string>(logs)
         };
     }
 }
@@ -220,7 +220,7 @@ public class ProcessingResult
 // Concrete implementations
 public class NumberProcessor : DataProcessor<int>
 {
-    private int _multiplier = 1;
+    private int multiplier = 1;
     
     protected override void Initialize(ProcessingOptions options)
     {
@@ -228,7 +228,7 @@ public class NumberProcessor : DataProcessor<int>
         
         if (options.CustomOptions.TryGetValue("multiplier", out var mult))
         {
-            _multiplier = Convert.ToInt32(mult);
+            multiplier = Convert.ToInt32(mult);
             LogMessage($"Multiplier set to {_multiplier}");
         }
     }
@@ -237,7 +237,7 @@ public class NumberProcessor : DataProcessor<int>
     {
         LogMessage("Processing numbers: multiplication and filtering");
         
-        var processed = data.Select(x => x * _multiplier).Where(x => x > 0);
+        var processed = data.Select(x => x * multiplier).Where(x => x > 0);
         
         if (options.ParallelProcessing)
         {
@@ -264,8 +264,8 @@ public class NumberProcessor : DataProcessor<int>
 
 public class TextProcessor : DataProcessor<string>
 {
-    private string _prefix = "";
-    private string _suffix = "";
+    private string prefix = "";
+    private string suffix = "";
     
     protected override void Initialize(ProcessingOptions options)
     {
@@ -273,12 +273,12 @@ public class TextProcessor : DataProcessor<string>
         
         if (options.CustomOptions.TryGetValue("prefix", out var prefix))
         {
-            _prefix = prefix.ToString() ?? "";
+            prefix = prefix.ToString() ?? "";
         }
         
         if (options.CustomOptions.TryGetValue("suffix", out var suffix))
         {
-            _suffix = suffix.ToString() ?? "";
+            suffix = suffix.ToString() ?? "";
         }
     }
     
@@ -317,9 +317,9 @@ public class TextProcessor : DataProcessor<string>
 // Document generator template
 public abstract class DocumentGenerator
 {
-    protected DocumentMetadata _metadata = new();
-    protected List<DocumentSection> _sections = new();
-    protected DocumentFormatting _formatting = new();
+    protected DocumentMetadata metadata = new();
+    protected List<DocumentSection> sections = new();
+    protected DocumentFormatting formatting = new();
     
     // Template method
     public GeneratedDocument GenerateDocument(DocumentRequest request)
@@ -382,14 +382,14 @@ public abstract class DocumentGenerator
     // Virtual methods with default behavior
     protected virtual void InitializeDocument(DocumentRequest request)
     {
-        _sections.Clear();
-        _formatting = new DocumentFormatting();
+        sections.Clear();
+        formatting = new DocumentFormatting();
         Console.WriteLine("Document initialized");
     }
     
     protected virtual void CreateMetadata(DocumentRequest request)
     {
-        _metadata = new DocumentMetadata
+        metadata = new DocumentMetadata
         {
             Title = request.Title,
             Author = request.Author ?? "Unknown",
@@ -397,7 +397,7 @@ public abstract class DocumentGenerator
             Version = "1.0",
             Subject = request.Subject
         };
-        Console.WriteLine($"Metadata created for: {_metadata.Title}");
+        Console.WriteLine($"Metadata created for: {metadata.Title}");
     }
     
     protected virtual void GenerateHeader(DocumentRequest request)
@@ -405,10 +405,10 @@ public abstract class DocumentGenerator
         var header = new DocumentSection
         {
             Type = SectionType.Header,
-            Title = _metadata.Title,
-            Content = $"Document: {_metadata.Title}\nAuthor: {_metadata.Author}\nDate: {_metadata.CreatedDate:yyyy-MM-dd}"
+            Title = metadata.Title,
+            Content = $"Document: {metadata.Title}\nAuthor: {metadata.Author}\nDate: {metadata.CreatedDate:yyyy-MM-dd}"
         };
-        _sections.Insert(0, header);
+        sections.Insert(0, header);
         Console.WriteLine("Header generated");
     }
     
@@ -420,7 +420,7 @@ public abstract class DocumentGenerator
             Title = "Table of Contents",
             Content = "Table of contents will be generated based on sections"
         };
-        _sections.Add(tocSection);
+        sections.Add(tocSection);
         Console.WriteLine("Table of contents placeholder added");
     }
     
@@ -432,18 +432,18 @@ public abstract class DocumentGenerator
             Title = "Footer",
             Content = $"Generated on {DateTime.UtcNow:yyyy-MM-dd HH:mm} | Page {{page}} of {{total}}"
         };
-        _sections.Add(footer);
+        sections.Add(footer);
         Console.WriteLine("Footer generated");
     }
     
     protected virtual void ValidateDocument()
     {
-        if (!_sections.Any(s => s.Type == SectionType.Content))
+        if (!sections.Any(s => s.Type == SectionType.Content))
         {
             throw new InvalidOperationException("Document must contain at least one content section");
         }
         
-        if (string.IsNullOrWhiteSpace(_metadata.Title))
+        if (string.IsNullOrWhiteSpace(metadata.Title))
         {
             throw new InvalidOperationException("Document must have a title");
         }
@@ -457,7 +457,7 @@ public abstract class DocumentGenerator
         {
             Title = request.Title ?? "Error Document",
             Content = $"Error generating document: {ex.Message}",
-            Metadata = _metadata,
+            Metadata = metadata,
             Success = false,
             Error = ex.Message
         };
@@ -471,12 +471,12 @@ public abstract class DocumentGenerator
     // Helper methods
     protected void AddSection(SectionType type, string title, string content)
     {
-        _sections.Add(new DocumentSection
+        sections.Add(new DocumentSection
         {
             Type = type,
             Title = title,
             Content = content,
-            Order = _sections.Count
+            Order = sections.Count
         });
     }
 }
@@ -578,23 +578,23 @@ public class ReportGenerator : DocumentGenerator
     
     protected override void ApplyFormatting()
     {
-        _formatting.FontFamily = "Times New Roman";
-        _formatting.FontSize = 11;
-        _formatting.Styles["heading"] = "Bold, 14pt";
-        _formatting.Styles["subheading"] = "Bold, 12pt";
+        formatting.FontFamily = "Times New Roman";
+        formatting.FontSize = 11;
+        formatting.Styles["heading"] = "Bold, 14pt";
+        formatting.Styles["subheading"] = "Bold, 12pt";
         Console.WriteLine("Applied report formatting");
     }
     
     protected override GeneratedDocument FinalizeDocument()
     {
-        var content = string.Join("\n\n", _sections.Select(s => 
+        var content = string.Join("\n\n", sections.Select(s => 
             $"{s.Title}\n{new string('=', s.Title.Length)}\n{s.Content}"));
         
         return new GeneratedDocument
         {
-            Title = _metadata.Title,
+            Title = metadata.Title,
             Content = content,
-            Metadata = _metadata,
+            Metadata = metadata,
             PageCount = Math.Max(1, content.Length / 2000), // Rough estimation
             Success = true
         };
@@ -639,23 +639,23 @@ public class InvoiceGenerator : DocumentGenerator
     
     protected override void ApplyFormatting()
     {
-        _formatting.FontFamily = "Arial";
-        _formatting.FontSize = 10;
-        _formatting.Styles["table"] = "Border, 1pt";
-        _formatting.Styles["total"] = "Bold, 12pt";
+        formatting.FontFamily = "Arial";
+        formatting.FontSize = 10;
+        formatting.Styles["table"] = "Border, 1pt";
+        formatting.Styles["total"] = "Bold, 12pt";
         Console.WriteLine("Applied invoice formatting");
     }
     
     protected override GeneratedDocument FinalizeDocument()
     {
-        var content = string.Join("\n", _sections.Select(s => 
+        var content = string.Join("\n", sections.Select(s => 
             $"{s.Title}: {s.Content}"));
         
         return new GeneratedDocument
         {
-            Title = _metadata.Title,
+            Title = metadata.Title,
             Content = content,
-            Metadata = _metadata,
+            Metadata = metadata,
             PageCount = 1, // Invoices are typically single page
             Success = true
         };
@@ -694,26 +694,26 @@ public class LetterGenerator : DocumentGenerator
         // Closing
         var closing = request.Data.TryGetValue("closing", out var close) 
             ? close.ToString() : "Sincerely";
-        AddSection(SectionType.Content, "", $"{closing},\n\n{_metadata.Author}");
+        AddSection(SectionType.Content, "", $"{closing},\n\n{metadata.Author}");
     }
     
     protected override void ApplyFormatting()
     {
-        _formatting.FontFamily = "Calibri";
-        _formatting.FontSize = 11;
-        _formatting.Styles["paragraph"] = "Justified, 1.5 line spacing";
+        formatting.FontFamily = "Calibri";
+        formatting.FontSize = 11;
+        formatting.Styles["paragraph"] = "Justified, 1.5 line spacing";
         Console.WriteLine("Applied letter formatting");
     }
     
     protected override GeneratedDocument FinalizeDocument()
     {
-        var content = string.Join("\n\n", _sections.Select(s => s.Content));
+        var content = string.Join("\n\n", sections.Select(s => s.Content));
         
         return new GeneratedDocument
         {
-            Title = _metadata.Title,
+            Title = metadata.Title,
             Content = content,
-            Metadata = _metadata,
+            Metadata = metadata,
             PageCount = Math.Max(1, content.Length / 1500),
             Success = true
         };
@@ -727,16 +727,16 @@ public class LetterGenerator : DocumentGenerator
 // Test runner template
 public abstract class TestRunner<T>
 {
-    protected List<TestResult> _results = new();
-    protected TestConfiguration _config = new();
-    protected DateTime _startTime;
+    protected List<TestResult> results = new();
+    protected TestConfiguration config = new();
+    protected DateTime startTime;
     
     // Template method
     public TestSuiteResult RunTests(IEnumerable<T> testCases, TestConfiguration config)
     {
-        _config = config;
-        _results.Clear();
-        _startTime = DateTime.UtcNow;
+        config = config;
+        results.Clear();
+        startTime = DateTime.UtcNow;
         
         try
         {
@@ -755,9 +755,9 @@ public abstract class TestRunner<T>
             foreach (var testCase in testCases)
             {
                 var result = RunSingleTest(testCase);
-                _results.Add(result);
+                results.Add(result);
                 
-                if (result.Status == TestStatus.Failed && _config.StopOnFirstFailure)
+                if (result.Status == TestStatus.Failed && config.StopOnFirstFailure)
                 {
                     Console.WriteLine("Stopping test execution due to failure");
                     break;
@@ -770,14 +770,14 @@ public abstract class TestRunner<T>
             // Step 5: Cleanup
             CleanupTestEnvironment();
             
-            Console.WriteLine($"Test execution completed. {_results.Count(r => r.Status == TestStatus.Passed)} passed, {_results.Count(r => r.Status == TestStatus.Failed)} failed");
+            Console.WriteLine($"Test execution completed. {results.Count(r => r.Status == TestStatus.Passed)} passed, {results.Count(r => r.Status == TestStatus.Failed)} failed");
             
             return new TestSuiteResult
             {
-                Results = _results,
+                Results = results,
                 Report = report,
-                TotalTime = DateTime.UtcNow - _startTime,
-                Success = !_results.Any(r => r.Status == TestStatus.Failed)
+                TotalTime = DateTime.UtcNow - startTime,
+                Success = !results.Any(r => r.Status == TestStatus.Failed)
             };
         }
         catch (Exception ex)
@@ -841,7 +841,7 @@ public abstract class TestRunner<T>
     protected virtual void PostTestExecution(T testCase, TestResult result)
     {
         // Hook for test cleanup
-        if (_config.VerboseOutput)
+        if (config.VerboseOutput)
         {
             Console.WriteLine($"  Result: {result.Status}, Time: {result.ExecutionTime.TotalMilliseconds:F0}ms");
             if (!string.IsNullOrEmpty(result.ErrorMessage))
@@ -853,14 +853,14 @@ public abstract class TestRunner<T>
     
     protected virtual string GenerateTestReport()
     {
-        var passed = _results.Count(r => r.Status == TestStatus.Passed);
-        var failed = _results.Count(r => r.Status == TestStatus.Failed);
-        var skipped = _results.Count(r => r.Status == TestStatus.Skipped);
-        var totalTime = DateTime.UtcNow - _startTime;
+        var passed = results.Count(r => r.Status == TestStatus.Passed);
+        var failed = results.Count(r => r.Status == TestStatus.Failed);
+        var skipped = results.Count(r => r.Status == TestStatus.Skipped);
+        var totalTime = DateTime.UtcNow - startTime;
         
         var report = $"Test Execution Report\n";
         report += $"=====================\n";
-        report += $"Total Tests: {_results.Count}\n";
+        report += $"Total Tests: {results.Count}\n";
         report += $"Passed: {passed}\n";
         report += $"Failed: {failed}\n";
         report += $"Skipped: {skipped}\n";
@@ -869,7 +869,7 @@ public abstract class TestRunner<T>
         if (failed > 0)
         {
             report += $"\nFailed Tests:\n";
-            foreach (var failure in _results.Where(r => r.Status == TestStatus.Failed))
+            foreach (var failure in results.Where(r => r.Status == TestStatus.Failed))
             {
                 report += $"- {failure.TestName}: {failure.ErrorMessage}\n";
             }
@@ -882,22 +882,22 @@ public abstract class TestRunner<T>
     {
         return new TestSuiteResult
         {
-            Results = _results,
+            Results = results,
             Report = $"Test execution failed: {ex.Message}",
-            TotalTime = DateTime.UtcNow - _startTime,
+            TotalTime = DateTime.UtcNow - startTime,
             Success = false,
             Error = ex.Message
         };
     }
     
     // Hook methods
-    protected virtual bool ShouldInitializeTestData() => _config.InitializeTestData;
+    protected virtual bool ShouldInitializeTestData() => config.InitializeTestData;
     protected virtual string GetTestName(T testCase) => testCase?.ToString() ?? "Unknown Test";
     
     // Helper methods
     protected void LogTestMessage(string message)
     {
-        if (_config.VerboseOutput)
+        if (config.VerboseOutput)
         {
             Console.WriteLine($"  {message}");
         }
@@ -942,12 +942,12 @@ public class TestSuiteResult
 // Concrete test runners
 public class UnitTestRunner : TestRunner<UnitTestCase>
 {
-    private Dictionary<string, object> _testData = new();
+    private Dictionary<string, object> testData = new();
     
     protected override void SetupTestEnvironment()
     {
         Console.WriteLine("Setting up unit test environment");
-        _testData.Clear();
+        testData.Clear();
     }
     
     protected override void InitializeTestData()
@@ -989,7 +989,7 @@ public class UnitTestRunner : TestRunner<UnitTestCase>
     protected override void CleanupTestEnvironment()
     {
         Console.WriteLine("Cleaning up unit test environment");
-        _testData.Clear();
+        testData.Clear();
     }
     
     protected override void PreTestExecution(UnitTestCase testCase)
@@ -1008,12 +1008,12 @@ public class UnitTestRunner : TestRunner<UnitTestCase>
 
 public class IntegrationTestRunner : TestRunner<IntegrationTestCase>
 {
-    private string _connectionString = "";
+    private string connectionString = "";
     
     protected override void SetupTestEnvironment()
     {
         Console.WriteLine("Setting up integration test environment");
-        _connectionString = _config.Properties.TryGetValue("connectionString", out var cs) 
+        connectionString = config.Properties.TryGetValue("connectionString", out var cs) 
             ? cs.ToString() ?? "" : "DefaultConnectionString";
     }
     
@@ -1065,7 +1065,7 @@ public class IntegrationTestRunner : TestRunner<IntegrationTestCase>
     protected override bool ShouldInitializeTestData()
     {
         return base.ShouldInitializeTestData() && 
-               _config.Properties.ContainsKey("useTestDatabase");
+               config.Properties.ContainsKey("useTestDatabase");
     }
 }
 

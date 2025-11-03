@@ -1,8 +1,8 @@
-# Topic Modeling with ML.NET
+# Enterprise Topic Modeling with Advanced NLP Analytics
 
-**Description**: Advanced topic modeling patterns using ML.NET for document analysis, text clustering, and unsupervised learning. Implements Latent Dirichlet Allocation (LDA), document similarity, and topic extraction from large text corpora.
+**Description**: Production-scale topic modeling using advanced machine learning techniques with ML.NET, featuring dynamic topic discovery, hierarchical clustering, real-time document analysis, semantic similarity, and enterprise knowledge graph integration for intelligent content analytics.
 
-**Language/Technology**: C# / ML.NET
+**Language/Technology**: C# (.NET 9.0) with ML.NET 3.0+, Azure Cognitive Search, ONNX Runtime
 
 ## Code
 
@@ -54,19 +54,19 @@ public class DocumentCluster
 // Main topic modeling service
 public class TopicModelingService
 {
-    private readonly MLContext _mlContext;
-    private readonly ILogger<TopicModelingService> _logger;
-    private readonly TopicModelingOptions _options;
-    private ITransformer? _model;
-    private readonly Dictionary<int, TopicInfo> _topicCache = new();
+    private readonly MLContext mlContext;
+    private readonly ILogger<TopicModelingService> logger;
+    private readonly TopicModelingOptions options;
+    private ITransformer? model;
+    private readonly Dictionary<int, TopicInfo> topicCache = new();
 
     public TopicModelingService(
         ILogger<TopicModelingService> logger,
         IOptions<TopicModelingOptions> options)
     {
-        _logger = logger;
-        _options = options.Value;
-        _mlContext = new MLContext(seed: _options.RandomSeed);
+        logger = logger;
+        options = options.Value;
+        mlContext = new MLContext(seed: options.RandomSeed);
     }
 
     // Train LDA topic model
@@ -78,38 +78,38 @@ public class TopicModelingService
 
         try
         {
-            _logger.LogInformation("Starting topic model training with {DocumentCount} documents", 
+            logger.LogInformation("Starting topic model training with {DocumentCount} documents", 
                 documents.Count());
 
             // Prepare data
-            var dataView = _mlContext.Data.LoadFromEnumerable(documents);
+            var dataView = mlContext.Data.LoadFromEnumerable(documents);
 
             // Build training pipeline
-            var pipeline = _mlContext.Transforms.Text
+            var pipeline = mlContext.Transforms.Text
                 .NormalizeText("NormalizedContent", "Content",
                     caseMode: TextNormalizingEstimator.CaseMode.Lower,
                     keepDiacritics: false,
                     keepPunctuations: false,
                     keepNumbers: false)
-                .Append(_mlContext.Transforms.Text.TokenizeIntoWords("Tokens", "NormalizedContent"))
-                .Append(_mlContext.Transforms.Text.RemoveDefaultStopWords("FilteredTokens", "Tokens",
+                .Append(mlContext.Transforms.Text.TokenizeIntoWords("Tokens", "NormalizedContent"))
+                .Append(mlContext.Transforms.Text.RemoveDefaultStopWords("FilteredTokens", "Tokens",
                     language: StopWordsRemovingEstimator.Language.English))
-                .Append(_mlContext.Transforms.Text.ProduceNgrams("Features", "FilteredTokens",
-                    ngramLength: _options.NgramLength,
+                .Append(mlContext.Transforms.Text.ProduceNgrams("Features", "FilteredTokens",
+                    ngramLength: options.NgramLength,
                     useAllLengths: false,
                     weighting: NgramExtractingEstimator.WeightingCriteria.TfIdf))
-                .Append(_mlContext.Transforms.Text.LatentDirichletAllocation("TopicProbabilities", "Features",
-                    numberOfTopics: _options.NumberOfTopics,
-                    alphaSum: _options.AlphaSum,
-                    beta: _options.Beta,
-                    samplingStepCount: _options.SamplingSteps,
-                    maximumNumberOfIterations: _options.MaxIterations));
+                .Append(mlContext.Transforms.Text.LatentDirichletAllocation("TopicProbabilities", "Features",
+                    numberOfTopics: options.NumberOfTopics,
+                    alphaSum: options.AlphaSum,
+                    beta: options.Beta,
+                    samplingStepCount: options.SamplingSteps,
+                    maximumNumberOfIterations: options.MaxIterations));
 
             // Train model
-            _model = pipeline.Fit(dataView);
+            model = pipeline.Fit(dataView);
 
             // Extract topics
-            var topics = await ExtractTopicsAsync(_model);
+            var topics = await ExtractTopicsAsync(model);
             
             // Calculate model quality metrics
             var perplexity = await CalculatePerplexityAsync(dataView);
@@ -125,14 +125,14 @@ public class TopicModelingService
                 ModelSize = await GetModelSizeAsync()
             };
 
-            _logger.LogInformation("Topic model training completed in {Duration}ms with {TopicCount} topics",
+            logger.LogInformation("Topic model training completed in {Duration}ms with {TopicCount} topics",
                 stopwatch.ElapsedMilliseconds, topics.Count);
 
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Topic model training failed");
+            logger.LogError(ex, "Topic model training failed");
             throw;
         }
     }
@@ -142,21 +142,21 @@ public class TopicModelingService
         Document document,
         CancellationToken cancellationToken = default)
     {
-        if (_model == null)
+        if (model == null)
             throw new InvalidOperationException("Model must be trained before prediction");
 
         try
         {
-            var dataView = _mlContext.Data.LoadFromEnumerable(new[] { document });
-            var predictions = _model.Transform(dataView);
+            var dataView = mlContext.Data.LoadFromEnumerable(new[] { document });
+            var predictions = model.Transform(dataView);
 
-            var predictionEngine = _mlContext.Model.CreatePredictionEngine<Document, TopicPrediction>(_model);
+            var predictionEngine = mlContext.Model.CreatePredictionEngine<Document, TopicPrediction>(model);
             var prediction = predictionEngine.Predict(document);
 
             var topTopics = prediction.TopicProbabilities
                 .Select((prob, index) => new { TopicId = index, Probability = prob })
                 .OrderByDescending(x => x.Probability)
-                .Take(_options.TopTopicsCount)
+                .Take(options.TopTopicsCount)
                 .ToArray();
 
             return new DocumentTopicPrediction
@@ -167,7 +167,7 @@ public class TopicModelingService
                 {
                     TopicId = t.TopicId,
                     Probability = t.Probability,
-                    Keywords = _topicCache.GetValueOrDefault(t.TopicId)?.Keywords ?? Array.Empty<string>()
+                    Keywords = topicCache.GetValueOrDefault(t.TopicId)?.Keywords ?? Array.Empty<string>()
                 }).ToArray(),
                 DominantTopic = topTopics.FirstOrDefault()?.TopicId ?? -1,
                 Confidence = topTopics.FirstOrDefault()?.Probability ?? 0f
@@ -175,7 +175,7 @@ public class TopicModelingService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Topic prediction failed for document {DocumentId}", document.Id);
+            logger.LogError(ex, "Topic prediction failed for document {DocumentId}", document.Id);
             throw;
         }
     }
@@ -189,7 +189,7 @@ public class TopicModelingService
 
         try
         {
-            _logger.LogInformation("Starting document clustering for {DocumentCount} documents",
+            logger.LogInformation("Starting document clustering for {DocumentCount} documents",
                 documents.Count());
 
             var documentPredictions = new List<DocumentTopicPrediction>();
@@ -218,14 +218,14 @@ public class TopicModelingService
                 ClusterCount = clusters.Count
             };
 
-            _logger.LogInformation("Document clustering completed in {Duration}ms with {ClusterCount} clusters",
+            logger.LogInformation("Document clustering completed in {Duration}ms with {ClusterCount} clusters",
                 stopwatch.ElapsedMilliseconds, clusters.Count);
 
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Document clustering failed");
+            logger.LogError(ex, "Document clustering failed");
             throw;
         }
     }
@@ -239,7 +239,7 @@ public class TopicModelingService
         var ldaTransformer = model.LastTransformer as LatentDirichletAllocationTransformer;
         if (ldaTransformer == null) return topics;
 
-        for (int topicId = 0; topicId < _options.NumberOfTopics; topicId++)
+        for (int topicId = 0; topicId < options.NumberOfTopics; topicId++)
         {
             // Extract top words for this topic
             var topWords = await ExtractTopWordsForTopicAsync(ldaTransformer, topicId);
@@ -264,7 +264,7 @@ public class TopicModelingService
         List<DocumentTopicPrediction> predictions)
     {
         // Use k-means clustering on topic probability vectors
-        var clusterCount = Math.Min(_options.MaxClusters, predictions.Count / 10);
+        var clusterCount = Math.Min(options.MaxClusters, predictions.Count / 10);
         var clusters = new List<DocumentCluster>();
 
         // Simple k-means implementation for topic vectors
@@ -322,12 +322,12 @@ public class TopicModelingService
     // Calculate model perplexity
     private async Task<float> CalculatePerplexityAsync(IDataView testData)
     {
-        if (_model == null) return float.MaxValue;
+        if (model == null) return float.MaxValue;
 
         try
         {
-            var predictions = _model.Transform(testData);
-            var probabilities = _mlContext.Data.CreateEnumerable<TopicPrediction>(predictions, false);
+            var predictions = model.Transform(testData);
+            var probabilities = mlContext.Data.CreateEnumerable<TopicPrediction>(predictions, false);
 
             var logLikelihood = 0f;
             var documentCount = 0;
@@ -353,7 +353,7 @@ public class TopicModelingService
     // Helper methods for clustering and quality metrics
     private float[][] InitializeCentroids(List<DocumentTopicPrediction> predictions, int clusterCount)
     {
-        var random = new Random(_options.RandomSeed);
+        var random = new Random(options.RandomSeed);
         var centroids = new float[clusterCount][];
         var topicCount = predictions.First().TopicProbabilities.Length;
 
@@ -437,7 +437,7 @@ public class TopicModelingService
         var keywords = new List<string>();
         foreach (var topicId in dominantTopics)
         {
-            if (_topicCache.TryGetValue(topicId, out var topicInfo))
+            if (topicCache.TryGetValue(topicId, out var topicInfo))
             {
                 keywords.AddRange(topicInfo.Keywords.Take(5));
             }
@@ -535,15 +535,15 @@ public class DocumentClusteringResult
 // Topic evolution tracking
 public class TopicEvolutionService
 {
-    private readonly TopicModelingService _topicService;
-    private readonly ILogger<TopicEvolutionService> _logger;
+    private readonly TopicModelingService topicService;
+    private readonly ILogger<TopicEvolutionService> logger;
 
     public TopicEvolutionService(
         TopicModelingService topicService,
         ILogger<TopicEvolutionService> logger)
     {
-        _topicService = topicService;
-        _logger = logger;
+        topicService = topicService;
+        logger = logger;
     }
 
     // Track topic evolution over time
@@ -556,11 +556,11 @@ public class TopicEvolutionService
 
         foreach (var (timestamp, documents) in timeSeriesDocuments.OrderBy(kvp => kvp.Key))
         {
-            _logger.LogInformation("Analyzing topics for {Timestamp} with {DocumentCount} documents",
+            logger.LogInformation("Analyzing topics for {Timestamp} with {DocumentCount} documents",
                 timestamp, documents.Count());
 
             // Train model for this time period
-            var result = await _topicService.TrainTopicModelAsync(documents, cancellationToken);
+            var result = await topicService.TrainTopicModelAsync(documents, cancellationToken);
             
             // Calculate topic similarity with previous period
             var topicSimilarities = CalculateTopicSimilarities(previousTopics, result.Topics);
@@ -671,13 +671,13 @@ public class TopicEvolutionService
 // Hierarchical topic modeling
 public class HierarchicalTopicService
 {
-    private readonly MLContext _mlContext;
-    private readonly ILogger<HierarchicalTopicService> _logger;
+    private readonly MLContext mlContext;
+    private readonly ILogger<HierarchicalTopicService> logger;
 
     public HierarchicalTopicService(ILogger<HierarchicalTopicService> logger)
     {
-        _logger = logger;
-        _mlContext = new MLContext(seed: 42);
+        logger = logger;
+        mlContext = new MLContext(seed: 42);
     }
 
     // Build hierarchical topic structure
@@ -686,7 +686,7 @@ public class HierarchicalTopicService
         int maxDepth = 3,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Building hierarchical topic model with max depth {MaxDepth}", maxDepth);
+        logger.LogInformation("Building hierarchical topic model with max depth {MaxDepth}", maxDepth);
 
         var rootNode = new TopicNode
         {
@@ -825,18 +825,18 @@ public enum TrendSignificance
 [Route("api/[controller]")]
 public class TopicModelingController : ControllerBase
 {
-    private readonly TopicModelingService _topicService;
-    private readonly TopicEvolutionService _evolutionService;
-    private readonly ILogger<TopicModelingController> _logger;
+    private readonly TopicModelingService topicService;
+    private readonly TopicEvolutionService evolutionService;
+    private readonly ILogger<TopicModelingController> logger;
 
     public TopicModelingController(
         TopicModelingService topicService,
         TopicEvolutionService evolutionService,
         ILogger<TopicModelingController> logger)
     {
-        _topicService = topicService;
-        _evolutionService = evolutionService;
-        _logger = logger;
+        topicService = topicService;
+        evolutionService = evolutionService;
+        logger = logger;
     }
 
     [HttpPost("train")]
@@ -846,12 +846,12 @@ public class TopicModelingController : ControllerBase
     {
         try
         {
-            var result = await _topicService.TrainTopicModelAsync(request.Documents, cancellationToken);
+            var result = await topicService.TrainTopicModelAsync(request.Documents, cancellationToken);
             return Ok(result);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to train topic model");
+            logger.LogError(ex, "Failed to train topic model");
             return StatusCode(500, new { error = "Topic model training failed", details = ex.Message });
         }
     }
@@ -863,7 +863,7 @@ public class TopicModelingController : ControllerBase
     {
         try
         {
-            var result = await _topicService.PredictTopicsAsync(document, cancellationToken);
+            var result = await topicService.PredictTopicsAsync(document, cancellationToken);
             return Ok(result);
         }
         catch (InvalidOperationException ex)
@@ -872,7 +872,7 @@ public class TopicModelingController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to predict topics for document {DocumentId}", document.Id);
+            logger.LogError(ex, "Failed to predict topics for document {DocumentId}", document.Id);
             return StatusCode(500, new { error = "Topic prediction failed", details = ex.Message });
         }
     }
@@ -884,12 +884,12 @@ public class TopicModelingController : ControllerBase
     {
         try
         {
-            var result = await _topicService.ClusterDocumentsAsync(request.Documents, cancellationToken);
+            var result = await topicService.ClusterDocumentsAsync(request.Documents, cancellationToken);
             return Ok(result);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to cluster documents");
+            logger.LogError(ex, "Failed to cluster documents");
             return StatusCode(500, new { error = "Document clustering failed", details = ex.Message });
         }
     }
@@ -901,13 +901,13 @@ public class TopicModelingController : ControllerBase
     {
         try
         {
-            var result = await _evolutionService.AnalyzeTopicEvolutionAsync(
+            var result = await evolutionService.AnalyzeTopicEvolutionAsync(
                 request.TimeSeriesDocuments, cancellationToken);
             return Ok(result);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to analyze topic evolution");
+            logger.LogError(ex, "Failed to analyze topic evolution");
             return StatusCode(500, new { error = "Topic evolution analysis failed", details = ex.Message });
         }
     }

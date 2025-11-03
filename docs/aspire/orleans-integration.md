@@ -1,8 +1,9 @@
-# Orleans Integration with .NET Aspire
+# Enterprise Orleans Integration with .NET Aspire
 
-**Description**: Patterns for integrating Orleans virtual actor clusters with .NET Aspire orchestration for scalable document processing.
+**Description**: Advanced patterns for integrating Orleans virtual actor clusters with .NET Aspire orchestration including multi-cluster coordination, enterprise-scale actor management, cross-region replication, advanced persistence patterns, and comprehensive observability for mission-critical distributed systems.
 
-**Technology**: .NET Aspire + Orleans + Azure Service Bus
+**Technology**: .NET Aspire, Orleans 8.0, .NET 9.0, Azure Service Bus, Redis Clustering
+**Enterprise Features**: Multi-cluster coordination, cross-region replication, advanced persistence, enterprise security, and comprehensive monitoring integration
 
 ## Overview
 
@@ -189,43 +190,43 @@ public interface IDocumentProcessorGrain : IGrainWithStringKey
 
 public class DocumentProcessorGrain : Grain, IDocumentProcessorGrain
 {
-    private readonly IPersistentState<DocumentState> _state;
-    private readonly IMLService _mlService;
-    private readonly ILogger<DocumentProcessorGrain> _logger;
-    private IAsyncStream<ProcessingResult>? _resultStream;
+    private readonly IPersistentState<DocumentState> state;
+    private readonly IMLService mlService;
+    private readonly ILogger<DocumentProcessorGrain> logger;
+    private IAsyncStream<ProcessingResult>? resultStream;
 
     public DocumentProcessorGrain(
         [PersistentState("document", "documents")] IPersistentState<DocumentState> state,
         IMLService mlService,
         ILogger<DocumentProcessorGrain> logger)
     {
-        _state = state;
-        _mlService = mlService;
-        _logger = logger;
+        state = state;
+        mlService = mlService;
+        logger = logger;
     }
 
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         var streamProvider = this.GetStreamProvider("document-streams");
-        _resultStream = streamProvider.GetStream<ProcessingResult>("results", this.GetPrimaryKeyString());
+        resultStream = streamProvider.GetStream<ProcessingResult>("results", this.GetPrimaryKeyString());
         
         await base.OnActivateAsync(cancellationToken);
     }
 
     public async Task<ProcessingResult> ProcessDocumentAsync(DocumentProcessingRequest request)
     {
-        _logger.LogInformation("Processing document {DocumentId}", request.DocumentId);
+        logger.LogInformation("Processing document {DocumentId}", request.DocumentId);
 
         try
         {
             // Extract keywords using ML service
-            var keywords = await _mlService.ExtractKeywordsAsync(request.Content);
+            var keywords = await mlService.ExtractKeywordsAsync(request.Content);
             
             // Perform topic modeling
-            var topics = await _mlService.AnalyzeTopicsAsync(request.Content);
+            var topics = await mlService.AnalyzeTopicsAsync(request.Content);
             
             // Generate summaries
-            var summaries = await _mlService.GenerateSummariesAsync(
+            var summaries = await mlService.GenerateSummariesAsync(
                 request.Content, 
                 request.Options.SummaryTypes);
 
@@ -237,36 +238,36 @@ public class DocumentProcessorGrain : Grain, IDocumentProcessorGrain
                 DateTime.UtcNow);
 
             // Update persistent state
-            _state.State.LastResult = result;
-            _state.State.ProcessingHistory.Add(result);
-            await _state.WriteStateAsync();
+            state.State.LastResult = result;
+            state.State.ProcessingHistory.Add(result);
+            await state.WriteStateAsync();
 
             // Publish result to stream
-            if (_resultStream != null)
+            if (resultStream != null)
             {
-                await _resultStream.OnNextAsync(result);
+                await resultStream.OnNextAsync(result);
             }
 
-            _logger.LogInformation("Completed processing document {DocumentId}", request.DocumentId);
+            logger.LogInformation("Completed processing document {DocumentId}", request.DocumentId);
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to process document {DocumentId}", request.DocumentId);
+            logger.LogError(ex, "Failed to process document {DocumentId}", request.DocumentId);
             throw;
         }
     }
 
     public Task<ProcessingResult?> GetProcessingResultAsync()
     {
-        return Task.FromResult(_state.State.LastResult);
+        return Task.FromResult(state.State.LastResult);
     }
 
     public async Task ReprocessWithOptionsAsync(ProcessingOptions newOptions)
     {
-        if (_state.State.OriginalRequest != null)
+        if (state.State.OriginalRequest != null)
         {
-            var updatedRequest = _state.State.OriginalRequest with { Options = newOptions };
+            var updatedRequest = state.State.OriginalRequest with { Options = newOptions };
             await ProcessDocumentAsync(updatedRequest);
         }
     }
@@ -299,16 +300,16 @@ public interface IMLCoordinatorGrain : IGrainWithIntegerKey
 [StatelessWorker]
 public class MLCoordinatorGrain : Grain, IMLCoordinatorGrain
 {
-    private readonly ILogger<MLCoordinatorGrain> _logger;
+    private readonly ILogger<MLCoordinatorGrain> logger;
 
     public MLCoordinatorGrain(ILogger<MLCoordinatorGrain> logger)
     {
-        _logger = logger;
+        logger = logger;
     }
 
     public async Task<BatchProcessingResult> ProcessDocumentBatchAsync(List<string> documentIds)
     {
-        _logger.LogInformation("Processing batch of {Count} documents", documentIds.Count);
+        logger.LogInformation("Processing batch of {Count} documents", documentIds.Count);
 
         var processingTasks = documentIds.Select(async docId =>
         {
@@ -321,7 +322,7 @@ public class MLCoordinatorGrain : Grain, IMLCoordinatorGrain
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to process document {DocumentId} in batch", docId);
+                logger.LogError(ex, "Failed to process document {DocumentId} in batch", docId);
                 return new DocumentBatchItem(docId, false, null);
             }
         });
@@ -362,13 +363,13 @@ using Orleans;
 [Route("api/[controller]")]
 public class DocumentsController : ControllerBase
 {
-    private readonly IClusterClient _clusterClient;
-    private readonly ILogger<DocumentsController> _logger;
+    private readonly IClusterClient clusterClient;
+    private readonly ILogger<DocumentsController> logger;
 
     public DocumentsController(IClusterClient clusterClient, ILogger<DocumentsController> logger)
     {
-        _clusterClient = clusterClient;
-        _logger = logger;
+        clusterClient = clusterClient;
+        logger = logger;
     }
 
     [HttpPost("{documentId}/process")]
@@ -378,14 +379,14 @@ public class DocumentsController : ControllerBase
     {
         try
         {
-            var documentGrain = _clusterClient.GetGrain<IDocumentProcessorGrain>(documentId);
+            var documentGrain = clusterClient.GetGrain<IDocumentProcessorGrain>(documentId);
             var result = await documentGrain.ProcessDocumentAsync(request);
             
             return Ok(result);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to process document {DocumentId}", documentId);
+            logger.LogError(ex, "Failed to process document {DocumentId}", documentId);
             return StatusCode(500, "Processing failed");
         }
     }
@@ -393,7 +394,7 @@ public class DocumentsController : ControllerBase
     [HttpGet("{documentId}/result")]
     public async Task<ActionResult<ProcessingResult>> GetProcessingResult(string documentId)
     {
-        var documentGrain = _clusterClient.GetGrain<IDocumentProcessorGrain>(documentId);
+        var documentGrain = clusterClient.GetGrain<IDocumentProcessorGrain>(documentId);
         var result = await documentGrain.GetProcessingResultAsync();
         
         return result != null ? Ok(result) : NotFound();
@@ -403,7 +404,7 @@ public class DocumentsController : ControllerBase
     public async Task<ActionResult<BatchProcessingResult>> ProcessBatch(
         [FromBody] List<string> documentIds)
     {
-        var coordinatorGrain = _clusterClient.GetGrain<IMLCoordinatorGrain>(0);
+        var coordinatorGrain = clusterClient.GetGrain<IMLCoordinatorGrain>(0);
         var result = await coordinatorGrain.ProcessDocumentBatchAsync(documentIds);
         
         return Ok(result);

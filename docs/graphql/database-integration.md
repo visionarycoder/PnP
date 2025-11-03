@@ -1,8 +1,8 @@
 # GraphQL Database Integration Patterns
 
-**Description**: Comprehensive patterns for integrating HotChocolate GraphQL with Entity Framework, database optimization, connection pooling, and advanced data access strategies.
+**Description**: Comprehensive patterns for integrating HotChocolate GraphQL with Entity Framework Core, implementing DataLoader patterns for batching and caching, query optimization, connection pooling, and advanced data access strategies with proper schema design around business domains.
 
-**Language/Technology**: C# / HotChocolate / Entity Framework Core
+**Language/Technology**: C#, HotChocolate, Entity Framework Core, .NET 9.0
 
 ## Code
 
@@ -13,12 +13,12 @@ namespace DocumentProcessor.Data;
 
 using Microsoft.EntityFrameworkCore;
 
-public class DocumentProcessorDbContext : DbContext
+/// <summary>
+/// DbContext optimized for GraphQL operations with proper entity configuration
+/// Designed around business domain rather than database structure
+/// </summary>
+public class DocumentProcessorDbContext(DbContextOptions<DocumentProcessorDbContext> options) : DbContext(options)
 {
-    public DocumentProcessorDbContext(DbContextOptions<DocumentProcessorDbContext> options)
-        : base(options)
-    {
-    }
 
     public DbSet<Document> Documents { get; set; } = null!;
     public DbSet<User> Users { get; set; } = null!;
@@ -337,26 +337,26 @@ public interface IRepository<TEntity> where TEntity : class
 // Generic repository implementation
 public class Repository<TEntity> : IRepository<TEntity> where TEntity : class
 {
-    protected readonly DocumentProcessorDbContext _context;
-    protected readonly DbSet<TEntity> _dbSet;
-    protected readonly ILogger<Repository<TEntity>> _logger;
+    protected readonly DocumentProcessorDbContext context;
+    protected readonly DbSet<TEntity> dbSet;
+    protected readonly ILogger<Repository<TEntity>> logger;
 
     public Repository(DocumentProcessorDbContext context, ILogger<Repository<TEntity>> logger)
     {
-        _context = context;
-        _dbSet = context.Set<TEntity>();
-        _logger = logger;
+        context = context;
+        dbSet = context.Set<TEntity>();
+        logger = logger;
     }
 
     public virtual async Task<TEntity?> GetByIdAsync(object id, CancellationToken cancellationToken = default)
     {
         try
         {
-            return await _dbSet.FindAsync(new object[] { id }, cancellationToken);
+            return await dbSet.FindAsync(new object[] { id }, cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting entity by ID: {Id}", id);
+            logger.LogError(ex, "Error getting entity by ID: {Id}", id);
             throw;
         }
     }
@@ -365,11 +365,11 @@ public class Repository<TEntity> : IRepository<TEntity> where TEntity : class
     {
         try
         {
-            return await _dbSet.ToListAsync(cancellationToken);
+            return await dbSet.ToListAsync(cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting all entities");
+            logger.LogError(ex, "Error getting all entities");
             throw;
         }
     }
@@ -378,11 +378,11 @@ public class Repository<TEntity> : IRepository<TEntity> where TEntity : class
     {
         try
         {
-            return await _dbSet.Where(predicate).ToListAsync(cancellationToken);
+            return await dbSet.Where(predicate).ToListAsync(cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error finding entities with predicate");
+            logger.LogError(ex, "Error finding entities with predicate");
             throw;
         }
     }
@@ -391,13 +391,13 @@ public class Repository<TEntity> : IRepository<TEntity> where TEntity : class
     {
         try
         {
-            var result = await _dbSet.AddAsync(entity, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
+            var result = await dbSet.AddAsync(entity, cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
             return result.Entity;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error adding entity");
+            logger.LogError(ex, "Error adding entity");
             throw;
         }
     }
@@ -406,13 +406,13 @@ public class Repository<TEntity> : IRepository<TEntity> where TEntity : class
     {
         try
         {
-            await _dbSet.AddRangeAsync(entities, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
+            await dbSet.AddRangeAsync(entities, cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
             return entities;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error adding entities range");
+            logger.LogError(ex, "Error adding entities range");
             throw;
         }
     }
@@ -421,12 +421,12 @@ public class Repository<TEntity> : IRepository<TEntity> where TEntity : class
     {
         try
         {
-            _dbSet.Update(entity);
-            await _context.SaveChangesAsync(cancellationToken);
+            dbSet.Update(entity);
+            await context.SaveChangesAsync(cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating entity");
+            logger.LogError(ex, "Error updating entity");
             throw;
         }
     }
@@ -435,12 +435,12 @@ public class Repository<TEntity> : IRepository<TEntity> where TEntity : class
     {
         try
         {
-            _dbSet.Remove(entity);
-            await _context.SaveChangesAsync(cancellationToken);
+            dbSet.Remove(entity);
+            await context.SaveChangesAsync(cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting entity");
+            logger.LogError(ex, "Error deleting entity");
             throw;
         }
     }
@@ -450,12 +450,12 @@ public class Repository<TEntity> : IRepository<TEntity> where TEntity : class
         try
         {
             return predicate == null 
-                ? await _dbSet.CountAsync(cancellationToken) 
-                : await _dbSet.CountAsync(predicate, cancellationToken);
+                ? await dbSet.CountAsync(cancellationToken) 
+                : await dbSet.CountAsync(predicate, cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error counting entities");
+            logger.LogError(ex, "Error counting entities");
             throw;
         }
     }
@@ -464,11 +464,11 @@ public class Repository<TEntity> : IRepository<TEntity> where TEntity : class
     {
         try
         {
-            return await _dbSet.AnyAsync(predicate, cancellationToken);
+            return await dbSet.AnyAsync(predicate, cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking entity existence");
+            logger.LogError(ex, "Error checking entity existence");
             throw;
         }
     }
@@ -498,7 +498,7 @@ public class DocumentRepository : Repository<Document>, IDocumentRepository
     {
         try
         {
-            return await _dbSet
+            return await dbSet
                 .Where(d => d.CreatedBy == userId)
                 .Include(d => d.Tags)
                 .OrderByDescending(d => d.CreatedAt)
@@ -506,7 +506,7 @@ public class DocumentRepository : Repository<Document>, IDocumentRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting documents by user: {UserId}", userId);
+            logger.LogError(ex, "Error getting documents by user: {UserId}", userId);
             throw;
         }
     }
@@ -517,7 +517,7 @@ public class DocumentRepository : Repository<Document>, IDocumentRepository
         {
             var lowerSearchTerm = searchTerm.ToLower();
             
-            return await _dbSet
+            return await dbSet
                 .Where(d => d.Title.ToLower().Contains(lowerSearchTerm) || 
                            d.Content.ToLower().Contains(lowerSearchTerm) ||
                            d.Tags.Any(t => t.TagName.ToLower().Contains(lowerSearchTerm)))
@@ -528,7 +528,7 @@ public class DocumentRepository : Repository<Document>, IDocumentRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error searching documents with term: {SearchTerm}", searchTerm);
+            logger.LogError(ex, "Error searching documents with term: {SearchTerm}", searchTerm);
             throw;
         }
     }
@@ -539,7 +539,7 @@ public class DocumentRepository : Repository<Document>, IDocumentRepository
         {
             var lowerTags = tags.Select(t => t.ToLower()).ToArray();
             
-            return await _dbSet
+            return await dbSet
                 .Where(d => d.Tags.Any(t => lowerTags.Contains(t.TagName.ToLower())))
                 .Include(d => d.Tags)
                 .Include(d => d.Creator)
@@ -548,7 +548,7 @@ public class DocumentRepository : Repository<Document>, IDocumentRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting documents by tags: {Tags}", string.Join(", ", tags));
+            logger.LogError(ex, "Error getting documents by tags: {Tags}", string.Join(", ", tags));
             throw;
         }
     }
@@ -557,7 +557,7 @@ public class DocumentRepository : Repository<Document>, IDocumentRepository
     {
         try
         {
-            return await _dbSet
+            return await dbSet
                 .Include(d => d.Tags)
                 .Include(d => d.Creator)
                 .OrderByDescending(d => d.CreatedAt)
@@ -566,7 +566,7 @@ public class DocumentRepository : Repository<Document>, IDocumentRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting recent documents");
+            logger.LogError(ex, "Error getting recent documents");
             throw;
         }
     }
@@ -576,7 +576,7 @@ public class DocumentRepository : Repository<Document>, IDocumentRepository
         try
         {
             // Calculate popularity based on analytics events
-            var popularDocumentIds = await _context.AnalyticsEvents
+            var popularDocumentIds = await context.AnalyticsEvents
                 .Where(e => e.EventType == "DocumentViewed" && e.Timestamp >= DateTime.UtcNow.AddDays(-30))
                 .GroupBy(e => e.EntityId)
                 .OrderByDescending(g => g.Count())
@@ -584,7 +584,7 @@ public class DocumentRepository : Repository<Document>, IDocumentRepository
                 .Select(g => g.Key)
                 .ToListAsync(cancellationToken);
 
-            return await _dbSet
+            return await dbSet
                 .Where(d => popularDocumentIds.Contains(d.Id))
                 .Include(d => d.Tags)
                 .Include(d => d.Creator)
@@ -592,7 +592,7 @@ public class DocumentRepository : Repository<Document>, IDocumentRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting popular documents");
+            logger.LogError(ex, "Error getting popular documents");
             throw;
         }
     }
@@ -601,7 +601,7 @@ public class DocumentRepository : Repository<Document>, IDocumentRepository
     {
         try
         {
-            return await _dbSet
+            return await dbSet
                 .Include(d => d.Versions.OrderByDescending(v => v.VersionNumber))
                 .Include(d => d.Tags)
                 .Include(d => d.Creator)
@@ -609,7 +609,7 @@ public class DocumentRepository : Repository<Document>, IDocumentRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting document with versions: {Id}", id);
+            logger.LogError(ex, "Error getting document with versions: {Id}", id);
             throw;
         }
     }
@@ -618,7 +618,7 @@ public class DocumentRepository : Repository<Document>, IDocumentRepository
     {
         try
         {
-            return await _dbSet
+            return await dbSet
                 .Include(d => d.Collaborators)
                 .ThenInclude(c => c.User)
                 .Include(d => d.Tags)
@@ -627,7 +627,7 @@ public class DocumentRepository : Repository<Document>, IDocumentRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting document with collaborators: {Id}", id);
+            logger.LogError(ex, "Error getting document with collaborators: {Id}", id);
             throw;
         }
     }
@@ -636,7 +636,7 @@ public class DocumentRepository : Repository<Document>, IDocumentRepository
     {
         try
         {
-            return await _dbSet
+            return await dbSet
                 .Where(d => ids.Contains(d.Id))
                 .Include(d => d.Tags)
                 .Include(d => d.Creator)
@@ -644,7 +644,7 @@ public class DocumentRepository : Repository<Document>, IDocumentRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting documents batch");
+            logger.LogError(ex, "Error getting documents batch");
             throw;
         }
     }
@@ -666,13 +666,13 @@ public interface IQueryService
 
 public class QueryService : IQueryService
 {
-    private readonly DocumentProcessorDbContext _context;
-    private readonly ILogger<QueryService> _logger;
+    private readonly DocumentProcessorDbContext context;
+    private readonly ILogger<QueryService> logger;
 
     public QueryService(DocumentProcessorDbContext context, ILogger<QueryService> logger)
     {
-        _context = context;
-        _logger = logger;
+        context = context;
+        logger = logger;
     }
 
     public async Task<PagedResult<Document>> GetDocumentsPagedAsync(
@@ -683,7 +683,7 @@ public class QueryService : IQueryService
     {
         try
         {
-            var query = _context.Documents
+            var query = context.Documents
                 .Include(d => d.Tags)
                 .Include(d => d.Creator)
                 .AsQueryable();
@@ -750,7 +750,7 @@ public class QueryService : IQueryService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting paged documents");
+            logger.LogError(ex, "Error getting paged documents");
             throw;
         }
     }
@@ -761,7 +761,7 @@ public class QueryService : IQueryService
     {
         try
         {
-            var documents = await _context.Documents
+            var documents = await context.Documents
                 .Where(d => documentIds.Contains(d.Id))
                 .ToListAsync(cancellationToken);
 
@@ -770,15 +770,15 @@ public class QueryService : IQueryService
             foreach (var document in documents)
             {
                 // Get view count from analytics
-                var viewCount = await _context.AnalyticsEvents
+                var viewCount = await context.AnalyticsEvents
                     .CountAsync(e => e.EntityId == document.Id && e.EventType == "DocumentViewed", cancellationToken);
 
                 // Get collaborator count
-                var collaboratorCount = await _context.DocumentCollaborators
+                var collaboratorCount = await context.DocumentCollaborators
                     .CountAsync(c => c.DocumentId == document.Id, cancellationToken);
 
                 // Get version count
-                var versionCount = await _context.DocumentVersions
+                var versionCount = await context.DocumentVersions
                     .CountAsync(v => v.DocumentId == document.Id, cancellationToken);
 
                 // Calculate statistics
@@ -803,7 +803,7 @@ public class QueryService : IQueryService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting document statistics");
+            logger.LogError(ex, "Error getting document statistics");
             throw;
         }
     }
@@ -816,7 +816,7 @@ public class QueryService : IQueryService
     {
         try
         {
-            var activities = await _context.AnalyticsEvents
+            var activities = await context.AnalyticsEvents
                 .Where(e => e.UserId == userId && e.Timestamp >= from && e.Timestamp <= to)
                 .OrderByDescending(e => e.Timestamp)
                 .Select(e => new UserActivity
@@ -833,7 +833,7 @@ public class QueryService : IQueryService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting user activity for user: {UserId}", userId);
+            logger.LogError(ex, "Error getting user activity for user: {UserId}", userId);
             throw;
         }
     }
@@ -842,7 +842,7 @@ public class QueryService : IQueryService
     {
         try
         {
-            var tagPopularity = await _context.DocumentTags
+            var tagPopularity = await context.DocumentTags
                 .GroupBy(t => t.TagName)
                 .Select(g => new TagPopularity
                 {
@@ -858,7 +858,7 @@ public class QueryService : IQueryService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting tag popularity");
+            logger.LogError(ex, "Error getting tag popularity");
             throw;
         }
     }
@@ -870,7 +870,7 @@ public class QueryService : IQueryService
     {
         try
         {
-            var jobs = await _context.ProcessingJobs
+            var jobs = await context.ProcessingJobs
                 .Where(j => j.CreatedAt >= from && j.CreatedAt <= to)
                 .ToListAsync(cancellationToken);
 
@@ -896,14 +896,14 @@ public class QueryService : IQueryService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting processing metrics");
+            logger.LogError(ex, "Error getting processing metrics");
             throw;
         }
     }
 
     private async Task<DateTime?> GetLastAccessTime(string documentId, CancellationToken cancellationToken)
     {
-        return await _context.AnalyticsEvents
+        return await context.AnalyticsEvents
             .Where(e => e.EntityId == documentId && e.EventType == "DocumentViewed")
             .OrderByDescending(e => e.Timestamp)
             .Select(e => e.Timestamp)

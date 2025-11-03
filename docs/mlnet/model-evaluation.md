@@ -1,8 +1,9 @@
-# Model Evaluation for ML.NET
+# Enterprise ML Model Evaluation & Validation
 
-**Description**: Comprehensive model performance evaluation patterns with advanced metrics, cross-validation strategies, statistical significance testing, and automated model comparison frameworks for ML.NET applications.
+**Description**: Advanced enterprise model evaluation with comprehensive fairness metrics, bias detection, explainable AI integration, automated validation pipelines, regulatory compliance reporting, and continuous monitoring for production ML systems.
 
-**Language/Technology**: C#, ML.NET, Statistical Analysis, Model Validation
+**Language/Technology**: C#, ML.NET, .NET 9.0, Fairness Metrics, Explainable AI, Regulatory Compliance
+**Enterprise Features**: Fairness metrics, bias detection, explainable AI, automated validation, compliance reporting, and continuous monitoring frameworks
 
 **Code**:
 
@@ -53,10 +54,10 @@ public interface IModelEvaluator
 
 public class ModelEvaluator : IModelEvaluator
 {
-    private readonly MLContext _mlContext;
-    private readonly ILogger<ModelEvaluator> _logger;
-    private readonly IMetricsCalculator _metricsCalculator;
-    private readonly IStatisticalTester _statisticalTester;
+    private readonly MLContext mlContext;
+    private readonly ILogger<ModelEvaluator> logger;
+    private readonly IMetricsCalculator metricsCalculator;
+    private readonly IStatisticalTester statisticalTester;
 
     public ModelEvaluator(
         MLContext mlContext,
@@ -64,10 +65,10 @@ public class ModelEvaluator : IModelEvaluator
         IMetricsCalculator metricsCalculator,
         IStatisticalTester statisticalTester)
     {
-        _mlContext = mlContext;
-        _logger = logger;
-        _metricsCalculator = metricsCalculator;
-        _statisticalTester = statisticalTester;
+        mlContext = mlContext;
+        logger = logger;
+        metricsCalculator = metricsCalculator;
+        statisticalTester = statisticalTester;
     }
 
     public async Task<EvaluationResult> EvaluateClassificationModelAsync<TData, TPrediction>(
@@ -80,20 +81,20 @@ public class ModelEvaluator : IModelEvaluator
         options ??= new EvaluationOptions();
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         
-        _logger.LogInformation("Starting classification model evaluation with {TestCount} samples", testData.Count());
+        logger.LogInformation("Starting classification model evaluation with {TestCount} samples", testData.Count());
 
-        var testDataView = _mlContext.Data.LoadFromEnumerable(testData);
+        var testDataView = mlContext.Data.LoadFromEnumerable(testData);
         var predictions = model.Transform(testDataView);
         
         // Get ML.NET built-in metrics
-        var metrics = _mlContext.MulticlassClassification.Evaluate(predictions);
+        var metrics = mlContext.MulticlassClassification.Evaluate(predictions);
         
         // Calculate additional custom metrics
-        var predictionResults = _mlContext.Data.CreateEnumerable<TPrediction>(predictions, reuseRowObject: false).ToList();
+        var predictionResults = mlContext.Data.CreateEnumerable<TPrediction>(predictions, reuseRowObject: false).ToList();
         var actualLabels = ExtractActualLabels(testData);
         var predictedLabels = ExtractPredictedLabels(predictionResults);
         
-        var customMetrics = await _metricsCalculator.CalculateDetailedMetricsAsync(
+        var customMetrics = await metricsCalculator.CalculateDetailedMetricsAsync(
             actualLabels, 
             predictedLabels, 
             options.ClassNames ?? GetUniqueLabels(actualLabels));
@@ -141,7 +142,7 @@ public class ModelEvaluator : IModelEvaluator
                 ["TopKAccuracy"] = metrics.TopKAccuracy
             });
 
-        _logger.LogInformation("Classification evaluation completed: Accuracy={Accuracy:P2}, LogLoss={LogLoss:F4} in {Duration}ms",
+        logger.LogInformation("Classification evaluation completed: Accuracy={Accuracy:P2}, LogLoss={LogLoss:F4} in {Duration}ms",
             result.Accuracy, result.LogLoss, stopwatch.ElapsedMilliseconds);
 
         return result;
@@ -157,15 +158,15 @@ public class ModelEvaluator : IModelEvaluator
         options ??= new EvaluationOptions();
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-        _logger.LogInformation("Starting regression model evaluation with {TestCount} samples", testData.Count());
+        logger.LogInformation("Starting regression model evaluation with {TestCount} samples", testData.Count());
 
-        var testDataView = _mlContext.Data.LoadFromEnumerable(testData);
+        var testDataView = mlContext.Data.LoadFromEnumerable(testData);
         var predictions = model.Transform(testDataView);
         
-        var metrics = _mlContext.Regression.Evaluate(predictions);
+        var metrics = mlContext.Regression.Evaluate(predictions);
         
         // Calculate additional regression metrics
-        var predictionResults = _mlContext.Data.CreateEnumerable<TPrediction>(predictions, reuseRowObject: false).ToList();
+        var predictionResults = mlContext.Data.CreateEnumerable<TPrediction>(predictions, reuseRowObject: false).ToList();
         var actualValues = ExtractActualValues(testData);
         var predictedValues = ExtractPredictedValues(predictionResults);
         
@@ -185,7 +186,7 @@ public class ModelEvaluator : IModelEvaluator
             EvaluationDuration: stopwatch.Elapsed,
             EvaluatedAt: DateTime.UtcNow);
 
-        _logger.LogInformation("Regression evaluation completed: R²={RSquared:F4}, RMSE={RMSE:F4} in {Duration}ms",
+        logger.LogInformation("Regression evaluation completed: R²={RSquared:F4}, RMSE={RMSE:F4} in {Duration}ms",
             result.RSquared, result.RootMeanSquaredError, stopwatch.ElapsedMilliseconds);
 
         return result;
@@ -199,13 +200,13 @@ public class ModelEvaluator : IModelEvaluator
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         
-        _logger.LogInformation("Starting {Folds}-fold cross-validation with {DataCount} samples", 
+        logger.LogInformation("Starting {Folds}-fold cross-validation with {DataCount} samples", 
             options.NumberOfFolds, data.Count());
 
-        var dataView = _mlContext.Data.LoadFromEnumerable(data);
+        var dataView = mlContext.Data.LoadFromEnumerable(data);
         
         // Perform cross-validation
-        var cvResults = _mlContext.MulticlassClassification.CrossValidate(
+        var cvResults = mlContext.MulticlassClassification.CrossValidate(
             data: dataView,
             estimator: pipeline,
             numberOfFolds: options.NumberOfFolds,
@@ -251,7 +252,7 @@ public class ModelEvaluator : IModelEvaluator
             ValidationDuration: stopwatch.Elapsed,
             ValidatedAt: DateTime.UtcNow);
 
-        _logger.LogInformation("Cross-validation completed: Mean Accuracy={MeanAccuracy:P2}±{StdAccuracy:P3} in {Duration}ms",
+        logger.LogInformation("Cross-validation completed: Mean Accuracy={MeanAccuracy:P2}±{StdAccuracy:P3} in {Duration}ms",
             aggregateStats.MeanAccuracy, aggregateStats.StdAccuracy, stopwatch.ElapsedMilliseconds);
 
         return result;
@@ -265,7 +266,7 @@ public class ModelEvaluator : IModelEvaluator
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         
-        _logger.LogInformation("Comparing {ModelCount} models on {TestCount} samples", 
+        logger.LogInformation("Comparing {ModelCount} models on {TestCount} samples", 
             models.Count, testData.Count());
 
         var modelResults = new Dictionary<string, EvaluationResult>();
@@ -322,7 +323,7 @@ public class ModelEvaluator : IModelEvaluator
             ComparedAt: DateTime.UtcNow);
 
         var bestModel = rankings.Values.First().First().ModelName;
-        _logger.LogInformation("Model comparison completed. Best model: {BestModel} in {Duration}ms",
+        logger.LogInformation("Model comparison completed. Best model: {BestModel} in {Duration}ms",
             bestModel, stopwatch.ElapsedMilliseconds);
 
         return result;
@@ -333,15 +334,15 @@ public class ModelEvaluator : IModelEvaluator
         EvaluationResult model2Results,
         SignificanceTestOptions options)
     {
-        _logger.LogInformation("Testing statistical significance between {Model1} and {Model2}",
+        logger.LogInformation("Testing statistical significance between {Model1} and {Model2}",
             model1Results.ModelName, model2Results.ModelName);
 
-        var result = await _statisticalTester.PerformSignificanceTestAsync(
+        var result = await statisticalTester.PerformSignificanceTestAsync(
             model1Results, 
             model2Results, 
             options);
 
-        _logger.LogInformation("Significance test completed: p-value={PValue:F6}, significant={IsSignificant}",
+        logger.LogInformation("Significance test completed: p-value={PValue:F6}, significant={IsSignificant}",
             result.PValue, result.IsSignificant);
 
         return result;
@@ -368,18 +369,18 @@ public class ModelEvaluator : IModelEvaluator
         foreach (var sampleSize in sampleSizes)
         {
             var trainingSample = trainingList.Take(sampleSize);
-            var trainingDataView = _mlContext.Data.LoadFromEnumerable(trainingSample);
+            var trainingDataView = mlContext.Data.LoadFromEnumerable(trainingSample);
             
             var model = pipeline.Fit(trainingDataView);
             
             // Evaluate on training data
             var trainingPredictions = model.Transform(trainingDataView);
-            var trainingMetrics = _mlContext.MulticlassClassification.Evaluate(trainingPredictions);
+            var trainingMetrics = mlContext.MulticlassClassification.Evaluate(trainingPredictions);
             
             // Evaluate on validation data
-            var validationDataView = _mlContext.Data.LoadFromEnumerable(validationList);
+            var validationDataView = mlContext.Data.LoadFromEnumerable(validationList);
             var validationPredictions = model.Transform(validationDataView);
-            var validationMetrics = _mlContext.MulticlassClassification.Evaluate(validationPredictions);
+            var validationMetrics = mlContext.MulticlassClassification.Evaluate(validationPredictions);
             
             curvePoints.Add(new LearningCurvePoint(
                 TrainingSampleSize: sampleSize,
@@ -453,7 +454,7 @@ public class ModelEvaluator : IModelEvaluator
                 var model1 = models[i];
                 var model2 = models[j];
                 
-                var significance = await _statisticalTester.PerformSignificanceTestAsync(
+                var significance = await statisticalTester.PerformSignificanceTestAsync(
                     modelResults[model1],
                     modelResults[model2],
                     new SignificanceTestOptions { TestType = SignificanceTestType.McNemar });
@@ -859,18 +860,18 @@ namespace DocumentProcessor.API.Controllers;
 [Route("api/[controller]")]
 public class ModelEvaluationController : ControllerBase
 {
-    private readonly IModelEvaluator _modelEvaluator;
-    private readonly IModelManager _modelManager;
-    private readonly ILogger<ModelEvaluationController> _logger;
+    private readonly IModelEvaluator modelEvaluator;
+    private readonly IModelManager modelManager;
+    private readonly ILogger<ModelEvaluationController> logger;
 
     public ModelEvaluationController(
         IModelEvaluator modelEvaluator,
         IModelManager modelManager,
         ILogger<ModelEvaluationController> logger)
     {
-        _modelEvaluator = modelEvaluator;
-        _modelManager = modelManager;
-        _logger = logger;
+        modelEvaluator = modelEvaluator;
+        modelManager = modelManager;
+        logger = logger;
     }
 
     [HttpPost("evaluate/classification")]
@@ -879,7 +880,7 @@ public class ModelEvaluationController : ControllerBase
     {
         try
         {
-            var model = await _modelManager.LoadModelAsync(request.ModelId);
+            var model = await modelManager.LoadModelAsync(request.ModelId);
             if (model == null)
             {
                 return NotFound($"Model {request.ModelId} not found");
@@ -896,7 +897,7 @@ public class ModelEvaluationController : ControllerBase
             // Convert test data (simplified - would need proper implementation)
             var testData = request.TestData.Select(td => new { Text = td.Text, Label = td.Label });
             
-            var result = await _modelEvaluator.EvaluateClassificationModelAsync<object, object>(
+            var result = await modelEvaluator.EvaluateClassificationModelAsync<object, object>(
                 model, testData, options);
 
             var response = new EvaluationResponse(
@@ -908,7 +909,7 @@ public class ModelEvaluationController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error evaluating classification model {ModelId}", request.ModelId);
+            logger.LogError(ex, "Error evaluating classification model {ModelId}", request.ModelId);
             return StatusCode(500, "Internal server error");
         }
     }
@@ -919,7 +920,7 @@ public class ModelEvaluationController : ControllerBase
     {
         try
         {
-            var pipeline = await _modelManager.GetPipelineAsync(request.PipelineId);
+            var pipeline = await modelManager.GetPipelineAsync(request.PipelineId);
             if (pipeline == null)
             {
                 return NotFound($"Pipeline {request.PipelineId} not found");
@@ -936,7 +937,7 @@ public class ModelEvaluationController : ControllerBase
             // Convert training data
             var data = request.TrainingData.Select(td => new { Text = td.Text, Label = td.Label });
 
-            var result = await _modelEvaluator.PerformCrossValidationAsync(pipeline, data, options);
+            var result = await modelEvaluator.PerformCrossValidationAsync(pipeline, data, options);
 
             var response = new CrossValidationResponse(
                 Result: result,
@@ -947,7 +948,7 @@ public class ModelEvaluationController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error performing cross-validation for pipeline {PipelineId}", request.PipelineId);
+            logger.LogError(ex, "Error performing cross-validation for pipeline {PipelineId}", request.PipelineId);
             return StatusCode(500, "Internal server error");
         }
     }
@@ -962,7 +963,7 @@ public class ModelEvaluationController : ControllerBase
             
             foreach (var modelId in request.ModelIds)
             {
-                var model = await _modelManager.LoadModelAsync(modelId);
+                var model = await modelManager.LoadModelAsync(modelId);
                 if (model != null)
                 {
                     models[modelId] = model;
@@ -985,7 +986,7 @@ public class ModelEvaluationController : ControllerBase
             // Convert test data
             var testData = request.TestData.Select(td => new { Text = td.Text, Label = td.Label });
 
-            var result = await _modelEvaluator.CompareModelsAsync(models, testData, comparisonMetrics);
+            var result = await modelEvaluator.CompareModelsAsync(models, testData, comparisonMetrics);
 
             var response = new ModelComparisonResponse(
                 Result: result,
@@ -996,7 +997,7 @@ public class ModelEvaluationController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error comparing models");
+            logger.LogError(ex, "Error comparing models");
             return StatusCode(500, "Internal server error");
         }
     }
@@ -1024,7 +1025,7 @@ public class ModelEvaluationController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving evaluation metrics for {EvaluationId}", evaluationId);
+            logger.LogError(ex, "Error retrieving evaluation metrics for {EvaluationId}", evaluationId);
             return StatusCode(500, "Internal server error");
         }
     }

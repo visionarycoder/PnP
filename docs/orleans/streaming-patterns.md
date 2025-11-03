@@ -1,8 +1,8 @@
-# Streaming Patterns
+# Enterprise Orleans Streaming Architecture
 
-**Description**: Orleans streaming patterns for event-driven communication, real-time processing, and distributed workflows.
+**Description**: Production-scale Orleans streaming with real-time event processing, guaranteed delivery, intelligent backpressure, distributed coordination, and enterprise integration for high-throughput data pipelines.
 
-**Language/Technology**: C# 12, Orleans Streams
+**Language/Technology**: C# (.NET 9.0), Orleans Streams 8.0+, Azure Event Hubs, Kafka
 
 ## Table of Contents
 

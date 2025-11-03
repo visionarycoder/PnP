@@ -175,7 +175,7 @@ CREATE INDEX idx_documents_author_status ON documents (author_id, processing_sta
 WHERE deleted_at IS NULL;
 
 -- Trigger for updating timestamps
-CREATE OR REPLACE FUNCTION update_updated_at_column()
+CREATE OR REPLACE FUNCTION usp_update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = NOW();
@@ -186,7 +186,7 @@ $$ language 'plpgsql';
 
 CREATE TRIGGER update_documents_updated_at 
     BEFORE UPDATE ON documents 
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    FOR EACH ROW EXECUTE FUNCTION usp_update_updated_at_column();
 ```
 
 ### Document Content Storage
@@ -333,14 +333,14 @@ using Qdrant.Client.Grpc;
 
 public class DocumentVectorRepository : IDocumentVectorRepository
 {
-    private readonly QdrantClient _qdrantClient;
-    private readonly ILogger<DocumentVectorRepository> _logger;
+    private readonly QdrantClient qdrantClient;
+    private readonly ILogger<DocumentVectorRepository> logger;
     private const string CollectionName = "document_embeddings";
 
     public DocumentVectorRepository(QdrantClient qdrantClient, ILogger<DocumentVectorRepository> logger)
     {
-        _qdrantClient = qdrantClient;
-        _logger = logger;
+        qdrantClient = qdrantClient;
+        logger = logger;
     }
 
     public async Task<bool> StoreDocumentEmbeddingAsync(
@@ -367,7 +367,7 @@ public class DocumentVectorRepository : IDocumentVectorRepository
                 }
             };
 
-            var response = await _qdrantClient.UpsertAsync(
+            var response = await qdrantClient.UpsertAsync(
                 CollectionName,
                 new[] { point },
                 cancellationToken: cancellationToken);
@@ -376,7 +376,7 @@ public class DocumentVectorRepository : IDocumentVectorRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to store embedding for document {DocumentId}", documentId);
+            logger.LogError(ex, "Failed to store embedding for document {DocumentId}", documentId);
             return false;
         }
     }
@@ -411,7 +411,7 @@ public class DocumentVectorRepository : IDocumentVectorRepository
                 searchRequest.Filter = BuildFilter(filter);
             }
 
-            var response = await _qdrantClient.SearchAsync(searchRequest, cancellationToken: cancellationToken);
+            var response = await qdrantClient.SearchAsync(searchRequest, cancellationToken: cancellationToken);
 
             return response.Result.Select(point => new SimilarDocument
             {
@@ -426,7 +426,7 @@ public class DocumentVectorRepository : IDocumentVectorRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to search for similar documents");
+            logger.LogError(ex, "Failed to search for similar documents");
             return new List<SimilarDocument>();
         }
     }
@@ -536,9 +536,9 @@ db.createCollection("processing_results", {
       bsonType: "object",
       required: ["document_id", "processing_type", "status", "created_at"],
       properties: {
-        _id: { bsonType: "objectId" },
-        document_id: { bsonType: "string" },
-        processing_type: {
+        id: { bsonType: "objectId" },
+        documentid: { bsonType: "string" },
+        processingtype: {
           enum: ["classification", "sentiment", "topic_modeling", "summarization", "entity_extraction", "keyword_extraction"]
         },
         status: {
@@ -546,11 +546,11 @@ db.createCollection("processing_results", {
         },
         
         // Processing metadata
-        model_version: { bsonType: "string" },
-        processing_options: { bsonType: "object" },
-        started_at: { bsonType: "date" },
-        completed_at: { bsonType: ["date", "null"] },
-        processing_time_ms: { bsonType: ["number", "null"] },
+        modelversion: { bsonType: "string" },
+        processingoptions: { bsonType: "object" },
+        startedat: { bsonType: "date" },
+        completedat: { bsonType: ["date", "null"] },
+        processingtimems: { bsonType: ["number", "null"] },
         
         // Results - polymorphic based on processing_type
         results: {
@@ -559,9 +559,9 @@ db.createCollection("processing_results", {
             {
               // Classification results
               properties: {
-                predicted_category: { bsonType: "string" },
+                predictedcategory: { bsonType: "string" },
                 confidence: { bsonType: "number", minimum: 0, maximum: 1 },
-                category_scores: { bsonType: "object" }
+                categoryscores: { bsonType: "object" }
               }
             },
             {
@@ -570,15 +570,15 @@ db.createCollection("processing_results", {
                 sentiment: { enum: ["very_negative", "negative", "neutral", "positive", "very_positive"] },
                 score: { bsonType: "number", minimum: -1, maximum: 1 },
                 confidence: { bsonType: "number", minimum: 0, maximum: 1 },
-                emotion_scores: { bsonType: "object" }
+                emotionscores: { bsonType: "object" }
               }
             },
             {
               // Topic modeling results
               properties: {
-                topic_distribution: { bsonType: "object" },
-                dominant_topic: { bsonType: "number" },
-                dominant_topic_score: { bsonType: "number" },
+                topicdistribution: { bsonType: "object" },
+                dominanttopic: { bsonType: "number" },
+                dominanttopicscore: { bsonType: "number" },
                 keywords: {
                   bsonType: "array",
                   items: {
@@ -596,22 +596,22 @@ db.createCollection("processing_results", {
         },
         
         // Error information
-        error_message: { bsonType: ["string", "null"] },
-        error_details: { bsonType: ["object", "null"] },
+        errormessage: { bsonType: ["string", "null"] },
+        errordetails: { bsonType: ["object", "null"] },
         
         // Performance metrics
         metrics: {
           bsonType: "object",
           properties: {
-            memory_usage_mb: { bsonType: "number" },
-            cpu_time_ms: { bsonType: "number" },
-            tokens_processed: { bsonType: "number" },
-            batch_size: { bsonType: "number" }
+            memoryusagemb: { bsonType: "number" },
+            cputimems: { bsonType: "number" },
+            tokensprocessed: { bsonType: "number" },
+            batchsize: { bsonType: "number" }
           }
         },
         
-        created_at: { bsonType: "date" },
-        updated_at: { bsonType: "date" }
+        createdat: { bsonType: "date" },
+        updatedat: { bsonType: "date" }
       }
     }
   }
@@ -620,9 +620,9 @@ db.createCollection("processing_results", {
 // Indexes for performance
 db.processing_results.createIndex({ "document_id": 1 });
 db.processing_results.createIndex({ "processing_type": 1, "status": 1 });
-db.processing_results.createIndex({ "status": 1, "created_at": -1 });
+db.processing_results.createIndex({ "status": 1, "createdAt": -1 });
 db.processing_results.createIndex({ "model_version": 1 });
-db.processing_results.createIndex({ "created_at": -1 });
+db.processing_results.createIndex({ "createdAt": -1 });
 
 // Compound indexes for common queries
 db.processing_results.createIndex({ 
@@ -648,9 +648,9 @@ db.createCollection("ml_models", {
       bsonType: "object",
       required: ["model_id", "model_type", "version", "status"],
       properties: {
-        _id: { bsonType: "objectId" },
-        model_id: { bsonType: "string" },
-        model_type: {
+        id: { bsonType: "objectId" },
+        modelid: { bsonType: "string" },
+        modeltype: {
           enum: ["classification", "sentiment", "topic_modeling", "summarization", "embedding"]
         },
         version: { bsonType: "string" },
@@ -659,20 +659,20 @@ db.createCollection("ml_models", {
         },
         
         // Model metadata
-        display_name: { bsonType: "string" },
+        displayname: { bsonType: "string" },
         description: { bsonType: "string" },
         algorithm: { bsonType: "string" },
         framework: { bsonType: "string" },
         
         // Training information
-        training_data: {
+        trainingdata: {
           bsonType: "object",
           properties: {
-            dataset_id: { bsonType: "string" },
-            sample_count: { bsonType: "number" },
+            datasetid: { bsonType: "string" },
+            samplecount: { bsonType: "number" },
             features: { bsonType: "array" },
             labels: { bsonType: "array" },
-            data_quality_score: { bsonType: "number" }
+            dataqualityscore: { bsonType: "number" }
           }
         },
         
@@ -683,9 +683,9 @@ db.createCollection("ml_models", {
             accuracy: { bsonType: "number" },
             precision: { bsonType: "number" },
             recall: { bsonType: "number" },
-            f1_score: { bsonType: "number" },
-            validation_metrics: { bsonType: "object" },
-            benchmark_results: { bsonType: "object" }
+            f1score: { bsonType: "number" },
+            validationmetrics: { bsonType: "object" },
+            benchmarkresults: { bsonType: "object" }
           }
         },
         
@@ -693,11 +693,11 @@ db.createCollection("ml_models", {
         deployment: {
           bsonType: "object",
           properties: {
-            endpoint_url: { bsonType: "string" },
-            container_image: { bsonType: "string" },
-            resource_requirements: { bsonType: "object" },
-            scaling_config: { bsonType: "object" },
-            health_check_url: { bsonType: "string" }
+            endpointurl: { bsonType: "string" },
+            containerimage: { bsonType: "string" },
+            resourcerequirements: { bsonType: "object" },
+            scalingconfig: { bsonType: "object" },
+            healthcheckurl: { bsonType: "string" }
           }
         },
         
@@ -705,18 +705,18 @@ db.createCollection("ml_models", {
         artifacts: {
           bsonType: "object",
           properties: {
-            model_file_path: { bsonType: "string" },
-            config_file_path: { bsonType: "string" },
-            weights_file_path: { bsonType: "string" },
-            vocabulary_file_path: { bsonType: "string" },
-            preprocessing_config: { bsonType: "object" }
+            modelfilepath: { bsonType: "string" },
+            configfilepath: { bsonType: "string" },
+            weightsfilepath: { bsonType: "string" },
+            vocabularyfilepath: { bsonType: "string" },
+            preprocessingconfig: { bsonType: "object" }
           }
         },
         
-        created_at: { bsonType: "date" },
-        updated_at: { bsonType: "date" },
-        deployed_at: { bsonType: ["date", "null"] },
-        deprecated_at: { bsonType: ["date", "null"] }
+        createdat: { bsonType: "date" },
+        updatedat: { bsonType: "date" },
+        deployedat: { bsonType: ["date", "null"] },
+        deprecatedat: { bsonType: ["date", "null"] }
       }
     }
   }
@@ -726,7 +726,7 @@ db.createCollection("ml_models", {
 db.ml_models.createIndex({ "model_id": 1, "version": 1 }, { unique: true });
 db.ml_models.createIndex({ "model_type": 1, "status": 1 });
 db.ml_models.createIndex({ "status": 1, "deployed_at": -1 });
-db.ml_models.createIndex({ "created_at": -1 });
+db.ml_models.createIndex({ "createdAt": -1 });
 
 // Text index for searching models
 db.ml_models.createIndex({
@@ -852,17 +852,17 @@ using System.Text.Json;
 
 public class EventStoreRepository : IEventRepository
 {
-    private readonly EventStoreClient _eventStoreClient;
-    private readonly ILogger<EventStoreRepository> _logger;
-    private readonly JsonSerializerOptions _jsonOptions;
+    private readonly EventStoreClient eventStoreClient;
+    private readonly ILogger<EventStoreRepository> logger;
+    private readonly JsonSerializerOptions jsonOptions;
 
     public EventStoreRepository(
         EventStoreClient eventStoreClient, 
         ILogger<EventStoreRepository> logger)
     {
-        _eventStoreClient = eventStoreClient;
-        _logger = logger;
-        _jsonOptions = new JsonSerializerOptions
+        eventStoreClient = eventStoreClient;
+        logger = logger;
+        jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             WriteIndented = false
@@ -877,18 +877,18 @@ public class EventStoreRepository : IEventRepository
 
         try
         {
-            await _eventStoreClient.AppendToStreamAsync(
+            await eventStoreClient.AppendToStreamAsync(
                 streamName,
                 StreamState.Any,
                 new[] { eventData },
                 cancellationToken: cancellationToken);
 
-            _logger.LogDebug("Appended event {EventType} to stream {StreamName}", 
+            logger.LogDebug("Appended event {EventType} to stream {StreamName}", 
                 typeof(T).Name, streamName);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to append event {EventType} to stream {StreamName}", 
+            logger.LogError(ex, "Failed to append event {EventType} to stream {StreamName}", 
                 typeof(T).Name, streamName);
             throw;
         }
@@ -904,7 +904,7 @@ public class EventStoreRepository : IEventRepository
 
         try
         {
-            var result = _eventStoreClient.ReadStreamAsync(
+            var result = eventStoreClient.ReadStreamAsync(
                 Direction.Forwards,
                 streamName,
                 StreamPosition.FromInt64(fromVersion),
@@ -920,7 +920,7 @@ public class EventStoreRepository : IEventRepository
                 if (resolvedEvent.Event.EventType == typeof(T).Name)
                 {
                     var eventData = JsonSerializer.Deserialize<T>(
-                        resolvedEvent.Event.Data.Span, _jsonOptions);
+                        resolvedEvent.Event.Data.Span, jsonOptions);
                     
                     if (eventData != null)
                     {
@@ -933,7 +933,7 @@ public class EventStoreRepository : IEventRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to read events from stream {StreamName}", streamName);
+            logger.LogError(ex, "Failed to read events from stream {StreamName}", streamName);
             throw;
         }
     }
@@ -947,7 +947,7 @@ public class EventStoreRepository : IEventRepository
 
         try
         {
-            var result = _eventStoreClient.ReadStreamAsync(
+            var result = eventStoreClient.ReadStreamAsync(
                 Direction.Forwards,
                 streamName,
                 StreamPosition.Start,
@@ -971,7 +971,7 @@ public class EventStoreRepository : IEventRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to read all events from stream {StreamName}", streamName);
+            logger.LogError(ex, "Failed to read all events from stream {StreamName}", streamName);
             throw;
         }
     }
@@ -979,7 +979,7 @@ public class EventStoreRepository : IEventRepository
     private EventData CreateEventData<T>(T domainEvent) where T : DomainEvent
     {
         var eventType = typeof(T).Name;
-        var data = JsonSerializer.SerializeToUtf8Bytes(domainEvent, _jsonOptions);
+        var data = JsonSerializer.SerializeToUtf8Bytes(domainEvent, jsonOptions);
         
         var metadata = new Dictionary<string, object>
         {
@@ -988,7 +988,7 @@ public class EventStoreRepository : IEventRepository
             ["eventVersion"] = "1.0"
         };
         
-        var metadataBytes = JsonSerializer.SerializeToUtf8Bytes(metadata, _jsonOptions);
+        var metadataBytes = JsonSerializer.SerializeToUtf8Bytes(metadata, jsonOptions);
 
         return new EventData(
             Uuid.NewUuid(),
@@ -1004,27 +1004,27 @@ public class EventStoreRepository : IEventRepository
             return eventRecord.EventType switch
             {
                 nameof(DocumentCreated) => JsonSerializer.Deserialize<DocumentCreated>(
-                    eventRecord.Data.Span, _jsonOptions),
+                    eventRecord.Data.Span, jsonOptions),
                 nameof(DocumentContentUpdated) => JsonSerializer.Deserialize<DocumentContentUpdated>(
-                    eventRecord.Data.Span, _jsonOptions),
+                    eventRecord.Data.Span, jsonOptions),
                 nameof(ProcessingRequested) => JsonSerializer.Deserialize<ProcessingRequested>(
-                    eventRecord.Data.Span, _jsonOptions),
+                    eventRecord.Data.Span, jsonOptions),
                 nameof(ProcessingStarted) => JsonSerializer.Deserialize<ProcessingStarted>(
-                    eventRecord.Data.Span, _jsonOptions),
+                    eventRecord.Data.Span, jsonOptions),
                 nameof(ProcessingCompleted) => JsonSerializer.Deserialize<ProcessingCompleted>(
-                    eventRecord.Data.Span, _jsonOptions),
+                    eventRecord.Data.Span, jsonOptions),
                 nameof(ProcessingFailed) => JsonSerializer.Deserialize<ProcessingFailed>(
-                    eventRecord.Data.Span, _jsonOptions),
+                    eventRecord.Data.Span, jsonOptions),
                 nameof(ModelDeployed) => JsonSerializer.Deserialize<ModelDeployed>(
-                    eventRecord.Data.Span, _jsonOptions),
+                    eventRecord.Data.Span, jsonOptions),
                 nameof(ModelRetrained) => JsonSerializer.Deserialize<ModelRetrained>(
-                    eventRecord.Data.Span, _jsonOptions),
+                    eventRecord.Data.Span, jsonOptions),
                 _ => null
             };
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to deserialize event {EventType}", eventRecord.EventType);
+            logger.LogWarning(ex, "Failed to deserialize event {EventType}", eventRecord.EventType);
             return null;
         }
     }

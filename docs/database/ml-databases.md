@@ -119,23 +119,23 @@ public class DocumentEmbedding
 ```csharp
 public class DuckDBMLProvider
 {
-    private readonly string _connectionString;
-    private readonly ILogger<DuckDBMLProvider> _logger;
+    private readonly string connectionString;
+    private readonly ILogger<DuckDBMLProvider> logger;
 
     public DuckDBMLProvider(IConfiguration configuration, ILogger<DuckDBMLProvider> logger)
     {
-        _connectionString = configuration.GetConnectionString("DuckDB") ?? "Data Source=./data/ml_analytics.db";
-        _logger = logger;
+        connectionString = configuration.GetConnectionString("DuckDB") ?? "Data Source=./data/ml_analytics.db";
+        logger = logger;
     }
 
     public async Task<MLAnalyticsResult> AnalyzeModelPerformanceAsync(string experimentId)
     {
-        using var connection = new DuckDBConnection(_connectionString);
+        using var connection = new DuckDBConnection(connectionString);
         await connection.OpenAsync();
 
         var query = """
             SELECT 
-                model_name,
+                modelName,
                 AVG(accuracy) as avg_accuracy,
                 STDDEV(accuracy) as accuracy_std,
                 COUNT(*) as total_runs,
@@ -143,7 +143,7 @@ public class DuckDBMLProvider
                 DATE_TRUNC('hour', created_at) as hour_bucket
             FROM ml_experiment_results 
             WHERE experiment_id = $1 
-            GROUP BY model_name, hour_bucket
+            GROUP BY modelName, hour_bucket
             ORDER BY hour_bucket DESC;
             """;
 
@@ -157,7 +157,7 @@ public class DuckDBMLProvider
         {
             results.Add(new ModelPerformanceMetric
             {
-                ModelName = reader.GetString("model_name"),
+                ModelName = reader.GetString("modelName"),
                 AverageAccuracy = reader.GetDouble("avg_accuracy"),
                 AccuracyStandardDeviation = reader.GetDouble("accuracy_std"),
                 TotalRuns = reader.GetInt32("total_runs"),
@@ -171,7 +171,7 @@ public class DuckDBMLProvider
 
     public async Task StoreBatchPredictionsAsync(IEnumerable<MLPrediction> predictions)
     {
-        using var connection = new DuckDBConnection(_connectionString);
+        using var connection = new DuckDBConnection(connectionString);
         await connection.OpenAsync();
 
         // DuckDB excels at bulk inserts
@@ -229,20 +229,20 @@ services:
 ```csharp
 public class ChromaVectorProvider : ITextEmbeddingProvider
 {
-    private readonly HttpClient _httpClient;
-    private readonly ChromaConfiguration _configuration;
-    private readonly ILogger<ChromaVectorProvider> _logger;
+    private readonly HttpClient httpClient;
+    private readonly ChromaConfiguration configuration;
+    private readonly ILogger<ChromaVectorProvider> logger;
 
     public ChromaVectorProvider(
         HttpClient httpClient,
         IOptions<ChromaConfiguration> configuration,
         ILogger<ChromaVectorProvider> logger)
     {
-        _httpClient = httpClient;
-        _configuration = configuration.Value;
-        _logger = logger;
+        httpClient = httpClient;
+        configuration = configuration.Value;
+        logger = logger;
         
-        _httpClient.BaseAddress = new Uri(_configuration.Endpoint);
+        httpClient.BaseAddress = new Uri(configuration.Endpoint);
     }
 
     public async Task<string> CreateCollectionAsync(string name, Dictionary<string, object>? metadata = null)
@@ -253,7 +253,7 @@ public class ChromaVectorProvider : ITextEmbeddingProvider
             metadata = metadata ?? new Dictionary<string, object>()
         };
 
-        var response = await _httpClient.PostAsJsonAsync("/api/v1/collections", request);
+        var response = await httpClient.PostAsJsonAsync("/api/v1/collections", request);
         response.EnsureSuccessStatusCode();
         
         var result = await response.Content.ReadFromJsonAsync<ChromaCollection>();
@@ -274,7 +274,7 @@ public class ChromaVectorProvider : ITextEmbeddingProvider
             metadatas = embeddingsList.Select(e => e.Metadata).ToArray()
         };
 
-        var response = await _httpClient.PostAsJsonAsync(
+        var response = await httpClient.PostAsJsonAsync(
             $"/api/v1/collections/{collectionId}/add", request);
         response.EnsureSuccessStatusCode();
     }
@@ -293,7 +293,7 @@ public class ChromaVectorProvider : ITextEmbeddingProvider
             include = new[] { "metadatas", "documents", "distances" }
         };
 
-        var response = await _httpClient.PostAsJsonAsync(
+        var response = await httpClient.PostAsJsonAsync(
             $"/api/v1/collections/{collectionId}/query", request);
         response.EnsureSuccessStatusCode();
         
@@ -318,12 +318,12 @@ public class ChromaVectorProvider : ITextEmbeddingProvider
 ```csharp
 public class SQLiteMLProvider
 {
-    private readonly string _connectionString;
+    private readonly string connectionString;
     
     public SQLiteMLProvider(IConfiguration configuration)
     {
         var dbPath = configuration.GetConnectionString("SQLite") ?? "./data/ml_dev.db";
-        _connectionString = $"Data Source={dbPath};Cache=Shared;";
+        connectionString = $"Data Source={dbPath};Cache=Shared;";
         
         // Initialize database
         InitializeDatabase();
@@ -331,7 +331,7 @@ public class SQLiteMLProvider
 
     private void InitializeDatabase()
     {
-        using var connection = new SqliteConnection(_connectionString);
+        using var connection = new SqliteConnection(connectionString);
         connection.Open();
         
         var createTables = """
@@ -385,7 +385,7 @@ public class SQLiteMLProvider
     {
         var experimentId = Guid.NewGuid().ToString();
         
-        using var connection = new SqliteConnection(_connectionString);
+        using var connection = new SqliteConnection(connectionString);
         await connection.OpenAsync();
         
         var insertQuery = """
@@ -422,9 +422,9 @@ services:
       - ./data/clickhouse:/var/lib/clickhouse
       - ./config/clickhouse:/etc/clickhouse-server/config.d
     environment:
-      CLICKHOUSE_DB: ml_metrics
-      CLICKHOUSE_USER: ml_user
-      CLICKHOUSE_PASSWORD: ml_password
+      CLICKHOUSEDB: ml_metrics
+      CLICKHOUSEUSER: ml_user
+      CLICKHOUSEPASSWORD: ml_password
     ulimits:
       nofile:
         soft: 262144
@@ -434,12 +434,12 @@ services:
 ```csharp
 public class ClickHouseMLMetricsProvider
 {
-    private readonly ClickHouseConnection _connection;
+    private readonly ClickHouseConnection connection;
     
     public ClickHouseMLMetricsProvider(IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("ClickHouse");
-        _connection = new ClickHouseConnection(connectionString);
+        connection = new ClickHouseConnection(connectionString);
     }
 
     public async Task RecordModelPerformanceAsync(ModelPerformanceMetric metric)
@@ -448,7 +448,7 @@ public class ClickHouseMLMetricsProvider
             INSERT INTO ml_model_performance 
             (
                 timestamp,
-                model_name,
+                modelName,
                 model_version,
                 accuracy,
                 precision,
@@ -469,11 +469,11 @@ public class ClickHouseMLMetricsProvider
                 @f1Score,
                 @inferenceTime,
                 @memoryUsage,
-                @experimentId
+                @experiment_id
             );
             """;
 
-        using var command = _connection.CreateCommand(insertQuery);
+        using var command = connection.CreateCommand(insertQuery);
         command.Parameters.Add("@timestamp", DbType.DateTime).Value = metric.Timestamp;
         command.Parameters.Add("@modelName", DbType.String).Value = metric.ModelName;
         command.Parameters.Add("@modelVersion", DbType.String).Value = metric.ModelVersion;
@@ -483,7 +483,7 @@ public class ClickHouseMLMetricsProvider
         command.Parameters.Add("@f1Score", DbType.Double).Value = metric.F1Score;
         command.Parameters.Add("@inferenceTime", DbType.Int32).Value = metric.InferenceTimeMs;
         command.Parameters.Add("@memoryUsage", DbType.Double).Value = metric.MemoryUsageMb;
-        command.Parameters.Add("@experimentId", DbType.String).Value = metric.ExperimentId;
+        command.Parameters.Add("@experiment_id", DbType.String).Value = metric.ExperimentId;
         
         await command.ExecuteNonQueryAsync();
     }
@@ -495,20 +495,20 @@ public class ClickHouseMLMetricsProvider
         var query = """
             SELECT 
                 toStartOfHour(timestamp) as hour,
-                model_name,
+                modelName,
                 avg(accuracy) as avg_accuracy,
                 avg(inference_time_ms) as avg_inference_time,
                 count() as request_count,
                 quantile(0.95)(inference_time_ms) as p95_inference_time,
                 quantile(0.99)(inference_time_ms) as p99_inference_time
             FROM ml_model_performance 
-            WHERE model_name = @modelName 
+            WHERE modelName = @modelName 
               AND timestamp >= @startTime
-            GROUP BY hour, model_name
+            GROUP BY hour, modelName
             ORDER BY hour DESC;
             """;
 
-        using var command = _connection.CreateCommand(query);
+        using var command = connection.CreateCommand(query);
         command.Parameters.Add("@modelName", DbType.String).Value = modelName;
         command.Parameters.Add("@startTime", DbType.DateTime).Value = DateTime.UtcNow.Subtract(timeWindow);
         
@@ -520,7 +520,7 @@ public class ClickHouseMLMetricsProvider
             results.Add(new ModelPerformanceTrend
             {
                 Hour = reader.GetDateTime("hour"),
-                ModelName = reader.GetString("model_name"),
+                ModelName = reader.GetString("modelName"),
                 AverageAccuracy = reader.GetDouble("avg_accuracy"),
                 AverageInferenceTime = reader.GetDouble("avg_inference_time"),
                 RequestCount = reader.GetInt64("request_count"),
@@ -549,9 +549,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: ml_dev
-      POSTGRES_USER: ml_user
-      POSTGRES_PASSWORD: ml_password
+      POSTGRESDB: ml_dev
+      POSTGRESUSER: ml_user
+      POSTGRESPASSWORD: ml_password
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
       - ./sql/init:/docker-entrypoint-initdb.d/
@@ -583,9 +583,9 @@ services:
     volumes:
       - ./data/clickhouse:/var/lib/clickhouse
     environment:
-      CLICKHOUSE_DB: ml_metrics
-      CLICKHOUSE_USER: ml_user
-      CLICKHOUSE_PASSWORD: ml_password
+      CLICKHOUSEDB: ml_metrics
+      CLICKHOUSEUSER: ml_user
+      CLICKHOUSEPASSWORD: ml_password
 
   # Local LLM - Ollama
   ollama:

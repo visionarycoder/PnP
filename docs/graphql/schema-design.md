@@ -1,8 +1,9 @@
-# GraphQL Schema Design Patterns
+# Enterprise GraphQL Schema Design Patterns
 
-**Description**: Design patterns for creating robust, scalable GraphQL schemas using HotChocolate with document processing and ML integration.
+**Description**: Advanced enterprise schema design patterns using HotChocolate including federated schemas, domain-driven design, backward-compatible evolution, comprehensive validation, and enterprise security integration with performance optimization.
 
-**Language/Technology**: C# / HotChocolate
+**Language/Technology**: C#, HotChocolate, .NET 9.0, Schema Federation, Domain-Driven Design
+**Enterprise Features**: Schema federation, domain modeling, backward compatibility, comprehensive validation, security integration, and performance monitoring
 
 ## Code
 

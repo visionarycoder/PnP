@@ -16,18 +16,18 @@ using Microsoft.AspNetCore.SignalR;
 // SignalR Hub for real-time communication
 public class DocumentProcessingHub : Hub
 {
-    private readonly ILogger<DocumentProcessingHub> _logger;
-    private readonly IDocumentService _documentService;
-    private readonly IUserSessionService _userSessionService;
+    private readonly ILogger<DocumentProcessingHub> logger;
+    private readonly IDocumentService documentService;
+    private readonly IUserSessionService userSessionService;
 
     public DocumentProcessingHub(
         ILogger<DocumentProcessingHub> logger,
         IDocumentService documentService,
         IUserSessionService userSessionService)
     {
-        _logger = logger;
-        _documentService = documentService;
-        _userSessionService = userSessionService;
+        logger = logger;
+        documentService = documentService;
+        userSessionService = userSessionService;
     }
 
     public async Task JoinDocumentGroup(string documentId)
@@ -38,10 +38,10 @@ public class DocumentProcessingHub : Hub
         var userId = Context.UserIdentifier;
         if (!string.IsNullOrEmpty(userId))
         {
-            await _userSessionService.JoinDocumentAsync(userId, documentId, Context.ConnectionId);
+            await userSessionService.JoinDocumentAsync(userId, documentId, Context.ConnectionId);
         }
 
-        _logger.LogInformation("User {UserId} joined document group {DocumentId}", userId, documentId);
+        logger.LogInformation("User {UserId} joined document group {DocumentId}", userId, documentId);
     }
 
     public async Task LeaveDocumentGroup(string documentId)
@@ -51,10 +51,10 @@ public class DocumentProcessingHub : Hub
         var userId = Context.UserIdentifier;
         if (!string.IsNullOrEmpty(userId))
         {
-            await _userSessionService.LeaveDocumentAsync(userId, documentId, Context.ConnectionId);
+            await userSessionService.LeaveDocumentAsync(userId, documentId, Context.ConnectionId);
         }
 
-        _logger.LogInformation("User {UserId} left document group {DocumentId}", userId, documentId);
+        logger.LogInformation("User {UserId} left document group {DocumentId}", userId, documentId);
     }
 
     public async Task SendDocumentChange(string documentId, DocumentChange change)
@@ -66,7 +66,7 @@ public class DocumentProcessingHub : Hub
         }
 
         // Validate user has access to the document
-        var hasAccess = await _documentService.HasAccessAsync(documentId, userId);
+        var hasAccess = await documentService.HasAccessAsync(documentId, userId);
         if (!hasAccess)
         {
             throw new HubException("Access denied to document");
@@ -82,7 +82,7 @@ public class DocumentProcessingHub : Hub
                 Timestamp = DateTime.UtcNow
             });
 
-        _logger.LogDebug("Document change sent for document {DocumentId} by user {UserId}", documentId, userId);
+        logger.LogDebug("Document change sent for document {DocumentId} by user {UserId}", documentId, userId);
     }
 
     public async Task SendCursorPosition(string documentId, CursorPosition position)
@@ -111,7 +111,7 @@ public class DocumentProcessingHub : Hub
             return;
         }
 
-        await _userSessionService.StartCollaborativeSessionAsync(userId, documentId, Context.ConnectionId);
+        await userSessionService.StartCollaborativeSessionAsync(userId, documentId, Context.ConnectionId);
         
         await Clients.Group($"document:{documentId}")
             .SendAsync("CollaborativeSessionStarted", new
@@ -125,11 +125,11 @@ public class DocumentProcessingHub : Hub
     public override async Task OnConnectedAsync()
     {
         var userId = Context.UserIdentifier;
-        _logger.LogInformation("User {UserId} connected to DocumentProcessingHub", userId);
+        logger.LogInformation("User {UserId} connected to DocumentProcessingHub", userId);
         
         if (!string.IsNullOrEmpty(userId))
         {
-            await _userSessionService.UserConnectedAsync(userId, Context.ConnectionId);
+            await userSessionService.UserConnectedAsync(userId, Context.ConnectionId);
         }
 
         await base.OnConnectedAsync();
@@ -138,11 +138,11 @@ public class DocumentProcessingHub : Hub
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         var userId = Context.UserIdentifier;
-        _logger.LogInformation("User {UserId} disconnected from DocumentProcessingHub", userId);
+        logger.LogInformation("User {UserId} disconnected from DocumentProcessingHub", userId);
 
         if (!string.IsNullOrEmpty(userId))
         {
-            await _userSessionService.UserDisconnectedAsync(userId, Context.ConnectionId);
+            await userSessionService.UserDisconnectedAsync(userId, Context.ConnectionId);
         }
 
         await base.OnDisconnectedAsync(exception);
@@ -160,31 +160,31 @@ public interface IRealTimeProcessingService
 
 public class RealTimeProcessingService : IRealTimeProcessingService
 {
-    private readonly IHubContext<DocumentProcessingHub> _hubContext;
-    private readonly IProcessingService _processingService;
-    private readonly ILogger<RealTimeProcessingService> _logger;
-    private readonly ConcurrentDictionary<string, CancellationTokenSource> _activeProcessing;
+    private readonly IHubContext<DocumentProcessingHub> hubContext;
+    private readonly IProcessingService processingService;
+    private readonly ILogger<RealTimeProcessingService> logger;
+    private readonly ConcurrentDictionary<string, CancellationTokenSource> activeProcessing;
 
     public RealTimeProcessingService(
         IHubContext<DocumentProcessingHub> hubContext,
         IProcessingService processingService,
         ILogger<RealTimeProcessingService> logger)
     {
-        _hubContext = hubContext;
-        _processingService = processingService;
-        _logger = logger;
-        _activeProcessing = new ConcurrentDictionary<string, CancellationTokenSource>();
+        hubContext = hubContext;
+        processingService = processingService;
+        logger = logger;
+        activeProcessing = new ConcurrentDictionary<string, CancellationTokenSource>();
     }
 
     public async Task StartProcessingStreamAsync(string documentId, ProcessingRequest request)
     {
         var cancellationTokenSource = new CancellationTokenSource();
-        _activeProcessing.TryAdd(documentId, cancellationTokenSource);
+        activeProcessing.TryAdd(documentId, cancellationTokenSource);
 
         try
         {
             // Notify processing started
-            await _hubContext.Clients.Group($"document:{documentId}")
+            await hubContext.Clients.Group($"document:{documentId}")
                 .SendAsync("ProcessingStarted", new ProcessingUpdate
                 {
                     DocumentId = documentId,
@@ -197,7 +197,7 @@ public class RealTimeProcessingService : IRealTimeProcessingService
             // Process with real-time updates
             var progress = new Progress<ProcessingProgress>(async p =>
             {
-                await _hubContext.Clients.Group($"document:{documentId}")
+                await hubContext.Clients.Group($"document:{documentId}")
                     .SendAsync("ProcessingProgress", new ProcessingUpdate
                     {
                         DocumentId = documentId,
@@ -209,7 +209,7 @@ public class RealTimeProcessingService : IRealTimeProcessingService
                     }, cancellationTokenSource.Token);
             });
 
-            var result = await _processingService.ProcessDocumentAsync(
+            var result = await processingService.ProcessDocumentAsync(
                 documentId, 
                 request, 
                 progress, 
@@ -219,7 +219,7 @@ public class RealTimeProcessingService : IRealTimeProcessingService
         }
         catch (OperationCanceledException)
         {
-            await _hubContext.Clients.Group($"document:{documentId}")
+            await hubContext.Clients.Group($"document:{documentId}")
                 .SendAsync("ProcessingCancelled", new ProcessingUpdate
                 {
                     DocumentId = documentId,
@@ -230,9 +230,9 @@ public class RealTimeProcessingService : IRealTimeProcessingService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during real-time processing for document {DocumentId}", documentId);
+            logger.LogError(ex, "Error during real-time processing for document {DocumentId}", documentId);
             
-            await _hubContext.Clients.Group($"document:{documentId}")
+            await hubContext.Clients.Group($"document:{documentId}")
                 .SendAsync("ProcessingError", new ProcessingUpdate
                 {
                     DocumentId = documentId,
@@ -243,7 +243,7 @@ public class RealTimeProcessingService : IRealTimeProcessingService
         }
         finally
         {
-            _activeProcessing.TryRemove(documentId, out _);
+            activeProcessing.TryRemove(documentId, out _);
             cancellationTokenSource.Dispose();
         }
     }
@@ -313,7 +313,7 @@ public class RealTimeProcessingService : IRealTimeProcessingService
 
     public async Task NotifyProcessingCompleteAsync(string documentId, ProcessingResult result)
     {
-        await _hubContext.Clients.Group($"document:{documentId}")
+        await hubContext.Clients.Group($"document:{documentId}")
             .SendAsync("ProcessingCompleted", new ProcessingUpdate
             {
                 DocumentId = documentId,
@@ -324,13 +324,13 @@ public class RealTimeProcessingService : IRealTimeProcessingService
                 Timestamp = DateTime.UtcNow
             });
 
-        _logger.LogInformation("Processing completed notification sent for document {DocumentId}", documentId);
+        logger.LogInformation("Processing completed notification sent for document {DocumentId}", documentId);
     }
 
     public async Task BroadcastSystemStatusAsync(SystemStatus status)
     {
-        await _hubContext.Clients.All.SendAsync("SystemStatusUpdate", status);
-        _logger.LogDebug("System status update broadcasted: {Status}", status.Status);
+        await hubContext.Clients.All.SendAsync("SystemStatusUpdate", status);
+        logger.LogDebug("System status update broadcasted: {Status}", status.Status);
     }
 }
 ```
@@ -615,29 +615,29 @@ public interface IEventStreamingService
 
 public class EventStreamingService : IEventStreamingService
 {
-    private readonly ILogger<EventStreamingService> _logger;
-    private readonly ConcurrentDictionary<string, Channel<object>> _eventChannels;
-    private readonly ConcurrentDictionary<string, Channel<object>> _topicChannels;
+    private readonly ILogger<EventStreamingService> logger;
+    private readonly ConcurrentDictionary<string, Channel<object>> eventChannels;
+    private readonly ConcurrentDictionary<string, Channel<object>> topicChannels;
 
     public EventStreamingService(ILogger<EventStreamingService> logger)
     {
-        _logger = logger;
-        _eventChannels = new ConcurrentDictionary<string, Channel<object>>();
-        _topicChannels = new ConcurrentDictionary<string, Channel<object>>();
+        logger = logger;
+        eventChannels = new ConcurrentDictionary<string, Channel<object>>();
+        topicChannels = new ConcurrentDictionary<string, Channel<object>>();
     }
 
     public async Task PublishEventAsync<T>(string eventType, T eventData, CancellationToken cancellationToken = default)
     {
-        var channel = _eventChannels.GetOrAdd(eventType, _ => Channel.CreateUnbounded<object>());
+        var channel = eventChannels.GetOrAdd(eventType, _ => Channel.CreateUnbounded<object>());
         
         try
         {
             await channel.Writer.WriteAsync(eventData!, cancellationToken);
-            _logger.LogDebug("Event published to {EventType}", eventType);
+            logger.LogDebug("Event published to {EventType}", eventType);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error publishing event to {EventType}", eventType);
+            logger.LogError(ex, "Error publishing event to {EventType}", eventType);
         }
     }
 
@@ -645,7 +645,7 @@ public class EventStreamingService : IEventStreamingService
         string eventType, 
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var channel = _eventChannels.GetOrAdd(eventType, _ => Channel.CreateUnbounded<object>());
+        var channel = eventChannels.GetOrAdd(eventType, _ => Channel.CreateUnbounded<object>());
         
         await foreach (var eventData in channel.Reader.ReadAllAsync(cancellationToken))
         {
@@ -658,16 +658,16 @@ public class EventStreamingService : IEventStreamingService
 
     public async Task PublishToTopicAsync<T>(string topic, T eventData, CancellationToken cancellationToken = default)
     {
-        var channel = _topicChannels.GetOrAdd(topic, _ => Channel.CreateUnbounded<object>());
+        var channel = topicChannels.GetOrAdd(topic, _ => Channel.CreateUnbounded<object>());
         
         try
         {
             await channel.Writer.WriteAsync(eventData!, cancellationToken);
-            _logger.LogDebug("Event published to topic {Topic}", topic);
+            logger.LogDebug("Event published to topic {Topic}", topic);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error publishing event to topic {Topic}", topic);
+            logger.LogError(ex, "Error publishing event to topic {Topic}", topic);
         }
     }
 
@@ -675,7 +675,7 @@ public class EventStreamingService : IEventStreamingService
         string topic, 
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var channel = _topicChannels.GetOrAdd(topic, _ => Channel.CreateUnbounded<object>());
+        var channel = topicChannels.GetOrAdd(topic, _ => Channel.CreateUnbounded<object>());
         
         await foreach (var eventData in channel.Reader.ReadAllAsync(cancellationToken))
         {
@@ -690,23 +690,23 @@ public class EventStreamingService : IEventStreamingService
 // Background service for processing real-time events
 public class RealTimeEventProcessor : BackgroundService
 {
-    private readonly ILogger<RealTimeEventProcessor> _logger;
-    private readonly IEventStreamingService _eventStreamingService;
-    private readonly IHubContext<DocumentProcessingHub> _hubContext;
+    private readonly ILogger<RealTimeEventProcessor> logger;
+    private readonly IEventStreamingService eventStreamingService;
+    private readonly IHubContext<DocumentProcessingHub> hubContext;
 
     public RealTimeEventProcessor(
         ILogger<RealTimeEventProcessor> logger,
         IEventStreamingService eventStreamingService,
         IHubContext<DocumentProcessingHub> hubContext)
     {
-        _logger = logger;
-        _eventStreamingService = eventStreamingService;
-        _hubContext = hubContext;
+        logger = logger;
+        eventStreamingService = eventStreamingService;
+        hubContext = hubContext;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Real-time event processor started");
+        logger.LogInformation("Real-time event processor started");
 
         // Process document changes
         _ = ProcessDocumentChangesAsync(stoppingToken);
@@ -723,19 +723,19 @@ public class RealTimeEventProcessor : BackgroundService
             await Task.Delay(1000, stoppingToken);
         }
 
-        _logger.LogInformation("Real-time event processor stopped");
+        logger.LogInformation("Real-time event processor stopped");
     }
 
     private async Task ProcessDocumentChangesAsync(CancellationToken cancellationToken)
     {
         try
         {
-            await foreach (var change in _eventStreamingService.SubscribeToEventsAsync<DocumentChange>("DocumentChanged", cancellationToken))
+            await foreach (var change in eventStreamingService.SubscribeToEventsAsync<DocumentChange>("DocumentChanged", cancellationToken))
             {
-                await _hubContext.Clients.Group($"document:{change.DocumentId}")
+                await hubContext.Clients.Group($"document:{change.DocumentId}")
                     .SendAsync("DocumentChanged", change, cancellationToken);
                 
-                _logger.LogDebug("Document change processed for document {DocumentId}", change.DocumentId);
+                logger.LogDebug("Document change processed for document {DocumentId}", change.DocumentId);
             }
         }
         catch (OperationCanceledException)
@@ -744,7 +744,7 @@ public class RealTimeEventProcessor : BackgroundService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing document changes");
+            logger.LogError(ex, "Error processing document changes");
         }
     }
 
@@ -752,12 +752,12 @@ public class RealTimeEventProcessor : BackgroundService
     {
         try
         {
-            await foreach (var update in _eventStreamingService.SubscribeToEventsAsync<ProcessingUpdate>("ProcessingUpdate", cancellationToken))
+            await foreach (var update in eventStreamingService.SubscribeToEventsAsync<ProcessingUpdate>("ProcessingUpdate", cancellationToken))
             {
-                await _hubContext.Clients.Group($"document:{update.DocumentId}")
+                await hubContext.Clients.Group($"document:{update.DocumentId}")
                     .SendAsync("ProcessingUpdate", update, cancellationToken);
                 
-                _logger.LogDebug("Processing update sent for document {DocumentId}", update.DocumentId);
+                logger.LogDebug("Processing update sent for document {DocumentId}", update.DocumentId);
             }
         }
         catch (OperationCanceledException)
@@ -766,7 +766,7 @@ public class RealTimeEventProcessor : BackgroundService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing updates");
+            logger.LogError(ex, "Error processing updates");
         }
     }
 
@@ -774,11 +774,11 @@ public class RealTimeEventProcessor : BackgroundService
     {
         try
         {
-            await foreach (var status in _eventStreamingService.SubscribeToEventsAsync<SystemStatus>("SystemStatus", cancellationToken))
+            await foreach (var status in eventStreamingService.SubscribeToEventsAsync<SystemStatus>("SystemStatus", cancellationToken))
             {
-                await _hubContext.Clients.All.SendAsync("SystemStatusUpdate", status, cancellationToken);
+                await hubContext.Clients.All.SendAsync("SystemStatusUpdate", status, cancellationToken);
                 
-                _logger.LogDebug("System status update broadcasted: {Status}", status.Status);
+                logger.LogDebug("System status update broadcasted: {Status}", status.Status);
             }
         }
         catch (OperationCanceledException)
@@ -787,7 +787,7 @@ public class RealTimeEventProcessor : BackgroundService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing system status updates");
+            logger.LogError(ex, "Error processing system status updates");
         }
     }
 }

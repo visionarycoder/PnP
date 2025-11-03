@@ -1,8 +1,9 @@
-# .NET Aspire Local Development
+# Enterprise Local Development with .NET Aspire
 
-**Description**: Development dashboard and debugging workflows for .NET Aspire, including local development setup, debugging techniques, dashboard usage, and development productivity patterns.
+**Description**: Advanced enterprise development workflows with .NET Aspire including container orchestration, development environment standardization, automated testing integration, performance profiling, and team collaboration patterns with enterprise tooling and security compliance.
 
-**Language/Technology**: C#, .NET Aspire, .NET 9.0
+**Language/Technology**: C#, .NET Aspire, .NET 9.0, Docker Desktop, Testcontainers, Dev Containers
+**Enterprise Features**: Standardized dev environments, automated testing, performance profiling, security scanning, team collaboration tools, and enterprise authentication integration
 
 **Code**:
 
@@ -116,7 +117,7 @@ public class Program
     {
         project
             .WithEnvironment("OTEL_EXPORTER_OTLP_ENDPOINT", jaeger.GetEndpoint("otlp-http"))
-            .WithEnvironment("OTEL_SERVICE_NAME", project.Resource.Name)
+            .WithEnvironment("OTEL_serviceName", project.Resource.Name)
             .WithEnvironment("OTEL_RESOURCE_ATTRIBUTES", $"service.name={project.Resource.Name},service.version=1.0.0");
     }
 
@@ -220,13 +221,13 @@ public static class DevelopmentExtensions
 // Development-specific middleware
 public class DevelopmentLoggingMiddleware
 {
-    private readonly RequestDelegate _next;
-    private readonly ILogger<DevelopmentLoggingMiddleware> _logger;
+    private readonly RequestDelegate next;
+    private readonly ILogger<DevelopmentLoggingMiddleware> logger;
 
     public DevelopmentLoggingMiddleware(RequestDelegate next, ILogger<DevelopmentLoggingMiddleware> logger)
     {
-        _next = next;
-        _logger = logger;
+        next = next;
+        logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -235,7 +236,7 @@ public class DevelopmentLoggingMiddleware
         var requestPath = context.Request.Path;
         var requestMethod = context.Request.Method;
 
-        using var scope = _logger.BeginScope(new Dictionary<string, object>
+        using var scope = logger.BeginScope(new Dictionary<string, object>
         {
             ["RequestId"] = requestId,
             ["RequestPath"] = requestPath,
@@ -244,24 +245,24 @@ public class DevelopmentLoggingMiddleware
             ["RemoteIP"] = context.Connection.RemoteIpAddress?.ToString() ?? "Unknown"
         });
 
-        _logger.LogInformation("Processing request {Method} {Path}", requestMethod, requestPath);
+        logger.LogInformation("Processing request {Method} {Path}", requestMethod, requestPath);
 
         var stopwatch = Stopwatch.StartNew();
         
         try
         {
-            await _next(context);
+            await next(context);
             
             stopwatch.Stop();
             
-            _logger.LogInformation("Request completed {Method} {Path} with status {StatusCode} in {ElapsedMs}ms",
+            logger.LogInformation("Request completed {Method} {Path} with status {StatusCode} in {ElapsedMs}ms",
                 requestMethod, requestPath, context.Response.StatusCode, stopwatch.ElapsedMilliseconds);
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
             
-            _logger.LogError(ex, "Request failed {Method} {Path} after {ElapsedMs}ms",
+            logger.LogError(ex, "Request failed {Method} {Path} after {ElapsedMs}ms",
                 requestMethod, requestPath, stopwatch.ElapsedMilliseconds);
             
             throw;
@@ -271,22 +272,22 @@ public class DevelopmentLoggingMiddleware
 
 public class RequestResponseLoggingMiddleware
 {
-    private readonly RequestDelegate _next;
-    private readonly ILogger<RequestResponseLoggingMiddleware> _logger;
+    private readonly RequestDelegate next;
+    private readonly ILogger<RequestResponseLoggingMiddleware> logger;
 
     public RequestResponseLoggingMiddleware(RequestDelegate next, ILogger<RequestResponseLoggingMiddleware> logger)
     {
-        _next = next;
-        _logger = logger;
+        next = next;
+        logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
     {
         // Log request details
-        if (_logger.IsEnabled(LogLevel.Debug))
+        if (logger.IsEnabled(LogLevel.Debug))
         {
             var request = await FormatRequestAsync(context.Request);
-            _logger.LogDebug("Request Details: {RequestDetails}", request);
+            logger.LogDebug("Request Details: {RequestDetails}", request);
         }
 
         // Capture response
@@ -294,13 +295,13 @@ public class RequestResponseLoggingMiddleware
         using var responseBodyStream = new MemoryStream();
         context.Response.Body = responseBodyStream;
 
-        await _next(context);
+        await next(context);
 
         // Log response details
-        if (_logger.IsEnabled(LogLevel.Debug))
+        if (logger.IsEnabled(LogLevel.Debug))
         {
             var response = await FormatResponseAsync(context.Response, responseBodyStream);
-            _logger.LogDebug("Response Details: {ResponseDetails}", response);
+            logger.LogDebug("Response Details: {ResponseDetails}", response);
         }
 
         // Copy response back to original stream
@@ -335,27 +336,27 @@ public class RequestResponseLoggingMiddleware
 
 public class SlowRequestDetectionMiddleware
 {
-    private readonly RequestDelegate _next;
-    private readonly ILogger<SlowRequestDetectionMiddleware> _logger;
-    private readonly TimeSpan _slowRequestThreshold = TimeSpan.FromSeconds(5);
+    private readonly RequestDelegate next;
+    private readonly ILogger<SlowRequestDetectionMiddleware> logger;
+    private readonly TimeSpan slowRequestThreshold = TimeSpan.FromSeconds(5);
 
     public SlowRequestDetectionMiddleware(RequestDelegate next, ILogger<SlowRequestDetectionMiddleware> logger)
     {
-        _next = next;
-        _logger = logger;
+        next = next;
+        logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
     {
         var stopwatch = Stopwatch.StartNew();
         
-        await _next(context);
+        await next(context);
         
         stopwatch.Stop();
         
-        if (stopwatch.Elapsed > _slowRequestThreshold)
+        if (stopwatch.Elapsed > slowRequestThreshold)
         {
-            _logger.LogWarning("Slow request detected: {Method} {Path} took {ElapsedMs}ms",
+            logger.LogWarning("Slow request detected: {Method} {Path} took {ElapsedMs}ms",
                 context.Request.Method,
                 context.Request.Path,
                 stopwatch.ElapsedMilliseconds);
@@ -374,10 +375,10 @@ namespace DocumentProcessor.Api.Controllers;
 [Conditional("DEBUG")] // Only available in debug builds
 public class DevelopmentController : ControllerBase
 {
-    private readonly IServiceProvider _serviceProvider;
-    private readonly IConfiguration _configuration;
-    private readonly IMemoryDiagnostics _memoryDiagnostics;
-    private readonly ILogger<DevelopmentController> _logger;
+    private readonly IServiceProvider serviceProvider;
+    private readonly IConfiguration configuration;
+    private readonly IMemoryDiagnostics memoryDiagnostics;
+    private readonly ILogger<DevelopmentController> logger;
 
     public DevelopmentController(
         IServiceProvider serviceProvider,
@@ -385,10 +386,10 @@ public class DevelopmentController : ControllerBase
         IMemoryDiagnostics memoryDiagnostics,
         ILogger<DevelopmentController> logger)
     {
-        _serviceProvider = serviceProvider;
-        _configuration = configuration;
-        _memoryDiagnostics = memoryDiagnostics;
-        _logger = logger;
+        serviceProvider = serviceProvider;
+        configuration = configuration;
+        memoryDiagnostics = memoryDiagnostics;
+        logger = logger;
     }
 
     [HttpGet("info")]
@@ -403,7 +404,7 @@ public class DevelopmentController : ControllerBase
             RuntimeVersion = Environment.Version.ToString(),
             StartTime = Process.GetCurrentProcess().StartTime,
             Uptime = DateTime.Now - Process.GetCurrentProcess().StartTime,
-            MemoryUsage = _memoryDiagnostics.GetCurrentUsage(),
+            MemoryUsage = memoryDiagnostics.GetCurrentUsage(),
             ConfigurationSources = GetConfigurationSources(),
             RegisteredServices = GetRegisteredServices()
         };
@@ -416,7 +417,7 @@ public class DevelopmentController : ControllerBase
     {
         var config = new Dictionary<string, object>();
         
-        foreach (var kvp in _configuration.AsEnumerable())
+        foreach (var kvp in configuration.AsEnumerable())
         {
             if (!string.IsNullOrEmpty(kvp.Value) && !IsSensitiveKey(kvp.Key))
             {
@@ -432,7 +433,7 @@ public class DevelopmentController : ControllerBase
     {
         try
         {
-            var reloader = _serviceProvider.GetService<IConfigurationReloader>();
+            var reloader = serviceProvider.GetService<IConfigurationReloader>();
             if (reloader != null)
             {
                 await reloader.ReloadAsync();
@@ -443,7 +444,7 @@ public class DevelopmentController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to reload configuration");
+            logger.LogError(ex, "Failed to reload configuration");
             return StatusCode(500, new { Message = "Failed to reload configuration", Error = ex.Message });
         }
     }
@@ -451,7 +452,7 @@ public class DevelopmentController : ControllerBase
     [HttpGet("memory")]
     public ActionResult<MemoryDiagnosticsReport> GetMemoryDiagnostics()
     {
-        var report = _memoryDiagnostics.GenerateReport();
+        var report = memoryDiagnostics.GenerateReport();
         return Ok(report);
     }
 
@@ -479,7 +480,7 @@ public class DevelopmentController : ControllerBase
     [HttpGet("health")]
     public async Task<ActionResult<HealthReport>> GetHealthReport()
     {
-        var healthCheckService = _serviceProvider.GetService<HealthCheckService>();
+        var healthCheckService = serviceProvider.GetService<HealthCheckService>();
         if (healthCheckService == null)
         {
             return BadRequest(new { Message = "Health check service not configured" });
@@ -570,7 +571,7 @@ public class DevelopmentController : ControllerBase
 
     private List<string> GetConfigurationSources()
     {
-        if (_configuration is ConfigurationRoot root)
+        if (configuration is ConfigurationRoot root)
         {
             return root.Providers
                 .Select(p => p.GetType().Name)
@@ -582,7 +583,7 @@ public class DevelopmentController : ControllerBase
 
     private List<string> GetRegisteredServices()
     {
-        if (_serviceProvider is IServiceCollection services)
+        if (serviceProvider is IServiceCollection services)
         {
             return services
                 .Select(s => $"{s.ServiceType.Name} -> {s.ImplementationType?.Name ?? s.ImplementationFactory?.Method.Name ?? "Unknown"}")
@@ -634,14 +635,14 @@ public interface IMemoryDiagnostics
 
 public class MemoryDiagnostics : IMemoryDiagnostics
 {
-    private readonly ILogger<MemoryDiagnostics> _logger;
-    private readonly ConcurrentQueue<MemorySnapshot> _snapshots = new();
-    private readonly Timer _collectionTimer;
+    private readonly ILogger<MemoryDiagnostics> logger;
+    private readonly ConcurrentQueue<MemorySnapshot> snapshots = new();
+    private readonly Timer collectionTimer;
 
     public MemoryDiagnostics(ILogger<MemoryDiagnostics> logger)
     {
-        _logger = logger;
-        _collectionTimer = new Timer(CollectSnapshot, null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
+        logger = logger;
+        collectionTimer = new Timer(CollectSnapshot, null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
     }
 
     public MemoryUsage GetCurrentUsage()
@@ -717,21 +718,21 @@ public class MemoryDiagnostics : IMemoryDiagnostics
             var usage = GetCurrentUsage();
             var snapshot = new MemorySnapshot(usage, DateTime.UtcNow);
             
-            _snapshots.Enqueue(snapshot);
+            snapshots.Enqueue(snapshot);
             
             // Keep only recent snapshots (last 24 hours)
-            while (_snapshots.Count > 1440 && _snapshots.TryDequeue(out _)) { }
+            while (snapshots.Count > 1440 && snapshots.TryDequeue(out _)) { }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to collect memory snapshot");
+            logger.LogError(ex, "Failed to collect memory snapshot");
         }
     }
 
     private List<MemorySnapshot> GetRecentSnapshots(TimeSpan period)
     {
         var cutoff = DateTime.UtcNow - period;
-        return _snapshots
+        return snapshots
             .Where(s => s.Timestamp >= cutoff)
             .OrderBy(s => s.Timestamp)
             .ToList();
@@ -836,7 +837,7 @@ public class MemoryDiagnostics : IMemoryDiagnostics
 
     public void Dispose()
     {
-        _collectionTimer?.Dispose();
+        collectionTimer?.Dispose();
     }
 }
 
@@ -885,41 +886,41 @@ public record MemoryTrendAnalysis
 // Background service for memory monitoring
 public class MemoryDiagnosticsService : BackgroundService
 {
-    private readonly IMemoryDiagnostics _memoryDiagnostics;
-    private readonly ILogger<MemoryDiagnosticsService> _logger;
-    private readonly TimeSpan _monitoringInterval = TimeSpan.FromMinutes(5);
+    private readonly IMemoryDiagnostics memoryDiagnostics;
+    private readonly ILogger<MemoryDiagnosticsService> logger;
+    private readonly TimeSpan monitoringInterval = TimeSpan.FromMinutes(5);
 
     public MemoryDiagnosticsService(
         IMemoryDiagnostics memoryDiagnostics,
         ILogger<MemoryDiagnosticsService> logger)
     {
-        _memoryDiagnostics = memoryDiagnostics;
-        _logger = logger;
+        memoryDiagnostics = memoryDiagnostics;
+        logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var timer = new PeriodicTimer(_monitoringInterval);
+        using var timer = new PeriodicTimer(monitoringInterval);
         
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
             try
             {
-                var report = _memoryDiagnostics.GenerateReport();
+                var report = memoryDiagnostics.GenerateReport();
                 
                 if (report.Recommendations.Any())
                 {
-                    _logger.LogWarning("Memory diagnostics recommendations: {Recommendations}",
+                    logger.LogWarning("Memory diagnostics recommendations: {Recommendations}",
                         string.Join("; ", report.Recommendations));
                 }
                 
-                _logger.LogInformation("Memory usage: Working Set {WorkingSetMB}MB, Managed {ManagedMB}MB",
+                logger.LogInformation("Memory usage: Working Set {WorkingSetMB}MB, Managed {ManagedMB}MB",
                     report.CurrentUsage.WorkingSetBytes / (1024.0 * 1024.0),
                     report.CurrentUsage.ManagedMemoryBytes / (1024.0 * 1024.0));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during memory diagnostics monitoring");
+                logger.LogError(ex, "Error during memory diagnostics monitoring");
             }
         }
     }

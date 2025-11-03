@@ -1,8 +1,9 @@
-# Feature Engineering for ML.NET
+# Enterprise Feature Engineering with ML.NET
 
-**Description**: Comprehensive text preprocessing and feature transformation patterns for ML.NET applications with advanced vectorization techniques, custom feature extractors, and pipeline optimization strategies.
+**Description**: Advanced enterprise feature engineering with automated feature selection, real-time feature stores, distributed processing, feature lineage tracking, and comprehensive validation for production ML systems with governance and compliance.
 
-**Language/Technology**: C#, ML.NET, Text Processing, Feature Engineering
+**Language/Technology**: C#, ML.NET, .NET 9.0, Feature Stores, Distributed Processing, Data Governance
+**Enterprise Features**: Automated feature selection, real-time feature stores, distributed processing, feature lineage tracking, validation frameworks, and enterprise data governance
 
 **Code**:
 
@@ -28,29 +29,29 @@ public interface ITextPreprocessor
 
 public class TextPreprocessor : ITextPreprocessor
 {
-    private readonly ILogger<TextPreprocessor> _logger;
-    private readonly PreprocessingOptions _options;
-    private readonly HashSet<string> _stopWords;
-    private readonly Dictionary<string, string> _synonymMap;
-    private readonly Regex _urlRegex;
-    private readonly Regex _emailRegex;
-    private readonly Regex _phoneRegex;
-    private readonly Regex _numberRegex;
+    private readonly ILogger<TextPreprocessor> logger;
+    private readonly PreprocessingOptions options;
+    private readonly HashSet<string> stopWords;
+    private readonly Dictionary<string, string> synonymMap;
+    private readonly Regex urlRegex;
+    private readonly Regex emailRegex;
+    private readonly Regex phoneRegex;
+    private readonly Regex numberRegex;
 
     public TextPreprocessor(
         ILogger<TextPreprocessor> logger,
         IOptions<PreprocessingOptions> options)
     {
-        _logger = logger;
-        _options = options.Value;
-        _stopWords = LoadStopWords(_options.StopWordsLanguage);
-        _synonymMap = LoadSynonymMap(_options.SynonymMappingPath);
+        logger = logger;
+        options = options.Value;
+        stopWords = LoadStopWords(options.StopWordsLanguage);
+        synonymMap = LoadSynonymMap(options.SynonymMappingPath);
         
         // Compiled regex patterns for performance
-        _urlRegex = new Regex(@"https?://[^\s]+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        _emailRegex = new Regex(@"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", RegexOptions.Compiled);
-        _phoneRegex = new Regex(@"(\+?1[-.\s]?)?(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}", RegexOptions.Compiled);
-        _numberRegex = new Regex(@"\b\d+\.?\d*\b", RegexOptions.Compiled);
+        urlRegex = new Regex(@"https?://[^\s]+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        emailRegex = new Regex(@"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", RegexOptions.Compiled);
+        phoneRegex = new Regex(@"(\+?1[-.\s]?)?(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}", RegexOptions.Compiled);
+        numberRegex = new Regex(@"\b\d+\.?\d*\b", RegexOptions.Compiled);
     }
 
     public async Task<IEnumerable<string>> PreprocessAsync(string text)
@@ -78,47 +79,47 @@ public class TextPreprocessor : ITextPreprocessor
         // Extract and replace entities if configured
         var processedText = text;
         
-        if (_options.ExtractUrls)
+        if (options.ExtractUrls)
         {
-            var urls = ExtractMatches(_urlRegex, processedText);
+            var urls = ExtractMatches(urlRegex, processedText);
             entities["urls"] = urls;
-            processedText = _urlRegex.Replace(processedText, " URL_TOKEN ");
+            processedText = urlRegex.Replace(processedText, " URL_TOKEN ");
         }
 
-        if (_options.ExtractEmails)
+        if (options.ExtractEmails)
         {
-            var emails = ExtractMatches(_emailRegex, processedText);
+            var emails = ExtractMatches(emailRegex, processedText);
             entities["emails"] = emails;
-            processedText = _emailRegex.Replace(processedText, " EMAIL_TOKEN ");
+            processedText = emailRegex.Replace(processedText, " EMAIL_TOKEN ");
         }
 
-        if (_options.ExtractPhones)
+        if (options.ExtractPhones)
         {
-            var phones = ExtractMatches(_phoneRegex, processedText);
+            var phones = ExtractMatches(phoneRegex, processedText);
             entities["phones"] = phones;
-            processedText = _phoneRegex.Replace(processedText, " PHONE_TOKEN ");
+            processedText = phoneRegex.Replace(processedText, " PHONE_TOKEN ");
         }
 
-        if (_options.ExtractNumbers)
+        if (options.ExtractNumbers)
         {
-            var numbers = ExtractMatches(_numberRegex, processedText);
+            var numbers = ExtractMatches(numberRegex, processedText);
             entities["numbers"] = numbers;
-            processedText = _numberRegex.Replace(processedText, " NUMBER_TOKEN ");
+            processedText = numberRegex.Replace(processedText, " NUMBER_TOKEN ");
         }
 
         // Normalize text
-        if (_options.NormalizeCase)
+        if (options.NormalizeCase)
         {
             processedText = processedText.ToLowerInvariant();
         }
 
-        if (_options.RemoveAccents)
+        if (options.RemoveAccents)
         {
             processedText = RemoveAccents(processedText);
         }
 
         // Remove special characters
-        if (_options.RemoveSpecialChars)
+        if (options.RemoveSpecialChars)
         {
             processedText = Regex.Replace(processedText, @"[^\w\s]", " ");
         }
@@ -135,19 +136,19 @@ public class TextPreprocessor : ITextPreprocessor
         foreach (var token in tokens)
         {
             if (string.IsNullOrWhiteSpace(token) || 
-                token.Length < _options.MinTokenLength || 
-                token.Length > _options.MaxTokenLength)
+                token.Length < options.MinTokenLength || 
+                token.Length > options.MaxTokenLength)
             {
                 continue;
             }
 
-            if (_options.RemoveStopWords && _stopWords.Contains(token))
+            if (options.RemoveStopWords && stopWords.Contains(token))
             {
                 continue;
             }
 
             // Apply synonym mapping
-            var finalToken = _options.ApplySynonyms && _synonymMap.ContainsKey(token) 
+            var finalToken = options.ApplySynonyms && synonymMap.ContainsKey(token) 
                 ? _synonymMap[token] 
                 : token;
 
@@ -155,7 +156,7 @@ public class TextPreprocessor : ITextPreprocessor
         }
 
         // Apply stemming/lemmatization if configured
-        if (_options.EnableStemming)
+        if (options.EnableStemming)
         {
             filteredTokens = ApplyStemming(filteredTokens);
         }
@@ -171,7 +172,7 @@ public class TextPreprocessor : ITextPreprocessor
             Statistics: statistics,
             ProcessingTime: stopwatch.Elapsed);
 
-        _logger.LogDebug("Preprocessed text: {OriginalLength} -> {ProcessedLength} chars, {TokenCount} tokens in {Duration}ms",
+        logger.LogDebug("Preprocessed text: {OriginalLength} -> {ProcessedLength} chars, {TokenCount} tokens in {Duration}ms",
             text.Length, result.ProcessedText.Length, filteredTokens.Count, stopwatch.ElapsedMilliseconds);
 
         return result;
@@ -182,7 +183,7 @@ public class TextPreprocessor : ITextPreprocessor
         var tasks = texts.Select(text => PreprocessWithMetadataAsync(text));
         var results = await Task.WhenAll(tasks);
         
-        _logger.LogInformation("Preprocessed batch of {Count} texts", results.Length);
+        logger.LogInformation("Preprocessed batch of {Count} texts", results.Length);
         return results.ToList();
     }
 
@@ -346,10 +347,10 @@ public interface IFeatureEngineer
 
 public class FeatureEngineer : IFeatureEngineer
 {
-    private readonly MLContext _mlContext;
-    private readonly ITextPreprocessor _preprocessor;
-    private readonly ILogger<FeatureEngineer> _logger;
-    private readonly FeatureConfiguration _config;
+    private readonly MLContext mlContext;
+    private readonly ITextPreprocessor preprocessor;
+    private readonly ILogger<FeatureEngineer> logger;
+    private readonly FeatureConfiguration config;
 
     public FeatureEngineer(
         MLContext mlContext,
@@ -357,15 +358,15 @@ public class FeatureEngineer : IFeatureEngineer
         ILogger<FeatureEngineer> logger,
         IOptions<FeatureConfiguration> config)
     {
-        _mlContext = mlContext;
-        _preprocessor = preprocessor;
-        _logger = logger;
-        _config = config.Value;
+        mlContext = mlContext;
+        preprocessor = preprocessor;
+        logger = logger;
+        config = config.Value;
     }
 
     public async Task<FeatureSet> ExtractFeaturesAsync(string text)
     {
-        var preprocessed = await _preprocessor.PreprocessWithMetadataAsync(text);
+        var preprocessed = await preprocessor.PreprocessWithMetadataAsync(text);
         
         var features = new FeatureSet
         {
@@ -408,16 +409,16 @@ public class FeatureEngineer : IFeatureEngineer
         };
 
         // Calculate TF-IDF vectors if vocabulary is available
-        if (_config.EnableTfIdf && _config.Vocabulary?.Any() == true)
+        if (config.EnableTfIdf && config.Vocabulary?.Any() == true)
         {
-            features.TfIdfVector = CalculateTfIdfVector(preprocessed.ProcessedTokens, _config.Vocabulary);
+            features.TfIdfVector = CalculateTfIdfVector(preprocessed.ProcessedTokens, config.Vocabulary);
         }
 
         // Calculate feature count
         var featureCount = CountFeatures(features);
         features.ProcessingMetadata = features.ProcessingMetadata with { FeatureCount = featureCount };
 
-        _logger.LogDebug("Extracted {FeatureCount} features from text with {WordCount} words",
+        logger.LogDebug("Extracted {FeatureCount} features from text with {WordCount} words",
             featureCount, features.WordCount);
 
         return features;
@@ -430,7 +431,7 @@ public class FeatureEngineer : IFeatureEngineer
         var results = await Task.WhenAll(tasks);
         stopwatch.Stop();
 
-        _logger.LogInformation("Extracted features from batch of {Count} texts in {Duration}ms",
+        logger.LogInformation("Extracted features from batch of {Count} texts in {Duration}ms",
             results.Length, stopwatch.ElapsedMilliseconds);
 
         return results.ToList();
@@ -552,7 +553,7 @@ public class FeatureEngineer : IFeatureEngineer
             AnalysisDate: DateTime.UtcNow,
             SampleCount: featureList.Count);
 
-        _logger.LogInformation("Analyzed feature importance for {FeatureCount} features across {SampleCount} samples",
+        logger.LogInformation("Analyzed feature importance for {FeatureCount} features across {SampleCount} samples",
             importanceScores.Count, featureList.Count);
 
         return await Task.FromResult(result);
@@ -816,18 +817,18 @@ namespace DocumentProcessor.API.Controllers;
 [Route("api/[controller]")]
 public class FeatureEngineeringController : ControllerBase
 {
-    private readonly IFeatureEngineer _featureEngineer;
-    private readonly ITextPreprocessor _preprocessor;
-    private readonly ILogger<FeatureEngineeringController> _logger;
+    private readonly IFeatureEngineer featureEngineer;
+    private readonly ITextPreprocessor preprocessor;
+    private readonly ILogger<FeatureEngineeringController> logger;
 
     public FeatureEngineeringController(
         IFeatureEngineer featureEngineer,
         ITextPreprocessor preprocessor,
         ILogger<FeatureEngineeringController> logger)
     {
-        _featureEngineer = featureEngineer;
-        _preprocessor = preprocessor;
-        _logger = logger;
+        featureEngineer = featureEngineer;
+        preprocessor = preprocessor;
+        logger = logger;
     }
 
     [HttpPost("extract")]
@@ -836,19 +837,19 @@ public class FeatureEngineeringController : ControllerBase
     {
         try
         {
-            var features = await _featureEngineer.ExtractFeaturesAsync(request.Text);
+            var features = await featureEngineer.ExtractFeaturesAsync(request.Text);
             
             var response = new FeatureExtractionResponse(
                 Features: features,
                 RequestId: Guid.NewGuid().ToString(),
                 ProcessedAt: DateTime.UtcNow);
 
-            _logger.LogInformation("Extracted features for text with {WordCount} words", features.WordCount);
+            logger.LogInformation("Extracted features for text with {WordCount} words", features.WordCount);
             return Ok(response);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error extracting features from text");
+            logger.LogError(ex, "Error extracting features from text");
             return StatusCode(500, "Internal server error");
         }
     }
@@ -864,7 +865,7 @@ public class FeatureEngineeringController : ControllerBase
                 return BadRequest("Maximum batch size is 1000 texts");
             }
 
-            var features = await _featureEngineer.ExtractBatchFeaturesAsync(request.Texts);
+            var features = await featureEngineer.ExtractBatchFeaturesAsync(request.Texts);
             
             var response = new BatchFeatureExtractionResponse(
                 FeatureSets: features,
@@ -872,12 +873,12 @@ public class FeatureEngineeringController : ControllerBase
                 ProcessedAt: DateTime.UtcNow,
                 ProcessedCount: features.Count);
 
-            _logger.LogInformation("Extracted features for batch of {Count} texts", features.Count);
+            logger.LogInformation("Extracted features for batch of {Count} texts", features.Count);
             return Ok(response);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error extracting batch features");
+            logger.LogError(ex, "Error extracting batch features");
             return StatusCode(500, "Internal server error");
         }
     }
@@ -888,7 +889,7 @@ public class FeatureEngineeringController : ControllerBase
     {
         try
         {
-            var result = await _preprocessor.PreprocessWithMetadataAsync(request.Text);
+            var result = await preprocessor.PreprocessWithMetadataAsync(request.Text);
             
             var response = new PreprocessingResponse(
                 Result: result,
@@ -899,7 +900,7 @@ public class FeatureEngineeringController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error preprocessing text");
+            logger.LogError(ex, "Error preprocessing text");
             return StatusCode(500, "Internal server error");
         }
     }
@@ -910,8 +911,8 @@ public class FeatureEngineeringController : ControllerBase
     {
         try
         {
-            var features = await _featureEngineer.ExtractBatchFeaturesAsync(request.Texts);
-            var importance = await _featureEngineer.AnalyzeFeatureImportanceAsync(features, request.Labels);
+            var features = await featureEngineer.ExtractBatchFeaturesAsync(request.Texts);
+            var importance = await featureEngineer.AnalyzeFeatureImportanceAsync(features, request.Labels);
             
             var response = new FeatureImportanceResponse(
                 ImportanceResult: importance,
@@ -922,7 +923,7 @@ public class FeatureEngineeringController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error analyzing feature importance");
+            logger.LogError(ex, "Error analyzing feature importance");
             return StatusCode(500, "Internal server error");
         }
     }
@@ -973,15 +974,15 @@ public static class FeatureEngineeringServiceCollectionExtensions
 
 public class FeatureEngineeringHealthCheck : IHealthCheck
 {
-    private readonly IFeatureEngineer _featureEngineer;
-    private readonly ILogger<FeatureEngineeringHealthCheck> _logger;
+    private readonly IFeatureEngineer featureEngineer;
+    private readonly ILogger<FeatureEngineeringHealthCheck> logger;
 
     public FeatureEngineeringHealthCheck(
         IFeatureEngineer featureEngineer,
         ILogger<FeatureEngineeringHealthCheck> logger)
     {
-        _featureEngineer = featureEngineer;
-        _logger = logger;
+        featureEngineer = featureEngineer;
+        logger = logger;
     }
 
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
@@ -989,7 +990,7 @@ public class FeatureEngineeringHealthCheck : IHealthCheck
         try
         {
             var testText = "This is a test for feature engineering health check.";
-            var features = await _featureEngineer.ExtractFeaturesAsync(testText);
+            var features = await featureEngineer.ExtractFeaturesAsync(testText);
             
             if (features.WordCount > 0 && features.ProcessingMetadata.FeatureCount > 0)
             {
@@ -1000,7 +1001,7 @@ public class FeatureEngineeringHealthCheck : IHealthCheck
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Feature engineering health check failed");
+            logger.LogError(ex, "Feature engineering health check failed");
             return HealthCheckResult.Unhealthy("Feature engineering is not working", ex);
         }
     }

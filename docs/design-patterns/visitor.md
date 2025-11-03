@@ -255,17 +255,17 @@ public interface ICombiningVisitor<TResult>
 // Concrete visitors
 public class HtmlExportVisitor : IDocumentVisitor<string>, ICombiningVisitor<string>
 {
-    private readonly StringBuilder _html = new();
-    private readonly HtmlExportOptions _options;
+    private readonly StringBuilder html = new();
+    private readonly HtmlExportOptions options;
     
     public HtmlExportVisitor(HtmlExportOptions? options = null)
     {
-        _options = options ?? new HtmlExportOptions();
+        options = options ?? new HtmlExportOptions();
     }
     
     public string Visit(Paragraph paragraph)
     {
-        var style = _options.IncludeInlineStyles 
+        var style = options.IncludeInlineStyles 
             ? $" style=\"font-family: {paragraph.FontFamily}; font-size: {paragraph.FontSize}px;{(paragraph.IsJustified ? " text-align: justify;" : "")}\"" 
             : "";
         
@@ -451,11 +451,11 @@ public class WordCountVisitor : IDocumentVisitor<int>, ICombiningVisitor<int>
 
 public class ValidationVisitor : IDocumentVisitor<ValidationResult>, ICombiningVisitor<ValidationResult>
 {
-    private readonly ValidationOptions _options;
+    private readonly ValidationOptions options;
     
     public ValidationVisitor(ValidationOptions? options = null)
     {
-        _options = options ?? new ValidationOptions();
+        options = options ?? new ValidationOptions();
     }
     
     public ValidationResult Visit(Paragraph paragraph)
@@ -467,9 +467,9 @@ public class ValidationVisitor : IDocumentVisitor<ValidationResult>, ICombiningV
             result.AddError("Paragraph content cannot be empty");
         }
         
-        if (paragraph.Content.Length > _options.MaxParagraphLength)
+        if (paragraph.Content.Length > options.MaxParagraphLength)
         {
-            result.AddWarning($"Paragraph exceeds maximum length of {_options.MaxParagraphLength} characters");
+            result.AddWarning($"Paragraph exceeds maximum length of {options.MaxParagraphLength} characters");
         }
         
         return result;
@@ -489,9 +489,9 @@ public class ValidationVisitor : IDocumentVisitor<ValidationResult>, ICombiningV
             result.AddError($"Header level must be between 1 and 6, got {header.Level}");
         }
         
-        if (header.Content.Length > _options.MaxHeaderLength)
+        if (header.Content.Length > options.MaxHeaderLength)
         {
-            result.AddWarning($"Header exceeds maximum length of {_options.MaxHeaderLength} characters");
+            result.AddWarning($"Header exceeds maximum length of {options.MaxHeaderLength} characters");
         }
         
         return result;
@@ -844,8 +844,8 @@ public class BlockNode : AstNode
 // AST Visitors
 public class EvaluationVisitor : IAstVisitor<object>
 {
-    private readonly Dictionary<string, object> _variables = new();
-    private readonly Dictionary<string, Func<object[], object>> _functions = new();
+    private readonly Dictionary<string, object> variables = new();
+    private readonly Dictionary<string, Func<object[], object>> functions = new();
     
     public EvaluationVisitor()
     {
@@ -875,7 +875,7 @@ public class EvaluationVisitor : IAstVisitor<object>
     
     public object Visit(VariableNode node)
     {
-        if (_variables.TryGetValue(node.Name, out var value))
+        if (variables.TryGetValue(node.Name, out var value))
         {
             return value;
         }
@@ -921,7 +921,7 @@ public class EvaluationVisitor : IAstVisitor<object>
     
     public object Visit(FunctionCallNode node)
     {
-        if (_functions.TryGetValue(node.FunctionName, out var function))
+        if (functions.TryGetValue(node.FunctionName, out var function))
         {
             var args = node.Arguments.Select(arg => arg.Accept(this)).ToArray();
             return function(args);
@@ -999,8 +999,8 @@ public class EvaluationVisitor : IAstVisitor<object>
 
 public class CodeGenerationVisitor : IAstVisitor<string>
 {
-    private int _indentLevel = 0;
-    private readonly string _indentString = "  ";
+    private int indentLevel = 0;
+    private readonly string indentString = "  ";
     
     public string Visit(LiteralNode node)
     {
@@ -1060,92 +1060,92 @@ public class CodeGenerationVisitor : IAstVisitor<string>
     
     private string GetIndent()
     {
-        return new string(' ', _indentLevel * _indentString.Length);
+        return new string(' ', _indentLevel * indentString.Length);
     }
 }
 
 public class AstAnalysisVisitor : IAstVisitor<AnalysisResult>
 {
-    private readonly AnalysisResult _result = new();
+    private readonly AnalysisResult result = new();
     
-    public AnalysisResult GetResult() => _result;
+    public AnalysisResult GetResult() => result;
     
     public AnalysisResult Visit(LiteralNode node)
     {
-        _result.LiteralCount++;
-        _result.NodesByType.TryAdd("Literal", 0);
-        _result.NodesByType["Literal"]++;
-        return _result;
+        result.LiteralCount++;
+        result.NodesByType.TryAdd("Literal", 0);
+        result.NodesByType["Literal"]++;
+        return result;
     }
     
     public AnalysisResult Visit(VariableNode node)
     {
-        _result.VariableCount++;
-        _result.Variables.Add(node.Name);
-        _result.NodesByType.TryAdd("Variable", 0);
-        _result.NodesByType["Variable"]++;
-        return _result;
+        result.VariableCount++;
+        result.Variables.Add(node.Name);
+        result.NodesByType.TryAdd("Variable", 0);
+        result.NodesByType["Variable"]++;
+        return result;
     }
     
     public AnalysisResult Visit(BinaryOperationNode node)
     {
-        _result.OperationCount++;
-        _result.Operators.Add(node.Operator);
-        _result.NodesByType.TryAdd("BinaryOperation", 0);
-        _result.NodesByType["BinaryOperation"]++;
+        result.OperationCount++;
+        result.Operators.Add(node.Operator);
+        result.NodesByType.TryAdd("BinaryOperation", 0);
+        result.NodesByType["BinaryOperation"]++;
         
         node.Left.Accept(this);
         node.Right.Accept(this);
-        return _result;
+        return result;
     }
     
     public AnalysisResult Visit(UnaryOperationNode node)
     {
-        _result.OperationCount++;
-        _result.Operators.Add(node.Operator);
-        _result.NodesByType.TryAdd("UnaryOperation", 0);
-        _result.NodesByType["UnaryOperation"]++;
+        result.OperationCount++;
+        result.Operators.Add(node.Operator);
+        result.NodesByType.TryAdd("UnaryOperation", 0);
+        result.NodesByType["UnaryOperation"]++;
         
         node.Operand.Accept(this);
-        return _result;
+        return result;
     }
     
     public AnalysisResult Visit(FunctionCallNode node)
     {
-        _result.FunctionCallCount++;
-        _result.Functions.Add(node.FunctionName);
-        _result.NodesByType.TryAdd("FunctionCall", 0);
-        _result.NodesByType["FunctionCall"]++;
+        result.FunctionCallCount++;
+        result.Functions.Add(node.FunctionName);
+        result.NodesByType.TryAdd("FunctionCall", 0);
+        result.NodesByType["FunctionCall"]++;
         
         foreach (var arg in node.Arguments)
         {
             arg.Accept(this);
         }
-        return _result;
+        return result;
     }
     
     public AnalysisResult Visit(AssignmentNode node)
     {
-        _result.AssignmentCount++;
-        _result.Variables.Add(node.VariableName);
-        _result.NodesByType.TryAdd("Assignment", 0);
-        _result.NodesByType["Assignment"]++;
+        result.AssignmentCount++;
+        result.Variables.Add(node.VariableName);
+        result.NodesByType.TryAdd("Assignment", 0);
+        result.NodesByType["Assignment"]++;
         
         node.Value.Accept(this);
-        return _result;
+        return result;
     }
     
     public AnalysisResult Visit(BlockNode node)
     {
-        _result.BlockCount++;
-        _result.NodesByType.TryAdd("Block", 0);
-        _result.NodesByType["Block"]++;
+        result.BlockCount++;
+        result.NodesByType.TryAdd("Block", 0);
+        result.NodesByType["Block"]++;
         
         foreach (var statement in node.Statements)
         {
             statement.Accept(this);
         }
-        return _result;
+        return result;
     }
 }
 

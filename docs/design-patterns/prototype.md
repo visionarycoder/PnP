@@ -135,7 +135,7 @@ public class DocumentSection
 /// </summary>
 public class DocumentPrototypeRegistry
 {
-    private readonly Dictionary<string, Document> _prototypes = new();
+    private readonly Dictionary<string, Document> prototypes = new();
     
     public void RegisterPrototype(string key, Document prototype)
     {
@@ -144,7 +144,7 @@ public class DocumentPrototypeRegistry
     
     public Document CreateDocument(string prototypeKey)
     {
-        if (_prototypes.TryGetValue(prototypeKey, out var prototype))
+        if (prototypes.TryGetValue(prototypeKey, out var prototype))
         {
             return prototype.Clone();
         }
@@ -153,12 +153,12 @@ public class DocumentPrototypeRegistry
     
     public IEnumerable<string> GetAvailablePrototypes()
     {
-        return _prototypes.Keys;
+        return prototypes.Keys;
     }
     
     public void RemovePrototype(string key)
     {
-        _prototypes.Remove(key);
+        prototypes.Remove(key);
     }
 }
 
@@ -167,11 +167,11 @@ public class DocumentPrototypeRegistry
 /// </summary>
 public class DocumentFactory
 {
-    private readonly DocumentPrototypeRegistry _registry;
+    private readonly DocumentPrototypeRegistry registry;
     
     public DocumentFactory()
     {
-        _registry = new DocumentPrototypeRegistry();
+        registry = new DocumentPrototypeRegistry();
         InitializeStandardPrototypes();
     }
     
@@ -221,14 +221,14 @@ public class DocumentFactory
         proposalTemplate.AddSection("Budget", "[Budget estimation]");
         
         // Register prototypes
-        _registry.RegisterPrototype("report", reportTemplate);
-        _registry.RegisterPrototype("memo", memoTemplate);
-        _registry.RegisterPrototype("proposal", proposalTemplate);
+        registry.RegisterPrototype("report", reportTemplate);
+        registry.RegisterPrototype("memo", memoTemplate);
+        registry.RegisterPrototype("proposal", proposalTemplate);
     }
     
     public Document CreateDocument(string type)
     {
-        return _registry.CreateDocument(type);
+        return registry.CreateDocument(type);
     }
     
     public Document CreateCustomDocument(string title, string content)
@@ -238,7 +238,7 @@ public class DocumentFactory
     
     public IEnumerable<string> GetAvailableTemplates()
     {
-        return _registry.GetAvailablePrototypes();
+        return registry.GetAvailablePrototypes();
     }
 }
 ```

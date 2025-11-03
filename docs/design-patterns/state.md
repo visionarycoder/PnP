@@ -31,34 +31,34 @@ public interface IStateMachine<TState> where TState : IState<IStateMachine<TStat
 public abstract class StateMachine<TState> : IStateMachine<TState> 
     where TState : IState<IStateMachine<TState>>
 {
-    private TState _currentState = default!;
-    private readonly List<string> _stateHistory = new();
+    private TState currentState = default!;
+    private readonly List<string> stateHistory = new();
     
-    public TState CurrentState => _currentState;
-    public List<string> GetStateHistory() => new(_stateHistory);
+    public TState CurrentState => currentState;
+    public List<string> GetStateHistory() => new(stateHistory);
     
     public virtual void TransitionTo(TState newState)
     {
-        var previousState = _currentState?.StateName ?? "None";
+        var previousState = currentState?.StateName ?? "None";
         
-        _currentState?.Exit(this);
-        _currentState = newState;
-        _currentState?.Enter(this);
+        currentState?.Exit(this);
+        currentState = newState;
+        currentState?.Enter(this);
         
-        _stateHistory.Add($"{DateTime.Now:HH:mm:ss} - {previousState} -> {newState.StateName}");
+        stateHistory.Add($"{DateTime.Now:HH:mm:ss} - {previousState} -> {newState.StateName}");
         Console.WriteLine($"State transition: {previousState} -> {newState.StateName}");
     }
     
     public virtual void Handle()
     {
-        _currentState?.Handle(this);
+        currentState?.Handle(this);
     }
     
     protected void SetInitialState(TState initialState)
     {
-        _currentState = initialState;
-        _currentState?.Enter(this);
-        _stateHistory.Add($"{DateTime.Now:HH:mm:ss} - Initial state: {initialState.StateName}");
+        currentState = initialState;
+        currentState?.Enter(this);
+        stateHistory.Add($"{DateTime.Now:HH:mm:ss} - Initial state: {initialState.StateName}");
     }
 }
 ```

@@ -30,7 +30,7 @@ var mlService = builder.AddProject<Projects.MLService>("ml-service")
     .WithReference(textAnalytics)
     .WithReference(openai)
     .WithReference(redis)
-    .WithEnvironment("ML_MODEL_PATH", "/app/models")
+    .WithEnvironment("mlModel_PATH", "/app/models")
     .WithBindMount("./models", "/app/models");
 
 var documentProcessor = builder.AddProject<Projects.DocumentProcessor>("document-processor")
@@ -65,12 +65,12 @@ public interface IMLOrchestrator
 
 public class MLOrchestrator : IMLOrchestrator
 {
-    private readonly MLContext _mlContext;
-    private readonly TextAnalyticsClient _textAnalytics;
-    private readonly OpenAIClient _openAiClient;
-    private readonly IDistributedCache _cache;
-    private readonly ILogger<MLOrchestrator> _logger;
-    private readonly Dictionary<string, ITransformer> _models;
+    private readonly MLContext mlContext;
+    private readonly TextAnalyticsClient textAnalytics;
+    private readonly OpenAIClient openAiClient;
+    private readonly IDistributedCache cache;
+    private readonly ILogger<MLOrchestrator> logger;
+    private readonly Dictionary<string, ITransformer> models;
 
     public MLOrchestrator(
         MLContext mlContext,
@@ -79,12 +79,12 @@ public class MLOrchestrator : IMLOrchestrator
         IDistributedCache cache,
         ILogger<MLOrchestrator> logger)
     {
-        _mlContext = mlContext;
-        _textAnalytics = textAnalytics;
-        _openAiClient = openAiClient;
-        _cache = cache;
-        _logger = logger;
-        _models = new Dictionary<string, ITransformer>();
+        mlContext = mlContext;
+        textAnalytics = textAnalytics;
+        openAiClient = openAiClient;
+        cache = cache;
+        logger = logger;
+        models = new Dictionary<string, ITransformer>();
         
         LoadPretrainedModels();
     }
@@ -94,13 +94,13 @@ public class MLOrchestrator : IMLOrchestrator
         var cacheKey = $"text-analysis:{documentId}:{content.GetHashCode()}";
         
         // Check cache first
-        var cachedResult = await _cache.GetStringAsync(cacheKey);
+        var cachedResult = await cache.GetStringAsync(cacheKey);
         if (cachedResult != null)
         {
             return JsonSerializer.Deserialize<TextAnalysisResult>(cachedResult)!;
         }
 
-        _logger.LogInformation("Analyzing document {DocumentId}", documentId);
+        logger.LogInformation("Analyzing document {DocumentId}", documentId);
 
         // Parallel analysis with multiple services
         var tasks = new[]
@@ -122,7 +122,7 @@ public class MLOrchestrator : IMLOrchestrator
             AnalyzedAt: DateTime.UtcNow);
 
         // Cache result
-        await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(analysisResult),
+        await cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(analysisResult),
             new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1) });
 
         return analysisResult;
@@ -130,10 +130,10 @@ public class MLOrchestrator : IMLOrchestrator
 
     public async Task<TopicModelingResult> ExtractTopicsAsync(string content, int topicCount = 5)
     {
-        _logger.LogInformation("Extracting {TopicCount} topics from content", topicCount);
+        logger.LogInformation("Extracting {TopicCount} topics from content", topicCount);
 
         // Use Azure OpenAI for topic extraction
-        var chatCompletions = _openAiClient.GetChatCompletionsClient();
+        var chatCompletions = openAiClient.GetChatCompletionsClient();
         
         var response = await chatCompletions.CompleteAsync(new ChatCompletionsOptions
         {
@@ -157,11 +157,11 @@ public class MLOrchestrator : IMLOrchestrator
 
     public async Task<SummarizationResult> GenerateSummariesAsync(string content, SummarizationOptions options)
     {
-        _logger.LogInformation("Generating summaries with types: {SummaryTypes}", 
+        logger.LogInformation("Generating summaries with types: {SummaryTypes}", 
             string.Join(", ", options.SummaryTypes));
 
         var summaries = new Dictionary<string, string>();
-        var chatCompletions = _openAiClient.GetChatCompletionsClient();
+        var chatCompletions = openAiClient.GetChatCompletionsClient();
 
         foreach (var summaryType in options.SummaryTypes)
         {
@@ -195,11 +195,11 @@ public class MLOrchestrator : IMLOrchestrator
 
     public async Task<ClassificationResult> ClassifyDocumentAsync(string content, string[] categories)
     {
-        _logger.LogInformation("Classifying document into categories: {Categories}", 
+        logger.LogInformation("Classifying document into categories: {Categories}", 
             string.Join(", ", categories));
 
         // Use pre-trained ML.NET model for classification
-        if (_models.TryGetValue("document-classifier", out var classifier))
+        if (models.TryGetValue("document-classifier", out var classifier))
         {
             var prediction = await PredictWithMLNetAsync(classifier, content, categories);
             return prediction;
@@ -211,25 +211,25 @@ public class MLOrchestrator : IMLOrchestrator
 
     private async Task<string> AnalyzeSentimentAsync(string content)
     {
-        var response = await _textAnalytics.AnalyzeSentimentAsync(content);
+        var response = await textAnalytics.AnalyzeSentimentAsync(content);
         return response.Value.Sentiment.ToString();
     }
 
     private async Task<string[]> ExtractKeyPhrasesAsync(string content)
     {
-        var response = await _textAnalytics.ExtractKeyPhrasesAsync(content);
+        var response = await textAnalytics.ExtractKeyPhrasesAsync(content);
         return response.Value.KeyPhrases.ToArray();
     }
 
     private async Task<string[]> RecognizeEntitiesAsync(string content)
     {
-        var response = await _textAnalytics.RecognizeEntitiesAsync(content);
+        var response = await textAnalytics.RecognizeEntitiesAsync(content);
         return response.Value.Entities.Select(e => $"{e.Text}:{e.Category}").ToArray();
     }
 
     private async Task<string> DetectLanguageAsync(string content)
     {
-        var response = await _textAnalytics.DetectLanguageAsync(content);
+        var response = await textAnalytics.DetectLanguageAsync(content);
         return response.Value.Iso6391Name;
     }
 }
@@ -251,24 +251,24 @@ public interface IMLPipelineOrchestrator
 
 public class MLPipelineOrchestrator : IMLPipelineOrchestrator
 {
-    private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<MLPipelineOrchestrator> _logger;
-    private readonly Dictionary<string, MLPipelineDefinition> _pipelines;
-    private readonly Dictionary<string, PipelineExecution> _executions;
+    private readonly IServiceProvider serviceProvider;
+    private readonly ILogger<MLPipelineOrchestrator> logger;
+    private readonly Dictionary<string, MLPipelineDefinition> pipelines;
+    private readonly Dictionary<string, PipelineExecution> executions;
 
     public MLPipelineOrchestrator(IServiceProvider serviceProvider, ILogger<MLPipelineOrchestrator> logger)
     {
-        _serviceProvider = serviceProvider;
-        _logger = logger;
-        _pipelines = new Dictionary<string, MLPipelineDefinition>();
-        _executions = new Dictionary<string, PipelineExecution>();
+        serviceProvider = serviceProvider;
+        logger = logger;
+        pipelines = new Dictionary<string, MLPipelineDefinition>();
+        executions = new Dictionary<string, PipelineExecution>();
         
         RegisterDefaultPipelines();
     }
 
     public async Task<PipelineResult> ExecutePipelineAsync(string pipelineId, PipelineInput input)
     {
-        if (!_pipelines.TryGetValue(pipelineId, out var pipeline))
+        if (!pipelines.TryGetValue(pipelineId, out var pipeline))
         {
             throw new ArgumentException($"Pipeline {pipelineId} not found");
         }
@@ -277,12 +277,12 @@ public class MLPipelineOrchestrator : IMLPipelineOrchestrator
         var execution = new PipelineExecution(executionId, pipelineId, DateTime.UtcNow);
         _executions[executionId] = execution;
 
-        _logger.LogInformation("Executing pipeline {PipelineId} with execution {ExecutionId}", 
+        logger.LogInformation("Executing pipeline {PipelineId} with execution {ExecutionId}", 
             pipelineId, executionId);
 
         try
         {
-            var context = new PipelineExecutionContext(input, _serviceProvider, _logger);
+            var context = new PipelineExecutionContext(input, serviceProvider, logger);
             var result = await ExecutePipelineStepsAsync(pipeline, context);
             
             execution.Complete(result);
@@ -290,7 +290,7 @@ public class MLPipelineOrchestrator : IMLPipelineOrchestrator
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Pipeline {PipelineId} execution {ExecutionId} failed", 
+            logger.LogError(ex, "Pipeline {PipelineId} execution {ExecutionId} failed", 
                 pipelineId, executionId);
             
             execution.Fail(ex);
@@ -306,7 +306,7 @@ public class MLPipelineOrchestrator : IMLPipelineOrchestrator
         
         foreach (var step in pipeline.Steps.OrderBy(s => s.Order))
         {
-            _logger.LogDebug("Executing step {StepName} in pipeline {PipelineName}", 
+            logger.LogDebug("Executing step {StepName} in pipeline {PipelineName}", 
                 step.Name, pipeline.Name);
 
             var stepResult = await ExecuteStepAsync(step, context, stepResults);
@@ -371,11 +371,11 @@ public interface IPipelineStep
 
 public class SentimentAnalysisStep : IPipelineStep
 {
-    private readonly IMLOrchestrator _mlOrchestrator;
+    private readonly IMLOrchestrator mlOrchestrator;
 
     public SentimentAnalysisStep(IMLOrchestrator mlOrchestrator)
     {
-        _mlOrchestrator = mlOrchestrator;
+        mlOrchestrator = mlOrchestrator;
     }
 
     public async Task<object> ExecuteAsync(PipelineExecutionContext context, Dictionary<string, object> previousResults)
@@ -389,18 +389,18 @@ public class SentimentAnalysisStep : IPipelineStep
             content = preprocessing.ProcessedText;
         }
 
-        var analysis = await _mlOrchestrator.AnalyzeDocumentAsync(context.Input.DocumentId, content);
+        var analysis = await mlOrchestrator.AnalyzeDocumentAsync(context.Input.DocumentId, content);
         return new SentimentResult(analysis.Sentiment, DateTime.UtcNow);
     }
 }
 
 public class TopicExtractionStep : IPipelineStep
 {
-    private readonly IMLOrchestrator _mlOrchestrator;
+    private readonly IMLOrchestrator mlOrchestrator;
 
     public TopicExtractionStep(IMLOrchestrator mlOrchestrator)
     {
-        _mlOrchestrator = mlOrchestrator;
+        mlOrchestrator = mlOrchestrator;
     }
 
     public async Task<object> ExecuteAsync(PipelineExecutionContext context, Dictionary<string, object> previousResults)
@@ -408,17 +408,17 @@ public class TopicExtractionStep : IPipelineStep
         var content = context.Input.Content;
         var topicCount = context.Input.Options?.GetValueOrDefault("topicCount", 5) ?? 5;
         
-        return await _mlOrchestrator.ExtractTopicsAsync(content, topicCount);
+        return await mlOrchestrator.ExtractTopicsAsync(content, topicCount);
     }
 }
 
 public class SummarizationStep : IPipelineStep
 {
-    private readonly IMLOrchestrator _mlOrchestrator;
+    private readonly IMLOrchestrator mlOrchestrator;
 
     public SummarizationStep(IMLOrchestrator mlOrchestrator)
     {
-        _mlOrchestrator = mlOrchestrator;
+        mlOrchestrator = mlOrchestrator;
     }
 
     public async Task<object> ExecuteAsync(PipelineExecutionContext context, Dictionary<string, object> previousResults)
@@ -427,7 +427,7 @@ public class SummarizationStep : IPipelineStep
         var summaryTypes = context.Input.Options?.GetValueOrDefault("summaryTypes", new[] { "executive", "detailed" });
         
         var options = new SummarizationOptions { SummaryTypes = summaryTypes };
-        return await _mlOrchestrator.GenerateSummariesAsync(content, options);
+        return await mlOrchestrator.GenerateSummariesAsync(content, options);
     }
 }
 ```
@@ -542,61 +542,61 @@ public interface IMLMetricsCollector
 
 public class MLMetricsCollector : IMLMetricsCollector
 {
-    private readonly IMetrics _metrics;
-    private readonly Counter<long> _pipelineExecutions;
-    private readonly Histogram<double> _pipelineDuration;
-    private readonly Counter<long> _cacheHits;
-    private readonly Histogram<double> _modelConfidence;
+    private readonly IMetrics metrics;
+    private readonly Counter<long> pipelineExecutions;
+    private readonly Histogram<double> pipelineDuration;
+    private readonly Counter<long> cacheHits;
+    private readonly Histogram<double> modelConfidence;
 
     public MLMetricsCollector(IMeterFactory meterFactory)
     {
         var meter = meterFactory.Create("MLService");
         
-        _pipelineExecutions = meter.CreateCounter<long>("ml.pipeline.executions.total",
+        pipelineExecutions = meter.CreateCounter<long>("ml.pipeline.executions.total",
             description: "Total number of pipeline executions");
         
-        _pipelineDuration = meter.CreateHistogram<double>("ml.pipeline.duration.seconds",
+        pipelineDuration = meter.CreateHistogram<double>("ml.pipeline.duration.seconds",
             description: "Pipeline execution duration in seconds");
         
-        _cacheHits = meter.CreateCounter<long>("ml.cache.hits.total",
+        cacheHits = meter.CreateCounter<long>("ml.cache.hits.total",
             description: "Total number of cache hits");
         
-        _modelConfidence = meter.CreateHistogram<double>("ml.model.confidence",
+        modelConfidence = meter.CreateHistogram<double>("ml.model.confidence",
             description: "Model prediction confidence scores");
     }
 
     public void RecordPipelineExecution(string pipelineId, TimeSpan duration, bool success)
     {
-        _pipelineExecutions.Add(1, 
+        pipelineExecutions.Add(1, 
             new KeyValuePair<string, object?>("pipeline_id", pipelineId),
             new KeyValuePair<string, object?>("success", success));
         
-        _pipelineDuration.Record(duration.TotalSeconds,
+        pipelineDuration.Record(duration.TotalSeconds,
             new KeyValuePair<string, object?>("pipeline_id", pipelineId));
     }
 
     public void RecordModelPrediction(string modelName, TimeSpan duration, double confidence)
     {
-        _modelConfidence.Record(confidence,
+        modelConfidence.Record(confidence,
             new KeyValuePair<string, object?>("model_name", modelName));
     }
 
     public void RecordCacheHit(string cacheKey)
     {
-        _cacheHits.Add(1,
+        cacheHits.Add(1,
             new KeyValuePair<string, object?>("cache_key_prefix", cacheKey.Split(':')[0]));
     }
 }
 
 public class MLServiceHealthCheck : IHealthCheck
 {
-    private readonly IMLOrchestrator _orchestrator;
-    private readonly IDistributedCache _cache;
+    private readonly IMLOrchestrator orchestrator;
+    private readonly IDistributedCache cache;
 
     public MLServiceHealthCheck(IMLOrchestrator orchestrator, IDistributedCache cache)
     {
-        _orchestrator = orchestrator;
-        _cache = cache;
+        orchestrator = orchestrator;
+        cache = cache;
     }
 
     public async Task<HealthCheckResult> CheckHealthAsync(
@@ -606,11 +606,11 @@ public class MLServiceHealthCheck : IHealthCheck
         try
         {
             // Test basic ML functionality
-            var testResult = await _orchestrator.AnalyzeDocumentAsync("health-check", "test content");
+            var testResult = await orchestrator.AnalyzeDocumentAsync("health-check", "test content");
             
             // Test cache connectivity
-            await _cache.SetStringAsync("health-check", "ok", cancellationToken);
-            var cacheResult = await _cache.GetStringAsync("health-check", cancellationToken);
+            await cache.SetStringAsync("health-check", "ok", cancellationToken);
+            var cacheResult = await cache.GetStringAsync("health-check", cancellationToken);
             
             if (cacheResult == "ok")
             {

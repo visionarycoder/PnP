@@ -22,15 +22,15 @@ public interface IDocumentPipeline
 // Pipeline orchestrator with Aspire integration
 public class DocumentPipeline : IDocumentPipeline
 {
-    private readonly IDocumentIngestionService _ingestionService;
-    private readonly IDocumentValidationService _validationService;
-    private readonly IContentExtractionService _extractionService;
-    private readonly IMLProcessingService _mlService;
-    private readonly IDocumentStorageService _storageService;
-    private readonly INotificationService _notificationService;
-    private readonly IPipelineStateManager _stateManager;
-    private readonly ILogger<DocumentPipeline> _logger;
-    private readonly DocumentPipelineOptions _options;
+    private readonly IDocumentIngestionService ingestionService;
+    private readonly IDocumentValidationService validationService;
+    private readonly IContentExtractionService extractionService;
+    private readonly IMLProcessingService mlService;
+    private readonly IDocumentStorageService storageService;
+    private readonly INotificationService notificationService;
+    private readonly IPipelineStateManager stateManager;
+    private readonly ILogger<DocumentPipeline> logger;
+    private readonly DocumentPipelineOptions options;
 
     public DocumentPipeline(
         IDocumentIngestionService ingestionService,
@@ -43,15 +43,15 @@ public class DocumentPipeline : IDocumentPipeline
         ILogger<DocumentPipeline> logger,
         IOptions<DocumentPipelineOptions> options)
     {
-        _ingestionService = ingestionService;
-        _validationService = validationService;
-        _extractionService = extractionService;
-        _mlService = mlService;
-        _storageService = storageService;
-        _notificationService = notificationService;
-        _stateManager = stateManager;
-        _logger = logger;
-        _options = options.Value;
+        ingestionService = ingestionService;
+        validationService = validationService;
+        extractionService = extractionService;
+        mlService = mlService;
+        storageService = storageService;
+        notificationService = notificationService;
+        stateManager = stateManager;
+        logger = logger;
+        options = options.Value;
     }
 
     public async Task<PipelineResult> ProcessAsync(DocumentInput input, CancellationToken cancellationToken = default)
@@ -66,12 +66,12 @@ public class DocumentPipeline : IDocumentPipeline
 
         try
         {
-            await _stateManager.InitializePipelineAsync(context);
+            await stateManager.InitializePipelineAsync(context);
 
             // Stage 1: Ingestion
             var ingestionResult = await ExecuteStageAsync(
                 "Ingestion",
-                () => _ingestionService.IngestAsync(input, cancellationToken),
+                () => ingestionService.IngestAsync(input, cancellationToken),
                 context);
 
             if (!ingestionResult.IsSuccess)
@@ -85,7 +85,7 @@ public class DocumentPipeline : IDocumentPipeline
             // Stage 2: Validation
             var validationResult = await ExecuteStageAsync(
                 "Validation",
-                () => _validationService.ValidateAsync(document, cancellationToken),
+                () => validationService.ValidateAsync(document, cancellationToken),
                 context);
 
             if (!validationResult.IsSuccess)
@@ -96,7 +96,7 @@ public class DocumentPipeline : IDocumentPipeline
             // Stage 3: Content Extraction
             var extractionResult = await ExecuteStageAsync(
                 "ContentExtraction",
-                () => _extractionService.ExtractContentAsync(document, cancellationToken),
+                () => extractionService.ExtractContentAsync(document, cancellationToken),
                 context);
 
             if (!extractionResult.IsSuccess)
@@ -124,7 +124,7 @@ public class DocumentPipeline : IDocumentPipeline
             // Stage 5: Storage
             var storageResult = await ExecuteStageAsync(
                 "Storage",
-                () => _storageService.StoreAsync(document, extractedContent, analysisResults, cancellationToken),
+                () => storageService.StoreAsync(document, extractedContent, analysisResults, cancellationToken),
                 context);
 
             if (!storageResult.IsSuccess)
@@ -135,17 +135,17 @@ public class DocumentPipeline : IDocumentPipeline
             // Stage 6: Notification
             var notificationResult = await ExecuteStageAsync(
                 "Notification",
-                () => _notificationService.NotifyProcessingCompleteAsync(context, cancellationToken),
+                () => notificationService.NotifyProcessingCompleteAsync(context, cancellationToken),
                 context);
 
             // Notification failure doesn't fail the entire pipeline
             if (!notificationResult.IsSuccess)
             {
-                _logger.LogWarning("Notification failed for pipeline {PipelineId}: {Error}",
+                logger.LogWarning("Notification failed for pipeline {PipelineId}: {Error}",
                     pipelineId, notificationResult.Error);
             }
 
-            await _stateManager.CompletePipelineAsync(context);
+            await stateManager.CompletePipelineAsync(context);
 
             return new PipelineResult
             {
@@ -160,14 +160,14 @@ public class DocumentPipeline : IDocumentPipeline
         }
         catch (OperationCanceledException)
         {
-            _logger.LogInformation("Pipeline {PipelineId} was cancelled", pipelineId);
-            await _stateManager.CancelPipelineAsync(context);
+            logger.LogInformation("Pipeline {PipelineId} was cancelled", pipelineId);
+            await stateManager.CancelPipelineAsync(context);
             throw;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error in pipeline {PipelineId}", pipelineId);
-            await _stateManager.FailPipelineAsync(context, ex.Message);
+            logger.LogError(ex, "Unexpected error in pipeline {PipelineId}", pipelineId);
+            await stateManager.FailPipelineAsync(context, ex.Message);
             return CreateFailureResult(context, "Unexpected error", ex.Message);
         }
     }
@@ -178,14 +178,14 @@ public class DocumentPipeline : IDocumentPipeline
     {
         var batchId = Guid.NewGuid().ToString();
         var inputList = inputs.ToList();
-        var semaphore = new SemaphoreSlim(_options.MaxConcurrentProcessing, _options.MaxConcurrentProcessing);
+        var semaphore = new SemaphoreSlim(options.MaxConcurrentProcessing, options.MaxConcurrentProcessing);
         var results = new ConcurrentBag<PipelineResult>();
 
         using var activity = PipelineActivitySource.StartActivity("DocumentPipeline.ProcessBatch");
         activity?.SetTag("batch.id", batchId);
         activity?.SetTag("batch.size", inputList.Count);
 
-        _logger.LogInformation("Starting batch processing {BatchId} with {DocumentCount} documents",
+        logger.LogInformation("Starting batch processing {BatchId} with {DocumentCount} documents",
             batchId, inputList.Count);
 
         try
@@ -202,7 +202,7 @@ public class DocumentPipeline : IDocumentPipeline
                     var result = await ProcessAsync(input, cancellationToken);
                     results.Add(result);
 
-                    _logger.LogDebug("Completed batch item {Index} in batch {BatchId}: {Success}",
+                    logger.LogDebug("Completed batch item {Index} in batch {BatchId}: {Success}",
                         index, batchId, result.IsSuccess);
                 }
                 finally
@@ -217,7 +217,7 @@ public class DocumentPipeline : IDocumentPipeline
             var successCount = resultList.Count(r => r.IsSuccess);
             var failureCount = resultList.Count - successCount;
 
-            _logger.LogInformation("Completed batch processing {BatchId}: {SuccessCount} successful, {FailureCount} failed",
+            logger.LogInformation("Completed batch processing {BatchId}: {SuccessCount} successful, {FailureCount} failed",
                 batchId, successCount, failureCount);
 
             return new BatchPipelineResult
@@ -232,7 +232,7 @@ public class DocumentPipeline : IDocumentPipeline
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Batch processing failed for batch {BatchId}", batchId);
+            logger.LogError(ex, "Batch processing failed for batch {BatchId}", batchId);
             throw;
         }
         finally
@@ -250,12 +250,12 @@ public class DocumentPipeline : IDocumentPipeline
 
         try
         {
-            await _stateManager.InitializePipelineAsync(context);
+            await stateManager.InitializePipelineAsync(context);
 
             // Yield each stage result as it completes
             var ingestionResult = await ExecuteStageAsync(
                 "Ingestion",
-                () => _ingestionService.IngestAsync(input, cancellationToken),
+                () => ingestionService.IngestAsync(input, cancellationToken),
                 context);
             yield return ingestionResult;
 
@@ -266,7 +266,7 @@ public class DocumentPipeline : IDocumentPipeline
 
             var validationResult = await ExecuteStageAsync(
                 "Validation",
-                () => _validationService.ValidateAsync(document, cancellationToken),
+                () => validationService.ValidateAsync(document, cancellationToken),
                 context);
             yield return validationResult;
 
@@ -274,7 +274,7 @@ public class DocumentPipeline : IDocumentPipeline
 
             var extractionResult = await ExecuteStageAsync(
                 "ContentExtraction",
-                () => _extractionService.ExtractContentAsync(document, cancellationToken),
+                () => extractionService.ExtractContentAsync(document, cancellationToken),
                 context);
             yield return extractionResult;
 
@@ -296,20 +296,20 @@ public class DocumentPipeline : IDocumentPipeline
 
             var storageResult = await ExecuteStageAsync(
                 "Storage",
-                () => _storageService.StoreAsync(document, extractedContent, analysisResults, cancellationToken),
+                () => storageService.StoreAsync(document, extractedContent, analysisResults, cancellationToken),
                 context);
             yield return storageResult;
 
             if (storageResult.IsSuccess)
             {
-                await _stateManager.CompletePipelineAsync(context);
+                await stateManager.CompletePipelineAsync(context);
             }
         }
         finally
         {
             if (!context.IsCompleted)
             {
-                await _stateManager.CancelPipelineAsync(context);
+                await stateManager.CancelPipelineAsync(context);
             }
         }
     }
@@ -327,10 +327,10 @@ public class DocumentPipeline : IDocumentPipeline
         
         try
         {
-            _logger.LogDebug("Starting stage {StageName} for pipeline {PipelineId}",
+            logger.LogDebug("Starting stage {StageName} for pipeline {PipelineId}",
                 stageName, context.PipelineId);
 
-            await _stateManager.StartStageAsync(context, stageName);
+            await stateManager.StartStageAsync(context, stageName);
 
             var result = await stageOperation();
             
@@ -346,9 +346,9 @@ public class DocumentPipeline : IDocumentPipeline
             };
 
             context.AddStageResult(stageResult);
-            await _stateManager.CompleteStageAsync(context, stageName, stageResult);
+            await stateManager.CompleteStageAsync(context, stageName, stageResult);
 
-            _logger.LogDebug("Completed stage {StageName} for pipeline {PipelineId} in {ElapsedMs}ms",
+            logger.LogDebug("Completed stage {StageName} for pipeline {PipelineId} in {ElapsedMs}ms",
                 stageName, context.PipelineId, stopwatch.ElapsedMilliseconds);
 
             activity?.SetTag("stage.success", true);
@@ -370,9 +370,9 @@ public class DocumentPipeline : IDocumentPipeline
             };
 
             context.AddStageResult(stageResult);
-            await _stateManager.FailStageAsync(context, stageName, ex.Message);
+            await stateManager.FailStageAsync(context, stageName, ex.Message);
 
-            _logger.LogError(ex, "Stage {StageName} failed for pipeline {PipelineId} after {ElapsedMs}ms",
+            logger.LogError(ex, "Stage {StageName} failed for pipeline {PipelineId} after {ElapsedMs}ms",
                 stageName, context.PipelineId, stopwatch.ElapsedMilliseconds);
 
             activity?.SetTag("stage.success", false);
@@ -391,35 +391,35 @@ public class DocumentPipeline : IDocumentPipeline
         var results = new MLAnalysisResults();
 
         // Parallel ML processing
-        if (_options.EnableTextClassification)
+        if (options.EnableTextClassification)
         {
             tasks.Add(Task.Run(async () =>
             {
-                results.Classification = await _mlService.ClassifyTextAsync(content.Text, cancellationToken);
+                results.Classification = await mlService.ClassifyTextAsync(content.Text, cancellationToken);
             }, cancellationToken));
         }
 
-        if (_options.EnableSentimentAnalysis)
+        if (options.EnableSentimentAnalysis)
         {
             tasks.Add(Task.Run(async () =>
             {
-                results.Sentiment = await _mlService.AnalyzeSentimentAsync(content.Text, cancellationToken);
+                results.Sentiment = await mlService.AnalyzeSentimentAsync(content.Text, cancellationToken);
             }, cancellationToken));
         }
 
-        if (_options.EnableTopicModeling)
+        if (options.EnableTopicModeling)
         {
             tasks.Add(Task.Run(async () =>
             {
-                results.Topics = await _mlService.ExtractTopicsAsync(content.Text, cancellationToken);
+                results.Topics = await mlService.ExtractTopicsAsync(content.Text, cancellationToken);
             }, cancellationToken));
         }
 
-        if (_options.EnableEntityExtraction)
+        if (options.EnableEntityExtraction)
         {
             tasks.Add(Task.Run(async () =>
             {
-                results.Entities = await _mlService.ExtractEntitiesAsync(content.Text, cancellationToken);
+                results.Entities = await mlService.ExtractEntitiesAsync(content.Text, cancellationToken);
             }, cancellationToken));
         }
 
@@ -494,18 +494,18 @@ public interface IPipelineStateManager
 // Orleans-based pipeline state manager
 public class OrleansPipelineStateManager : IPipelineStateManager
 {
-    private readonly IClusterClient _clusterClient;
-    private readonly ILogger<OrleansPipelineStateManager> _logger;
+    private readonly IClusterClient clusterClient;
+    private readonly ILogger<OrleansPipelineStateManager> logger;
 
     public OrleansPipelineStateManager(IClusterClient clusterClient, ILogger<OrleansPipelineStateManager> logger)
     {
-        _clusterClient = clusterClient;
-        _logger = logger;
+        clusterClient = clusterClient;
+        logger = logger;
     }
 
     public async Task InitializePipelineAsync(PipelineContext context)
     {
-        var grain = _clusterClient.GetGrain<IPipelineStateGrain>(context.PipelineId);
+        var grain = clusterClient.GetGrain<IPipelineStateGrain>(context.PipelineId);
         
         var state = new PipelineState
         {
@@ -518,64 +518,64 @@ public class OrleansPipelineStateManager : IPipelineStateManager
 
         await grain.InitializeAsync(state);
         
-        _logger.LogDebug("Initialized pipeline state for {PipelineId}", context.PipelineId);
+        logger.LogDebug("Initialized pipeline state for {PipelineId}", context.PipelineId);
     }
 
     public async Task StartStageAsync(PipelineContext context, string stageName)
     {
-        var grain = _clusterClient.GetGrain<IPipelineStateGrain>(context.PipelineId);
+        var grain = clusterClient.GetGrain<IPipelineStateGrain>(context.PipelineId);
         await grain.StartStageAsync(stageName);
         
-        _logger.LogDebug("Started stage {StageName} for pipeline {PipelineId}", stageName, context.PipelineId);
+        logger.LogDebug("Started stage {StageName} for pipeline {PipelineId}", stageName, context.PipelineId);
     }
 
     public async Task CompleteStageAsync(PipelineContext context, string stageName, PipelineStageResult result)
     {
-        var grain = _clusterClient.GetGrain<IPipelineStateGrain>(context.PipelineId);
+        var grain = clusterClient.GetGrain<IPipelineStateGrain>(context.PipelineId);
         await grain.CompleteStageAsync(stageName, result);
         
-        _logger.LogDebug("Completed stage {StageName} for pipeline {PipelineId}", stageName, context.PipelineId);
+        logger.LogDebug("Completed stage {StageName} for pipeline {PipelineId}", stageName, context.PipelineId);
     }
 
     public async Task FailStageAsync(PipelineContext context, string stageName, string error)
     {
-        var grain = _clusterClient.GetGrain<IPipelineStateGrain>(context.PipelineId);
+        var grain = clusterClient.GetGrain<IPipelineStateGrain>(context.PipelineId);
         await grain.FailStageAsync(stageName, error);
         
-        _logger.LogWarning("Failed stage {StageName} for pipeline {PipelineId}: {Error}", 
+        logger.LogWarning("Failed stage {StageName} for pipeline {PipelineId}: {Error}", 
             stageName, context.PipelineId, error);
     }
 
     public async Task CompletePipelineAsync(PipelineContext context)
     {
-        var grain = _clusterClient.GetGrain<IPipelineStateGrain>(context.PipelineId);
+        var grain = clusterClient.GetGrain<IPipelineStateGrain>(context.PipelineId);
         await grain.CompleteAsync();
         
         context.Complete();
         
-        _logger.LogInformation("Completed pipeline {PipelineId} in {Duration}ms", 
+        logger.LogInformation("Completed pipeline {PipelineId} in {Duration}ms", 
             context.PipelineId, (DateTime.UtcNow - context.StartTime).TotalMilliseconds);
     }
 
     public async Task FailPipelineAsync(PipelineContext context, string error)
     {
-        var grain = _clusterClient.GetGrain<IPipelineStateGrain>(context.PipelineId);
+        var grain = clusterClient.GetGrain<IPipelineStateGrain>(context.PipelineId);
         await grain.FailAsync(error);
         
-        _logger.LogError("Failed pipeline {PipelineId}: {Error}", context.PipelineId, error);
+        logger.LogError("Failed pipeline {PipelineId}: {Error}", context.PipelineId, error);
     }
 
     public async Task CancelPipelineAsync(PipelineContext context)
     {
-        var grain = _clusterClient.GetGrain<IPipelineStateGrain>(context.PipelineId);
+        var grain = clusterClient.GetGrain<IPipelineStateGrain>(context.PipelineId);
         await grain.CancelAsync();
         
-        _logger.LogInformation("Cancelled pipeline {PipelineId}", context.PipelineId);
+        logger.LogInformation("Cancelled pipeline {PipelineId}", context.PipelineId);
     }
 
     public async Task<PipelineState?> GetPipelineStateAsync(string pipelineId)
     {
-        var grain = _clusterClient.GetGrain<IPipelineStateGrain>(pipelineId);
+        var grain = clusterClient.GetGrain<IPipelineStateGrain>(pipelineId);
         return await grain.GetStateAsync();
     }
 
@@ -604,33 +604,33 @@ public interface IPipelineStateGrain : IGrainWithStringKey
 // Pipeline state grain implementation
 public class PipelineStateGrain : Grain, IPipelineStateGrain
 {
-    private readonly IPersistentState<PipelineState> _state;
+    private readonly IPersistentState<PipelineState> state;
 
     public PipelineStateGrain([PersistentState("pipelineState", "pipelineStorage")] IPersistentState<PipelineState> state)
     {
-        _state = state;
+        state = state;
     }
 
     public async Task InitializeAsync(PipelineState state)
     {
-        _state.State = state;
-        await _state.WriteStateAsync();
+        state.State = state;
+        await state.WriteStateAsync();
     }
 
     public async Task StartStageAsync(string stageName)
     {
-        _state.State.Stages[stageName] = new StageState
+        state.State.Stages[stageName] = new StageState
         {
             Status = StageStatus.Running,
             StartTime = DateTime.UtcNow
         };
         
-        await _state.WriteStateAsync();
+        await state.WriteStateAsync();
     }
 
     public async Task CompleteStageAsync(string stageName, PipelineStageResult result)
     {
-        if (_state.State.Stages.TryGetValue(stageName, out var stage))
+        if (state.State.Stages.TryGetValue(stageName, out var stage))
         {
             stage.Status = StageStatus.Completed;
             stage.EndTime = DateTime.UtcNow;
@@ -638,53 +638,53 @@ public class PipelineStateGrain : Grain, IPipelineStateGrain
             stage.Result = result;
         }
         
-        await _state.WriteStateAsync();
+        await state.WriteStateAsync();
     }
 
     public async Task FailStageAsync(string stageName, string error)
     {
-        if (_state.State.Stages.TryGetValue(stageName, out var stage))
+        if (state.State.Stages.TryGetValue(stageName, out var stage))
         {
             stage.Status = StageStatus.Failed;
             stage.EndTime = DateTime.UtcNow;
             stage.Error = error;
         }
         
-        _state.State.Status = PipelineStatus.Failed;
-        _state.State.Error = $"Stage {stageName} failed: {error}";
-        _state.State.EndTime = DateTime.UtcNow;
+        state.State.Status = PipelineStatus.Failed;
+        state.State.Error = $"Stage {stageName} failed: {error}";
+        state.State.EndTime = DateTime.UtcNow;
         
-        await _state.WriteStateAsync();
+        await state.WriteStateAsync();
     }
 
     public async Task CompleteAsync()
     {
-        _state.State.Status = PipelineStatus.Completed;
-        _state.State.EndTime = DateTime.UtcNow;
+        state.State.Status = PipelineStatus.Completed;
+        state.State.EndTime = DateTime.UtcNow;
         
-        await _state.WriteStateAsync();
+        await state.WriteStateAsync();
     }
 
     public async Task FailAsync(string error)
     {
-        _state.State.Status = PipelineStatus.Failed;
-        _state.State.Error = error;
-        _state.State.EndTime = DateTime.UtcNow;
+        state.State.Status = PipelineStatus.Failed;
+        state.State.Error = error;
+        state.State.EndTime = DateTime.UtcNow;
         
-        await _state.WriteStateAsync();
+        await state.WriteStateAsync();
     }
 
     public async Task CancelAsync()
     {
-        _state.State.Status = PipelineStatus.Cancelled;
-        _state.State.EndTime = DateTime.UtcNow;
+        state.State.Status = PipelineStatus.Cancelled;
+        state.State.EndTime = DateTime.UtcNow;
         
-        await _state.WriteStateAsync();
+        await state.WriteStateAsync();
     }
 
     public Task<PipelineState> GetStateAsync()
     {
-        return Task.FromResult(_state.State);
+        return Task.FromResult(state.State);
     }
 }
 ```
@@ -702,11 +702,11 @@ public interface IDocumentIngestionService
 
 public class DocumentIngestionService : IDocumentIngestionService
 {
-    private readonly ILogger<DocumentIngestionService> _logger;
+    private readonly ILogger<DocumentIngestionService> logger;
 
     public DocumentIngestionService(ILogger<DocumentIngestionService> logger)
     {
-        _logger = logger;
+        logger = logger;
     }
 
     public async Task<Document> IngestAsync(DocumentInput input, CancellationToken cancellationToken = default)
@@ -727,7 +727,7 @@ public class DocumentIngestionService : IDocumentIngestionService
             Metadata = input.Metadata ?? new Dictionary<string, string>()
         };
 
-        _logger.LogDebug("Ingested document {DocumentId} with size {Size} bytes", 
+        logger.LogDebug("Ingested document {DocumentId} with size {Size} bytes", 
             document.Id, document.Size);
 
         return document;
@@ -742,13 +742,13 @@ public interface IDocumentValidationService
 
 public class DocumentValidationService : IDocumentValidationService
 {
-    private readonly DocumentPipelineOptions _options;
-    private readonly ILogger<DocumentValidationService> _logger;
+    private readonly DocumentPipelineOptions options;
+    private readonly ILogger<DocumentValidationService> logger;
 
     public DocumentValidationService(IOptions<DocumentPipelineOptions> options, ILogger<DocumentValidationService> logger)
     {
-        _options = options.Value;
-        _logger = logger;
+        options = options.Value;
+        logger = logger;
     }
 
     public async Task<ValidationResult> ValidateAsync(Document document, CancellationToken cancellationToken = default)
@@ -760,13 +760,13 @@ public class DocumentValidationService : IDocumentValidationService
         var errors = new List<string>();
 
         // Size validation
-        if (document.Size > _options.MaxDocumentSize)
+        if (document.Size > options.MaxDocumentSize)
         {
-            errors.Add($"Document size {document.Size} exceeds maximum allowed size {_options.MaxDocumentSize}");
+            errors.Add($"Document size {document.Size} exceeds maximum allowed size {options.MaxDocumentSize}");
         }
 
         // Content type validation
-        if (!_options.AllowedContentTypes.Contains(document.ContentType))
+        if (!options.AllowedContentTypes.Contains(document.ContentType))
         {
             errors.Add($"Content type {document.ContentType} is not allowed");
         }
@@ -779,7 +779,7 @@ public class DocumentValidationService : IDocumentValidationService
 
         var isValid = errors.Count == 0;
         
-        _logger.LogDebug("Validated document {DocumentId}: {IsValid} (errors: {ErrorCount})", 
+        logger.LogDebug("Validated document {DocumentId}: {IsValid} (errors: {ErrorCount})", 
             document.Id, isValid, errors.Count);
 
         return new ValidationResult
@@ -798,11 +798,11 @@ public interface IContentExtractionService
 
 public class ContentExtractionService : IContentExtractionService
 {
-    private readonly ILogger<ContentExtractionService> _logger;
+    private readonly ILogger<ContentExtractionService> logger;
 
     public ContentExtractionService(ILogger<ContentExtractionService> logger)
     {
-        _logger = logger;
+        logger = logger;
     }
 
     public async Task<ExtractedContent> ExtractContentAsync(Document document, CancellationToken cancellationToken = default)
@@ -826,7 +826,7 @@ public class ContentExtractionService : IContentExtractionService
             }
         };
 
-        _logger.LogDebug("Extracted content from document {DocumentId}: {WordCount} words, language: {Language}", 
+        logger.LogDebug("Extracted content from document {DocumentId}: {WordCount} words, language: {Language}", 
             document.Id, extractedContent.WordCount, extractedContent.Language);
 
         return extractedContent;
@@ -856,11 +856,11 @@ public interface IMLProcessingService
 
 public class MLProcessingService : IMLProcessingService
 {
-    private readonly ILogger<MLProcessingService> _logger;
+    private readonly ILogger<MLProcessingService> logger;
 
     public MLProcessingService(ILogger<MLProcessingService> logger)
     {
-        _logger = logger;
+        logger = logger;
     }
 
     public async Task<ClassificationResult> ClassifyTextAsync(string text, CancellationToken cancellationToken = default)
@@ -877,7 +877,7 @@ public class MLProcessingService : IMLProcessingService
             Timestamp = DateTime.UtcNow
         };
 
-        _logger.LogDebug("Classified text as {Category} with confidence {Confidence}", 
+        logger.LogDebug("Classified text as {Category} with confidence {Confidence}", 
             result.Category, result.Confidence);
 
         return result;
@@ -896,7 +896,7 @@ public class MLProcessingService : IMLProcessingService
             Timestamp = DateTime.UtcNow
         };
 
-        _logger.LogDebug("Analyzed sentiment as {Sentiment} with score {Score}", 
+        logger.LogDebug("Analyzed sentiment as {Sentiment} with score {Score}", 
             result.Sentiment, result.Score);
 
         return result;
@@ -915,7 +915,7 @@ public class MLProcessingService : IMLProcessingService
             new TopicResult { Topic = "Architecture", Weight = 0.3f }
         };
 
-        _logger.LogDebug("Extracted {TopicCount} topics from text", results.Length);
+        logger.LogDebug("Extracted {TopicCount} topics from text", results.Length);
 
         return results;
     }
@@ -933,7 +933,7 @@ public class MLProcessingService : IMLProcessingService
             new EntityResult { Entity = "Aspire", Type = "Technology", Confidence = 0.8f }
         };
 
-        _logger.LogDebug("Extracted {EntityCount} entities from text", results.Length);
+        logger.LogDebug("Extracted {EntityCount} entities from text", results.Length);
 
         return results;
     }

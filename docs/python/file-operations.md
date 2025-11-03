@@ -1,29 +1,28 @@
 # File Operations
 
-**Description**: Common file handling patterns for reading, writing, and processing files safely.
+**Description**: Common file handling patterns for reading, writing, and processing files safely following PEP 8 standards.
 
-**Language/Technology**: Python 3
+**Language/Technology**: Python 3.12+
 
 **Code**:
 ```python
 import os
 from pathlib import Path
-from typing import List, Iterator
+from typing import List, Iterator, Optional
 
 class FileOperations:
-    """Collection of safe file operation utilities"""
+    """Collection of safe file operation utilities following PEP 8."""
     
     @staticmethod
     def read_file_safely(filepath: str, encoding: str = 'utf-8') -> str:
-        """
-        Safely read entire file contents
+        """Safely read entire file contents.
         
         Args:
-            filepath: Path to the file
-            encoding: File encoding (default: utf-8)
+            filepath: Path to the file.
+            encoding: File encoding (default: utf-8).
             
         Returns:
-            File contents as string
+            File contents as string.
         """
         try:
             with open(filepath, 'r', encoding=encoding) as f:

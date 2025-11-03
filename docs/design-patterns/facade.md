@@ -20,20 +20,17 @@ using System.Text;
 // Email Service Subsystem
 public class SmtpClient
 {
-    private readonly string _server;
-    private readonly int _port;
-    private readonly bool _useSsl;
+    private readonly string server;
+    private readonly int port;
+    private readonly bool useSsl;
     
     public SmtpClient(string server, int port = 587, bool useSsl = true)
-    {
-        _server = server;
-        _port = port;
-        _useSsl = useSsl;
+    {server = server;port = port;useSsl = useSsl;
     }
     
     public void Connect()
     {
-        Console.WriteLine($"📡 Connecting to SMTP server {_server}:{_port} (SSL: {_useSsl})");
+        Console.WriteLine($"📡 Connecting to SMTP server {server}:{port} (SSL: {useSsl})");
         // Simulate connection logic
         System.Threading.Thread.Sleep(100);
         Console.WriteLine("✅ SMTP connection established");
@@ -66,11 +63,10 @@ public class SmtpClient
 
 public class EmailTemplate
 {
-    private readonly Dictionary<string, string> _templates;
+    private readonly Dictionary<string, string> templates;
     
     public EmailTemplate()
-    {
-        _templates = new Dictionary<string, string>
+    {templates = new Dictionary<string, string>
         {
             ["welcome"] = "<h1>Welcome {name}!</h1><p>Thank you for joining us.</p>",
             ["password-reset"] = "<h2>Password Reset</h2><p>Click <a href='{link}'>here</a> to reset your password.</p>",
@@ -81,7 +77,7 @@ public class EmailTemplate
     
     public string GetTemplate(string templateName)
     {
-        return _templates.TryGetValue(templateName, out var template) ? template : 
+        return templates.TryGetValue(templateName, out var template) ? template : 
                "<p>{message}</p>";
     }
     
@@ -140,25 +136,23 @@ public class EmailValidator
 // Database Service Subsystem
 public class DatabaseConnection
 {
-    private readonly string _connectionString;
-    private bool _isConnected;
+    private readonly string connectionString;
+    private bool isConnected;
     
     public DatabaseConnection(string connectionString)
-    {
-        _connectionString = connectionString;
+    {connectionString = connectionString;
     }
     
     public void Connect()
     {
-        Console.WriteLine($"🗄️ Connecting to database: {_connectionString}");
-        System.Threading.Thread.Sleep(150);
-        _isConnected = true;
+        Console.WriteLine($"🗄️ Connecting to database: {connectionString}");
+        System.Threading.Thread.Sleep(150);isConnected = true;
         Console.WriteLine("✅ Database connected");
     }
     
     public void ExecuteQuery(string sql, Dictionary<string, object> parameters = null)
     {
-        if (!_isConnected)
+        if (!isConnected)
             throw new InvalidOperationException("Not connected to database");
         
         Console.WriteLine($"🔍 Executing SQL: {sql}");
@@ -178,10 +172,9 @@ public class DatabaseConnection
     
     public void Disconnect()
     {
-        if (_isConnected)
+        if (isConnected)
         {
-            Console.WriteLine("🗄️ Disconnecting from database");
-            _isConnected = false;
+            Console.WriteLine("🗄️ Disconnecting from database");isConnected = false;
             Console.WriteLine("✅ Database disconnected");
         }
     }
@@ -189,11 +182,10 @@ public class DatabaseConnection
 
 public class UserRepository
 {
-    private readonly DatabaseConnection _db;
+    private readonly DatabaseConnection db;
     
     public UserRepository(DatabaseConnection db)
-    {
-        _db = db;
+    {db = db;
     }
     
     public void CreateUser(string email, string name, string hashedPassword)
@@ -204,15 +196,13 @@ public class UserRepository
             ["name"] = name,
             ["password"] = hashedPassword,
             ["created"] = DateTime.Now
-        };
-        
-        _db.ExecuteQuery("INSERT INTO Users (Email, Name, Password, Created) VALUES (@email, @name, @password, @created)", parameters);
+        };db.ExecuteQuery("INSERT INTO Users (Email, Name, Password, Created) VALUES (@email, @name, @password, @created)", parameters);
     }
     
     public bool UserExists(string email)
     {
         var parameters = new Dictionary<string, object> { ["email"] = email };
-        var count = _db.QuerySingle<int>("SELECT COUNT(*) FROM Users WHERE Email = @email", parameters);
+        var count =db.QuerySingle<int>("SELECT COUNT(*) FROM Users WHERE Email = @email", parameters);
         return count > 0;
     }
     
@@ -222,20 +212,17 @@ public class UserRepository
         {
             ["email"] = email,
             ["lastLogin"] = DateTime.Now
-        };
-        
-        _db.ExecuteQuery("UPDATE Users SET LastLogin = @lastLogin WHERE Email = @email", parameters);
+        };db.ExecuteQuery("UPDATE Users SET LastLogin = @lastLogin WHERE Email = @email", parameters);
     }
 }
 
 // Logging Subsystem
 public class FileLogger
 {
-    private readonly string _logPath;
+    private readonly string logPath;
     
     public FileLogger(string logPath = "app.log")
-    {
-        _logPath = logPath;
+    {logPath = logPath;
     }
     
     public void Log(string level, string message)
@@ -255,7 +242,7 @@ public class FileLogger
 
 public class EventLogger
 {
-    private readonly List<string> _events = new List<string>();
+    private readonly List<string> events = new List<string>();
     
     public void LogEvent(string eventType, string description, object data = null)
     {
@@ -263,13 +250,11 @@ public class EventLogger
         if (data != null)
         {
             eventEntry += $" | Data: {JsonSerializer.Serialize(data)}";
-        }
-        
-        _events.Add(eventEntry);
+        }events.Add(eventEntry);
         Console.WriteLine($"📊 Event logged: {eventEntry}");
     }
     
-    public IReadOnlyList<string> GetEvents() => _events.AsReadOnly();
+    public IReadOnlyList<string> GetEvents() => events.AsReadOnly();
 }
 
 // Security Subsystem
@@ -316,28 +301,19 @@ public class TokenGenerator
 // FACADE - Provides simple interface to complex subsystem
 public class UserManagementFacade
 {
-    private readonly SmtpClient _smtpClient;
-    private readonly EmailTemplate _emailTemplate;
-    private readonly EmailValidator _emailValidator;
-    private readonly DatabaseConnection _database;
-    private readonly UserRepository _userRepository;
-    private readonly FileLogger _fileLogger;
-    private readonly EventLogger _eventLogger;
-    private readonly PasswordHasher _passwordHasher;
-    private readonly TokenGenerator _tokenGenerator;
+    private readonly SmtpClient smtpClient;
+    private readonly EmailTemplate emailTemplate;
+    private readonly EmailValidator emailValidator;
+    private readonly DatabaseConnection database;
+    private readonly UserRepository userRepository;
+    private readonly FileLogger fileLogger;
+    private readonly EventLogger eventLogger;
+    private readonly PasswordHasher passwordHasher;
+    private readonly TokenGenerator tokenGenerator;
     
     public UserManagementFacade(string smtpServer, string dbConnectionString)
     {
-        // Initialize all subsystem components
-        _smtpClient = new SmtpClient(smtpServer);
-        _emailTemplate = new EmailTemplate();
-        _emailValidator = new EmailValidator();
-        _database = new DatabaseConnection(dbConnectionString);
-        _userRepository = new UserRepository(_database);
-        _fileLogger = new FileLogger("user_management.log");
-        _eventLogger = new EventLogger();
-        _passwordHasher = new PasswordHasher();
-        _tokenGenerator = new TokenGenerator();
+        // Initialize all subsystem componentssmtpClient = new SmtpClient(smtpServer);emailTemplate = new EmailTemplate();emailValidator = new EmailValidator();database = new DatabaseConnection(dbConnectionString);userRepository = new UserRepository(database);fileLogger = new FileLogger("user_management.log");eventLogger = new EventLogger();passwordHasher = new PasswordHasher();tokenGenerator = new TokenGenerator();
     }
     
     // Simple interface method that coordinates complex subsystem operations
@@ -347,8 +323,7 @@ public class UserManagementFacade
         {
             Console.WriteLine($"\n🚀 Starting user registration for: {email}");
             
-            // Step 1: Validate input
-            _emailValidator.ValidateEmailRequest("noreply@company.com", email, "Welcome", "Welcome message");
+            // Step 1: Validate inputemailValidator.ValidateEmailRequest("noreply@company.com", email, "Welcome", "Welcome message");
             
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Name is required");
@@ -356,23 +331,20 @@ public class UserManagementFacade
             if (string.IsNullOrWhiteSpace(password) || password.Length < 6)
                 throw new ArgumentException("Password must be at least 6 characters");
             
-            // Step 2: Check if user already exists
-            _database.Connect();
+            // Step 2: Check if user already existsdatabase.Connect();
             
-            if (_userRepository.UserExists(email))
-            {
-                _fileLogger.Warning($"Registration attempt for existing user: {email}");
+            if (userRepository.UserExists(email))
+            {fileLogger.Warning($"Registration attempt for existing user: {email}");
                 return false;
             }
             
             // Step 3: Hash password
-            var hashedPassword = _passwordHasher.HashPassword(password);
+            var hashedPassword =passwordHasher.HashPassword(password);
             
-            // Step 4: Create user in database
-            _userRepository.CreateUser(email, name, hashedPassword);
+            // Step 4: Create user in databaseuserRepository.CreateUser(email, name, hashedPassword);
             
             // Step 5: Generate verification token
-            var verificationToken = _tokenGenerator.GenerateVerificationToken();
+            var verificationToken =tokenGenerator.GenerateVerificationToken();
             
             // Step 6: Send welcome email
             var emailVariables = new Dictionary<string, string>
@@ -381,28 +353,17 @@ public class UserManagementFacade
                 ["verification_link"] = $"https://company.com/verify?token={verificationToken}"
             };
             
-            var emailBody = _emailTemplate.ProcessTemplate("welcome", emailVariables);
+            var emailBody =emailTemplate.ProcessTemplate("welcome", emailVariables);smtpClient.Connect();smtpClient.Authenticate("noreply@company.com", "smtp_password");smtpClient.SendMessage("noreply@company.com", email, "Welcome to Our Platform!", emailBody, true);smtpClient.Disconnect();
             
-            _smtpClient.Connect();
-            _smtpClient.Authenticate("noreply@company.com", "smtp_password");
-            _smtpClient.SendMessage("noreply@company.com", email, "Welcome to Our Platform!", emailBody, true);
-            _smtpClient.Disconnect();
+            // Step 7: Log successfileLogger.Info($"User registered successfully: {email}");eventLogger.LogEvent("USER_REGISTERED", $"New user registration", new { email, name });
             
-            // Step 7: Log success
-            _fileLogger.Info($"User registered successfully: {email}");
-            _eventLogger.LogEvent("USER_REGISTERED", $"New user registration", new { email, name });
-            
-            // Step 8: Cleanup
-            _database.Disconnect();
+            // Step 8: Cleanupdatabase.Disconnect();
             
             Console.WriteLine("✅ User registration completed successfully!");
             return true;
         }
         catch (Exception ex)
-        {
-            _fileLogger.Error($"Registration failed for {email}: {ex.Message}");
-            _eventLogger.LogEvent("REGISTRATION_FAILED", ex.Message, new { email });
-            _database.Disconnect();
+        {fileLogger.Error($"Registration failed for {email}: {ex.Message}");eventLogger.LogEvent("REGISTRATION_FAILED", ex.Message, new { email });database.Disconnect();
             throw;
         }
     }
@@ -414,20 +375,18 @@ public class UserManagementFacade
             Console.WriteLine($"\n🔑 Starting password reset for: {email}");
             
             // Validate email
-            if (!_emailValidator.IsValidEmail(email))
+            if (!emailValidator.IsValidEmail(email))
                 throw new ArgumentException("Invalid email address");
             
-            // Check if user exists
-            _database.Connect();
+            // Check if user existsdatabase.Connect();
             
-            if (!_userRepository.UserExists(email))
-            {
-                _fileLogger.Warning($"Password reset attempt for non-existent user: {email}");
+            if (!userRepository.UserExists(email))
+            {fileLogger.Warning($"Password reset attempt for non-existent user: {email}");
                 return false;
             }
             
             // Generate reset token
-            var resetToken = _tokenGenerator.GeneratePasswordResetToken(email);
+            var resetToken =tokenGenerator.GeneratePasswordResetToken(email);
             
             // Send reset email
             var emailVariables = new Dictionary<string, string>
@@ -435,27 +394,15 @@ public class UserManagementFacade
                 ["link"] = $"https://company.com/reset-password?token={resetToken}"
             };
             
-            var emailBody = _emailTemplate.ProcessTemplate("password-reset", emailVariables);
+            var emailBody =emailTemplate.ProcessTemplate("password-reset", emailVariables);smtpClient.Connect();smtpClient.Authenticate("noreply@company.com", "smtp_password");smtpClient.SendMessage("noreply@company.com", email, "Password Reset Request", emailBody, true);smtpClient.Disconnect();
             
-            _smtpClient.Connect();
-            _smtpClient.Authenticate("noreply@company.com", "smtp_password");
-            _smtpClient.SendMessage("noreply@company.com", email, "Password Reset Request", emailBody, true);
-            _smtpClient.Disconnect();
-            
-            // Log activity
-            _fileLogger.Info($"Password reset email sent to: {email}");
-            _eventLogger.LogEvent("PASSWORD_RESET_SENT", "Password reset email sent", new { email });
-            
-            _database.Disconnect();
+            // Log activityfileLogger.Info($"Password reset email sent to: {email}");eventLogger.LogEvent("PASSWORD_RESET_SENT", "Password reset email sent", new { email });database.Disconnect();
             
             Console.WriteLine("✅ Password reset email sent successfully!");
             return true;
         }
         catch (Exception ex)
-        {
-            _fileLogger.Error($"Password reset failed for {email}: {ex.Message}");
-            _eventLogger.LogEvent("PASSWORD_RESET_FAILED", ex.Message, new { email });
-            _database.Disconnect();
+        {fileLogger.Error($"Password reset failed for {email}: {ex.Message}");eventLogger.LogEvent("PASSWORD_RESET_FAILED", ex.Message, new { email });database.Disconnect();
             throw;
         }
     }
@@ -466,7 +413,7 @@ public class UserManagementFacade
         {
             Console.WriteLine($"\n📢 Sending notification to: {email}");
             
-            if (!_emailValidator.IsValidEmail(email))
+            if (!emailValidator.IsValidEmail(email))
                 throw new ArgumentException("Invalid email address");
             
             var emailVariables = new Dictionary<string, string>
@@ -474,49 +421,34 @@ public class UserManagementFacade
                 ["message"] = message
             };
             
-            var emailBody = _emailTemplate.ProcessTemplate("notification", emailVariables);
-            
-            _smtpClient.Connect();
-            _smtpClient.Authenticate("noreply@company.com", "smtp_password");
-            _smtpClient.SendMessage("noreply@company.com", email, "Notification", emailBody, true);
-            _smtpClient.Disconnect();
-            
-            _fileLogger.Info($"Notification sent to: {email}");
-            _eventLogger.LogEvent("NOTIFICATION_SENT", "Notification email sent", new { email, message });
+            var emailBody =emailTemplate.ProcessTemplate("notification", emailVariables);smtpClient.Connect();smtpClient.Authenticate("noreply@company.com", "smtp_password");smtpClient.SendMessage("noreply@company.com", email, "Notification", emailBody, true);smtpClient.Disconnect();fileLogger.Info($"Notification sent to: {email}");eventLogger.LogEvent("NOTIFICATION_SENT", "Notification email sent", new { email, message });
             
             Console.WriteLine("✅ Notification sent successfully!");
             return true;
         }
         catch (Exception ex)
-        {
-            _fileLogger.Error($"Notification failed for {email}: {ex.Message}");
-            _eventLogger.LogEvent("NOTIFICATION_FAILED", ex.Message, new { email, message });
+        {fileLogger.Error($"Notification failed for {email}: {ex.Message}");eventLogger.LogEvent("NOTIFICATION_FAILED", ex.Message, new { email, message });
             throw;
         }
     }
     
     public List<string> GetRecentActivity()
     {
-        return _eventLogger.GetEvents().ToList();
+        return eventLogger.GetEvents().ToList();
     }
 }
 
 // Alternative Facade for E-commerce Operations
 public class EcommerceFacade
 {
-    private readonly DatabaseConnection _database;
-    private readonly SmtpClient _emailClient;
-    private readonly EmailTemplate _emailTemplate;
-    private readonly FileLogger _logger;
-    private readonly EventLogger _eventLogger;
+    private readonly DatabaseConnection database;
+    private readonly SmtpClient emailClient;
+    private readonly EmailTemplate emailTemplate;
+    private readonly FileLogger logger;
+    private readonly EventLogger eventLogger;
     
     public EcommerceFacade(string dbConnection, string smtpServer)
-    {
-        _database = new DatabaseConnection(dbConnection);
-        _emailClient = new SmtpClient(smtpServer);
-        _emailTemplate = new EmailTemplate();
-        _logger = new FileLogger("ecommerce.log");
-        _eventLogger = new EventLogger();
+    {database = new DatabaseConnection(dbConnection);emailClient = new SmtpClient(smtpServer);emailTemplate = new EmailTemplate();logger = new FileLogger("ecommerce.log");eventLogger = new EventLogger();
     }
     
     public async Task<string> ProcessOrderAsync(string customerEmail, List<(string product, decimal price)> items)
@@ -529,8 +461,7 @@ public class EcommerceFacade
             var totalAmount = items.Sum(item => item.price);
             var itemsDescription = string.Join(", ", items.Select(i => $"{i.product} (${i.price})"));
             
-            // Save order to database
-            _database.Connect();
+            // Save order to databasedatabase.Connect();
             
             var orderParams = new Dictionary<string, object>
             {
@@ -540,9 +471,7 @@ public class EcommerceFacade
                 ["totalAmount"] = totalAmount,
                 ["orderDate"] = DateTime.Now,
                 ["status"] = "CONFIRMED"
-            };
-            
-            _database.ExecuteQuery("INSERT INTO Orders (OrderId, CustomerEmail, Items, TotalAmount, OrderDate, Status) VALUES (@orderId, @customerEmail, @items, @totalAmount, @orderDate, @status)", orderParams);
+            };database.ExecuteQuery("INSERT INTO Orders (OrderId, CustomerEmail, Items, TotalAmount, OrderDate, Status) VALUES (@orderId, @customerEmail, @items, @totalAmount, @orderDate, @status)", orderParams);
             
             // Send confirmation email
             var emailVariables = new Dictionary<string, string>
@@ -552,27 +481,15 @@ public class EcommerceFacade
                 ["due_date"] = DateTime.Now.AddDays(30).ToString("yyyy-MM-dd")
             };
             
-            var emailBody = _emailTemplate.ProcessTemplate("invoice", emailVariables);
+            var emailBody =emailTemplate.ProcessTemplate("invoice", emailVariables);emailClient.Connect();emailClient.Authenticate("orders@company.com", "smtp_password");emailClient.SendMessage("orders@company.com", customerEmail, $"Order Confirmation #{orderId}", emailBody, true);emailClient.Disconnect();
             
-            _emailClient.Connect();
-            _emailClient.Authenticate("orders@company.com", "smtp_password");
-            _emailClient.SendMessage("orders@company.com", customerEmail, $"Order Confirmation #{orderId}", emailBody, true);
-            _emailClient.Disconnect();
-            
-            // Log success
-            _logger.Info($"Order {orderId} processed successfully for {customerEmail}. Amount: ${totalAmount}");
-            _eventLogger.LogEvent("ORDER_PROCESSED", "Order successfully processed", new { orderId, customerEmail, totalAmount });
-            
-            _database.Disconnect();
+            // Log successlogger.Info($"Order {orderId} processed successfully for {customerEmail}. Amount: ${totalAmount}");eventLogger.LogEvent("ORDER_PROCESSED", "Order successfully processed", new { orderId, customerEmail, totalAmount });database.Disconnect();
             
             Console.WriteLine($"✅ Order {orderId} processed successfully!");
             return orderId;
         }
         catch (Exception ex)
-        {
-            _logger.Error($"Order processing failed for {customerEmail}: {ex.Message}");
-            _eventLogger.LogEvent("ORDER_FAILED", ex.Message, new { customerEmail });
-            _database.Disconnect();
+        {logger.Error($"Order processing failed for {customerEmail}: {ex.Message}");eventLogger.LogEvent("ORDER_FAILED", ex.Message, new { customerEmail });database.Disconnect();
             throw;
         }
     }

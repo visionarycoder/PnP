@@ -27,17 +27,17 @@ public interface IIterable<T>
 // Basic iterator implementation
 public abstract class Iterator<T> : IIterator<T>
 {
-    protected int _position = -1;
-    protected readonly IList<T> _items;
+    protected int position = -1;
+    protected readonly IList<T> items;
     
     protected Iterator(IList<T> items)
     {
-        _items = items ?? throw new ArgumentNullException(nameof(items));
+        items = items ?? throw new ArgumentNullException(nameof(items));
     }
     
     public virtual bool HasNext()
     {
-        return _position + 1 < _items.Count;
+        return position + 1 < items.Count;
     }
     
     public virtual T Next()
@@ -53,14 +53,14 @@ public abstract class Iterator<T> : IIterator<T>
     
     public virtual void Reset()
     {
-        _position = -1;
+        position = -1;
     }
     
     public virtual T Current
     {
         get
         {
-            if (_position < 0 || _position >= _items.Count)
+            if (position < 0 || position >= items.Count)
             {
                 throw new InvalidOperationException("Iterator is not positioned on a valid element");
             }
@@ -80,12 +80,12 @@ public class ReverseIterator<T> : Iterator<T>
 {
     public ReverseIterator(IList<T> items) : base(items)
     {
-        _position = items.Count;
+        position = items.Count;
     }
     
     public override bool HasNext()
     {
-        return _position - 1 >= 0;
+        return position - 1 >= 0;
     }
     
     public override T Next()
@@ -101,18 +101,18 @@ public class ReverseIterator<T> : Iterator<T>
     
     public override void Reset()
     {
-        _position = _items.Count;
+        position = items.Count;
     }
 }
 
 // Skip iterator (every nth element)
 public class SkipIterator<T> : Iterator<T>
 {
-    private readonly int _skipCount;
+    private readonly int skipCount;
     
     public SkipIterator(IList<T> items, int skipCount) : base(items)
     {
-        _skipCount = skipCount > 0 ? skipCount : 1;
+        skipCount = skipCount > 0 ? skipCount : 1;
     }
     
     public override T Next()
@@ -122,13 +122,13 @@ public class SkipIterator<T> : Iterator<T>
             throw new InvalidOperationException("No more elements");
         }
         
-        _position += _skipCount;
+        position += skipCount;
         return _items[_position];
     }
     
     public override bool HasNext()
     {
-        return _position + _skipCount < _items.Count;
+        return position + skipCount < items.Count;
     }
 }
 ```
@@ -139,29 +139,29 @@ public class SkipIterator<T> : Iterator<T>
 // Custom collection class
 public class CustomCollection<T> : IIterable<T>, IEnumerable<T>
 {
-    private readonly List<T> _items = new();
+    private readonly List<T> items = new();
     
-    public int Count => _items.Count;
-    public bool IsEmpty => _items.Count == 0;
+    public int Count => items.Count;
+    public bool IsEmpty => items.Count == 0;
     
     public void Add(T item)
     {
-        _items.Add(item);
+        items.Add(item);
     }
     
     public void AddRange(IEnumerable<T> items)
     {
-        _items.AddRange(items);
+        items.AddRange(items);
     }
     
     public bool Remove(T item)
     {
-        return _items.Remove(item);
+        return items.Remove(item);
     }
     
     public void Clear()
     {
-        _items.Clear();
+        items.Clear();
     }
     
     public T this[int index]
@@ -173,33 +173,33 @@ public class CustomCollection<T> : IIterable<T>, IEnumerable<T>
     // Multiple iterator creation methods
     public IIterator<T> CreateIterator()
     {
-        return new ForwardIterator<T>(_items);
+        return new ForwardIterator<T>(items);
     }
     
     public IIterator<T> CreateReverseIterator()
     {
-        return new ReverseIterator<T>(_items);
+        return new ReverseIterator<T>(items);
     }
     
     public IIterator<T> CreateSkipIterator(int skipCount = 2)
     {
-        return new SkipIterator<T>(_items, skipCount);
+        return new SkipIterator<T>(items, skipCount);
     }
     
     public IIterator<T> CreateFilterIterator(Func<T, bool> predicate)
     {
-        return new FilterIterator<T>(_items, predicate);
+        return new FilterIterator<T>(items, predicate);
     }
     
     public IIterator<TResult> CreateTransformIterator<TResult>(Func<T, TResult> transform)
     {
-        return new TransformIterator<T, TResult>(_items, transform);
+        return new TransformIterator<T, TResult>(items, transform);
     }
     
     // IEnumerable implementation for C# foreach support
     public IEnumerator<T> GetEnumerator()
     {
-        return _items.GetEnumerator();
+        return items.GetEnumerator();
     }
     
     IEnumerator IEnumerable.GetEnumerator()
@@ -210,7 +210,7 @@ public class CustomCollection<T> : IIterable<T>, IEnumerable<T>
     // Yield-based iterator methods
     public IEnumerable<T> Forward()
     {
-        for (int i = 0; i < _items.Count; i++)
+        for (int i = 0; i < items.Count; i++)
         {
             yield return _items[i];
         }
@@ -218,7 +218,7 @@ public class CustomCollection<T> : IIterable<T>, IEnumerable<T>
     
     public IEnumerable<T> Reverse()
     {
-        for (int i = _items.Count - 1; i >= 0; i--)
+        for (int i = items.Count - 1; i >= 0; i--)
         {
             yield return _items[i];
         }
@@ -226,7 +226,7 @@ public class CustomCollection<T> : IIterable<T>, IEnumerable<T>
     
     public IEnumerable<T> Skip(int count = 2)
     {
-        for (int i = 0; i < _items.Count; i += count)
+        for (int i = 0; i < items.Count; i += count)
         {
             yield return _items[i];
         }
@@ -234,7 +234,7 @@ public class CustomCollection<T> : IIterable<T>, IEnumerable<T>
     
     public IEnumerable<T> Where(Func<T, bool> predicate)
     {
-        foreach (var item in _items)
+        foreach (var item in items)
         {
             if (predicate(item))
             {
@@ -245,7 +245,7 @@ public class CustomCollection<T> : IIterable<T>, IEnumerable<T>
     
     public IEnumerable<TResult> Select<TResult>(Func<T, TResult> selector)
     {
-        foreach (var item in _items)
+        foreach (var item in items)
         {
             yield return selector(item);
         }
@@ -260,22 +260,22 @@ public class CustomCollection<T> : IIterable<T>, IEnumerable<T>
 // Advanced iterators
 public class FilterIterator<T> : IIterator<T>
 {
-    private readonly IList<T> _items;
-    private readonly Func<T, bool> _predicate;
-    private int _position = -1;
-    private T _current = default(T)!;
+    private readonly IList<T> items;
+    private readonly Func<T, bool> predicate;
+    private int position = -1;
+    private T current = default(T)!;
     
     public FilterIterator(IList<T> items, Func<T, bool> predicate)
     {
-        _items = items ?? throw new ArgumentNullException(nameof(items));
-        _predicate = predicate ?? throw new ArgumentNullException(nameof(predicate));
+        items = items ?? throw new ArgumentNullException(nameof(items));
+        predicate = predicate ?? throw new ArgumentNullException(nameof(predicate));
     }
     
     public bool HasNext()
     {
-        for (int i = _position + 1; i < _items.Count; i++)
+        for (int i = position + 1; i < items.Count; i++)
         {
-            if (_predicate(_items[i]))
+            if (predicate(_items[i]))
             {
                 return true;
             }
@@ -285,13 +285,13 @@ public class FilterIterator<T> : IIterator<T>
     
     public T Next()
     {
-        for (int i = _position + 1; i < _items.Count; i++)
+        for (int i = position + 1; i < items.Count; i++)
         {
-            if (_predicate(_items[i]))
+            if (predicate(_items[i]))
             {
-                _position = i;
-                _current = _items[i];
-                return _current;
+                position = i;
+                current = _items[i];
+                return current;
             }
         }
         throw new InvalidOperationException("No more elements matching the filter");
@@ -299,28 +299,28 @@ public class FilterIterator<T> : IIterator<T>
     
     public void Reset()
     {
-        _position = -1;
-        _current = default(T)!;
+        position = -1;
+        current = default(T)!;
     }
     
-    public T Current => _current;
+    public T Current => current;
 }
 
 public class TransformIterator<TSource, TResult> : IIterator<TResult>
 {
-    private readonly IList<TSource> _items;
-    private readonly Func<TSource, TResult> _transform;
-    private int _position = -1;
+    private readonly IList<TSource> items;
+    private readonly Func<TSource, TResult> transform;
+    private int position = -1;
     
     public TransformIterator(IList<TSource> items, Func<TSource, TResult> transform)
     {
-        _items = items ?? throw new ArgumentNullException(nameof(items));
-        _transform = transform ?? throw new ArgumentNullException(nameof(transform));
+        items = items ?? throw new ArgumentNullException(nameof(items));
+        transform = transform ?? throw new ArgumentNullException(nameof(transform));
     }
     
     public bool HasNext()
     {
-        return _position + 1 < _items.Count;
+        return position + 1 < items.Count;
     }
     
     public TResult Next()
@@ -331,23 +331,23 @@ public class TransformIterator<TSource, TResult> : IIterator<TResult>
         }
         
         _position++;
-        return _transform(_items[_position]);
+        return transform(_items[_position]);
     }
     
     public void Reset()
     {
-        _position = -1;
+        position = -1;
     }
     
     public TResult Current
     {
         get
         {
-            if (_position < 0 || _position >= _items.Count)
+            if (position < 0 || position >= items.Count)
             {
                 throw new InvalidOperationException("Iterator is not positioned on a valid element");
             }
-            return _transform(_items[_position]);
+            return transform(_items[_position]);
         }
     }
 }
@@ -553,22 +553,22 @@ public class Tree<T> : IEnumerable<T>
 // Async iterator for data streaming
 public class AsyncDataStream<T> : IAsyncEnumerable<T>
 {
-    private readonly IEnumerable<T> _data;
-    private readonly TimeSpan _delay;
-    private readonly int _batchSize;
+    private readonly IEnumerable<T> data;
+    private readonly TimeSpan delay;
+    private readonly int batchSize;
     
     public AsyncDataStream(IEnumerable<T> data, TimeSpan? delay = null, int batchSize = 1)
     {
-        _data = data ?? throw new ArgumentNullException(nameof(data));
-        _delay = delay ?? TimeSpan.FromMilliseconds(100);
-        _batchSize = Math.Max(1, batchSize);
+        data = data ?? throw new ArgumentNullException(nameof(data));
+        delay = delay ?? TimeSpan.FromMilliseconds(100);
+        batchSize = Math.Max(1, batchSize);
     }
     
     public async IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default)
     {
         int count = 0;
         
-        foreach (var item in _data)
+        foreach (var item in data)
         {
             if (cancellationToken.IsCancellationRequested)
             {
@@ -579,9 +579,9 @@ public class AsyncDataStream<T> : IAsyncEnumerable<T>
             count++;
             
             // Add delay every batch
-            if (count % _batchSize == 0)
+            if (count % batchSize == 0)
             {
-                await Task.Delay(_delay, cancellationToken);
+                await Task.Delay(delay, cancellationToken);
             }
         }
     }
@@ -669,11 +669,11 @@ public static class AsyncFileIterator
 // Async web data iterator
 public class AsyncWebDataIterator
 {
-    private readonly HttpClient _httpClient;
+    private readonly HttpClient httpClient;
     
     public AsyncWebDataIterator(HttpClient? httpClient = null)
     {
-        _httpClient = httpClient ?? new HttpClient();
+        httpClient = httpClient ?? new HttpClient();
     }
     
     public async IAsyncEnumerable<string> FetchUrlsAsync(IEnumerable<string> urls,
@@ -685,7 +685,7 @@ public class AsyncWebDataIterator
             
             try
             {
-                var response = await _httpClient.GetStringAsync(url, cancellationToken);
+                var response = await httpClient.GetStringAsync(url, cancellationToken);
                 yield return response;
             }
             catch (Exception ex)
@@ -706,7 +706,7 @@ public class AsyncWebDataIterator
             
             try
             {
-                var content = await _httpClient.GetStringAsync(url, cancellationToken);
+                var content = await httpClient.GetStringAsync(url, cancellationToken);
                 yield return processor(url, content);
             }
             catch (Exception ex)
@@ -876,13 +876,13 @@ public static class IteratorExtensions
 // Performance monitoring iterator
 public class MonitoredIterator<T> : IEnumerable<T>
 {
-    private readonly IEnumerable<T> _source;
-    private readonly Action<IterationStats>? _onStats;
+    private readonly IEnumerable<T> source;
+    private readonly Action<IterationStats>? onStats;
     
     public MonitoredIterator(IEnumerable<T> source, Action<IterationStats>? onStats = null)
     {
-        _source = source ?? throw new ArgumentNullException(nameof(source));
-        _onStats = onStats;
+        source = source ?? throw new ArgumentNullException(nameof(source));
+        onStats = onStats;
     }
     
     public IEnumerator<T> GetEnumerator()
@@ -892,7 +892,7 @@ public class MonitoredIterator<T> : IEnumerable<T>
         
         try
         {
-            foreach (var item in _source)
+            foreach (var item in source)
             {
                 stats.ItemsProcessed++;
                 yield return item;
@@ -902,7 +902,7 @@ public class MonitoredIterator<T> : IEnumerable<T>
         {
             stopwatch.Stop();
             stats.TotalTime = stopwatch.Elapsed;
-            _onStats?.Invoke(stats);
+            onStats?.Invoke(stats);
         }
     }
     

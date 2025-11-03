@@ -105,7 +105,7 @@ public class OAuthFlowManager(
         };
         
         // Cache the session
-        var cacheKey = $"auth_session_{state}";
+        var cacheKey = $"authSession{state}";
         cache.Set(cacheKey, authSession, TimeSpan.FromMinutes(10));
         
         // Build authorization URL
@@ -135,7 +135,7 @@ public class OAuthFlowManager(
     public async Task<TokenResponse> ExchangeCodeForTokensAsync(string code, string codeVerifier, string state)
     {
         // Retrieve and validate session
-        var cacheKey = $"auth_session_{state}";
+        var cacheKey = $"authSession{state}";
         if (!cache.TryGetValue(cacheKey, out AuthenticationSession? session) || session == null)
         {
             throw new AuthenticationException("Invalid or expired authentication session");
@@ -154,9 +154,9 @@ public class OAuthFlowManager(
         
         var tokenRequest = new FormUrlEncodedContent(new[]
         {
-            new KeyValuePair<string, string>("grant_type", "authorization_code"),
-            new KeyValuePair<string, string>("client_id", session.ClientId),
-            new KeyValuePair<string, string>("client_secret", oauthConfig.ClientSecret),
+            new KeyValuePair<string, string>("grantType", "authorization_code"),
+            new KeyValuePair<string, string>("clientId", session.ClientId),
+            new KeyValuePair<string, string>("clientSecret", oauthConfig.ClientSecret),
             new KeyValuePair<string, string>("code", code),
             new KeyValuePair<string, string>("redirect_uri", session.RedirectUri),
             new KeyValuePair<string, string>("code_verifier", codeVerifier)
@@ -199,10 +199,10 @@ public class OAuthFlowManager(
         
         var refreshRequest = new FormUrlEncodedContent(new[]
         {
-            new KeyValuePair<string, string>("grant_type", "refresh_token"),
-            new KeyValuePair<string, string>("client_id", oauthConfig.ClientId),
-            new KeyValuePair<string, string>("client_secret", oauthConfig.ClientSecret),
-            new KeyValuePair<string, string>("refresh_token", refreshToken)
+            new KeyValuePair<string, string>("grantType", "refreshToken"),
+            new KeyValuePair<string, string>("clientId", oauthConfig.ClientId),
+            new KeyValuePair<string, string>("clientSecret", oauthConfig.ClientSecret),
+            new KeyValuePair<string, string>("refreshToken", refreshToken)
         });
         
         var response = await httpClient.PostAsync(oauthConfig.TokenEndpoint, refreshRequest);
@@ -240,9 +240,9 @@ public class OAuthFlowManager(
             var revokeRequest = new FormUrlEncodedContent(new[]
             {
                 new KeyValuePair<string, string>("token", token),
-                new KeyValuePair<string, string>("token_type_hint", tokenType.ToString().ToLower()),
-                new KeyValuePair<string, string>("client_id", oauthConfig.ClientId),
-                new KeyValuePair<string, string>("client_secret", oauthConfig.ClientSecret)
+                new KeyValuePair<string, string>("tokenType_hint", tokenType.ToString().ToLower()),
+                new KeyValuePair<string, string>("clientId", oauthConfig.ClientId),
+                new KeyValuePair<string, string>("clientSecret", oauthConfig.ClientSecret)
             });
             
             var response = await httpClient.PostAsync(oauthConfig.RevocationEndpoint, revokeRequest);
@@ -303,7 +303,7 @@ public class OAuthFlowManager(
         var parameters = new Dictionary<string, string>
         {
             ["response_type"] = request.ResponseType,
-            ["client_id"] = request.ClientId,
+            ["clientId"] = request.ClientId,
             ["redirect_uri"] = request.RedirectUri,
             ["scope"] = string.Join(" ", request.Scopes),
             ["state"] = request.State,
@@ -395,16 +395,16 @@ public class TokenResponse
 
 public class OAuthTokenResponse
 {
-    [JsonPropertyName("access_token")]
+    [JsonPropertyName("accessToken")]
     public string AccessToken { get; set; } = "";
     
-    [JsonPropertyName("refresh_token")]
+    [JsonPropertyName("refreshToken")]
     public string? RefreshToken { get; set; }
     
-    [JsonPropertyName("token_type")]
+    [JsonPropertyName("tokenType")]
     public string TokenType { get; set; } = "Bearer";
     
-    [JsonPropertyName("expires_in")]
+    [JsonPropertyName("expiresIn")]
     public int ExpiresIn { get; set; }
     
     [JsonPropertyName("scope")]
@@ -463,7 +463,7 @@ public class JwtService(
         {
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
-            new("token_type", tokenType.ToString().ToLower())
+            new("tokenType", tokenType.ToString().ToLower())
         };
         
         var expiry = tokenType == TokenType.AccessToken 
@@ -1128,7 +1128,7 @@ public class JwtAuthenticationMiddleware(
                 context.User = principal;
                 
                 // Add token to context for potential refresh
-                context.Items["access_token"] = token;
+                context.Items["accessToken"] = token;
             }
         }
         catch (SecurityTokenExpiredException ex)
@@ -1162,13 +1162,13 @@ public class JwtAuthenticationMiddleware(
         }
         
         // Check query parameter (for WebSocket connections, etc.)
-        if (request.Query.TryGetValue("access_token", out var tokenQuery))
+        if (request.Query.TryGetValue("accessToken", out var tokenQuery))
         {
             return tokenQuery.FirstOrDefault();
         }
         
         // Check cookie (if configured)
-        if (request.Cookies.TryGetValue("access_token", out var tokenCookie))
+        if (request.Cookies.TryGetValue("accessToken", out var tokenCookie))
         {
             return tokenCookie;
         }
@@ -1285,10 +1285,10 @@ public class AuthController(
             
             return Ok(new
             {
-                access_token = accessToken,
-                refresh_token = refreshToken,
-                token_type = "Bearer",
-                expires_in = 3600 // 1 hour
+                accessToken = accessToken,
+                refreshToken = refreshToken,
+                tokenType = "Bearer",
+                expiresIn = 3600 // 1 hour
             });
         }
         catch (Exception ex)
@@ -1372,10 +1372,10 @@ public class AuthController(
             
             return Ok(new
             {
-                access_token = accessToken,
-                refresh_token = refreshToken,
-                token_type = "Bearer",
-                expires_in = 3600,
+                accessToken = accessToken,
+                refreshToken = refreshToken,
+                tokenType = "Bearer",
+                expiresIn = 3600,
                 device_trust_score = result.DeviceTrustScore
             });
         }
@@ -1395,10 +1395,10 @@ public class AuthController(
             
             return Ok(new
             {
-                access_token = tokenResponse.AccessToken,
-                refresh_token = tokenResponse.RefreshToken,
-                token_type = tokenResponse.TokenType,
-                expires_in = tokenResponse.ExpiresIn
+                accessToken = tokenResponse.AccessToken,
+                refreshToken = tokenResponse.RefreshToken,
+                tokenType = tokenResponse.TokenType,
+                expiresIn = tokenResponse.ExpiresIn
             });
         }
         catch (Exception ex)

@@ -56,7 +56,7 @@ on:
     paths-ignore:
       - '**.md'
       - '.gitignore'
-  pull_request:
+  pullrequest:
     branches: [ main ]
     paths-ignore:
       - '**.md'
@@ -65,11 +65,11 @@ on:
     types: [ published ]
 
 env:
-  DOTNET_VERSION: '9.0.x'
-  DOCKER_REGISTRY: 'ghcr.io'
-  IMAGE_NAME: 'documentprocessing/api'
-  AZURE_RESOURCE_GROUP: 'rg-documentprocessing'
-  AZURE_WEBAPP_NAME: 'app-documentprocessing'
+  DOTNETVERSION: '9.0.x'
+  DOCKERREGISTRY: 'ghcr.io'
+  IMAGENAME: 'documentprocessing/api'
+  AZURERESOURCEGROUP: 'rg-documentprocessing'
+  AZUREWEBAPPNAME: 'app-documentprocessing'
 
 jobs:
   # Build and Test Job
@@ -80,10 +80,10 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: testdb
+          POSTGRESPASSWORD: postgres
+          POSTGRESDB: testdb
         options: >-
-          --health-cmd pg_isready
+          --health-cmd pgIsready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -157,8 +157,8 @@ jobs:
           --collect:"XPlat Code Coverage" \
           --filter Category=Integration
       env:
-        ConnectionStrings__DefaultConnection: "Server=localhost;Port=5432;Database=testdb;User Id=postgres;Password=postgres;"
-        ConnectionStrings__Redis: "localhost:6379"
+        ConnectionStringsDefaultConnection: "Server=localhost;Port=5432;Database=testdb;User Id=postgres;Password=postgres;"
+        ConnectionStringsRedis: "localhost:6379"
 
     # Code Coverage
     - name: Generate Code Coverage Report
@@ -172,7 +172,7 @@ jobs:
       uses: codecov/codecov-action@v4
       with:
         file: CoverageReport/Cobertura.xml
-        fail_ci_if_error: true
+        failOnError: true
         
     - name: Check Code Coverage
       shell: pwsh
@@ -205,7 +205,7 @@ jobs:
   docker-build:
     runs-on: ubuntu-latest
     needs: build-and-test
-    if: github.event_name != 'pull_request'
+    if: github.eventName != 'pullRequest'
     
     outputs:
       image-digest: ${{ steps.build.outputs.digest }}
@@ -250,13 +250,13 @@ jobs:
         cache-to: type=gha,mode=max
         build-args: |
           BUILD_CONFIGURATION=Release
-          ENVIRONMENT_NAME=Production
+          environmentName=Production
 
   # Security Scanning
   security-scan:
     runs-on: ubuntu-latest
     needs: docker-build
-    if: github.event_name != 'pull_request'
+    if: github.eventName != 'pullRequest'
 
     steps:
     - name: Run Trivy vulnerability scanner
@@ -270,7 +270,7 @@ jobs:
       uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
-        sarif_file: 'trivy-results.sarif'
+        sariffile: 'trivy-results.sarif'
 
   # Deploy to Staging
   deploy-staging:
@@ -304,8 +304,8 @@ jobs:
 
     - name: Run Smoke Tests
       run: |
-        chmod +x ./scripts/smoke-tests.sh
-        ./scripts/smoke-tests.sh https://${{ env.AZURE_WEBAPP_NAME }}-staging.azurewebsites.net
+        chmod +x ./scripts/smokeTests.sh
+        ./scripts/smokeTests.sh https://${{ env.AZURE_WEBAPP_NAME }}-staging.azurewebsites.net
 
   # Performance Testing
   performance-test:
@@ -334,7 +334,7 @@ jobs:
   deploy-production:
     runs-on: ubuntu-latest
     needs: [deploy-staging, performance-test]
-    if: github.event_name == 'release'
+    if: github.eventName == 'release'
     environment: 
       name: production
       url: https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net
@@ -406,7 +406,7 @@ jobs:
           | tail -n +11 \
           | xargs -I {} gh api -X DELETE repos/${{ github.repository }}/packages/container/${{ env.IMAGE_NAME }}/versions/{}
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GHTOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ## 2. Azure DevOps Pipeline
@@ -457,11 +457,11 @@ stages:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: testdb
+          POSTGRESPASSWORD: postgres
+          POSTGRESDB: testdb
         ports:
           5432:5432
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        options: --health-cmd pgIsready --health-interval 10s --health-timeout 5s --health-retries 5
       
       redis:
         image: redis:7-alpine
@@ -514,7 +514,7 @@ stages:
         projects: '**/*Tests.csproj'
         arguments: '--configuration $(buildConfiguration) --no-build --collect:"XPlat Code Coverage" --filter Category!=Integration --logger trx --results-directory $(Agent.TempDirectory)/TestResults'
       env:
-        ASPNETCORE_ENVIRONMENT: 'Testing'
+        ASPNETCOREENVIRONMENT: 'Testing'
 
     - task: DotNetCoreCLI@2
       displayName: 'Run Integration Tests'
@@ -523,9 +523,9 @@ stages:
         projects: '**/*IntegrationTests.csproj'
         arguments: '--configuration $(buildConfiguration) --no-build --collect:"XPlat Code Coverage" --filter Category=Integration --logger trx --results-directory $(Agent.TempDirectory)/TestResults'
       env:
-        ASPNETCORE_ENVIRONMENT: 'Testing'
-        ConnectionStrings__DefaultConnection: 'Server=localhost;Port=5432;Database=testdb;User Id=postgres;Password=postgres;'
-        ConnectionStrings__Redis: 'localhost:6379'
+        ASPNETCOREENVIRONMENT: 'Testing'
+        ConnectionStringsDefaultConnection: 'Server=localhost;Port=5432;Database=testdb;User Id=postgres;Password=postgres;'
+        ConnectionStringsRedis: 'localhost:6379'
 
     # Code Coverage
     - task: PublishCodeCoverageResults@2
@@ -755,7 +755,7 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   location: location
   kind: 'web'
   properties: {
-    Application_Type: 'web'
+    ApplicationType: 'web'
     WorkspaceResourceId: logAnalytics.id
     IngestionMode: 'LogAnalytics'
   }
@@ -1053,8 +1053,8 @@ resource "azurerm_linux_web_app" "main" {
     always_on = var.environment == "prod"
     
     application_stack {
-      docker_image_name   = var.container_image
-      docker_registry_url = "https://index.docker.io/v1"
+      dockerIMAGE_NAME   = var.container_image
+      DOCKER_REGISTRY_url = "https://index.docker.io/v1"
     }
   }
   
@@ -1250,8 +1250,8 @@ export const options = {
     { duration: '2m', target: 0 },    // Ramp down
   ],
   thresholds: {
-    http_req_duration: ['p(95)<500'],  // 95% of requests should be below 500ms
-    http_req_failed: ['rate<0.05'],    // Error rate should be less than 5%
+    httpreqduration: ['p(95)<500'],  // 95% of requests should be below 500ms
+    httpreqfailed: ['rate<0.05'],    // Error rate should be less than 5%
     errors: ['rate<0.05'],
   },
 };

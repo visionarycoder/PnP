@@ -2,7 +2,7 @@
 
 **Description**: Safely truncate a string to a specified maximum length and add ellipsis if truncated.
 
-**Language/Technology**: C# / .NET
+**Language/Technology**: C# / .NET 8.0
 
 **Code**:
 
@@ -15,12 +15,12 @@ public static class StringExtensions
     /// <param name="value">The string to truncate</param>
     /// <param name="maxLength">Maximum length of the result (including ellipsis)</param>
     /// <returns>Truncated string with ellipsis if needed</returns>
-    public static string Truncate(this string value, int maxLength)
+    public static string Truncate(this string? value, int maxLength)
     {
         const string ellipsis = "...";
         
         if (string.IsNullOrEmpty(value))
-            return value;
+            return value ?? string.Empty;
             
         if (maxLength <= 0)
             throw new ArgumentException("Max length must be greater than 0", nameof(maxLength));
@@ -29,11 +29,11 @@ public static class StringExtensions
             return value;
             
         // Reserve characters for ellipsis
-        int truncateAt = maxLength - ellipsis.Length;
+        var truncateAt = maxLength - ellipsis.Length;
         if (truncateAt <= 0)
             return ellipsis;
             
-        return value.Substring(0, truncateAt) + ellipsis;
+        return string.Concat(value.AsSpan(0, truncateAt), ellipsis);
     }
 }
 ```
@@ -69,9 +69,11 @@ class Program
 
 **Notes**:
 
-- Works with .NET Framework 4.5+ and .NET Core/.NET 5+
+- Targets .NET 8.0 SDK with modern C# features
+- Uses `AsSpan()` and `string.Concat()` for better performance
 - Implemented as an extension method for convenient usage
-- Handles null and empty strings safely
+- Handles null and empty strings safely with nullable annotations
 - Ellipsis counts toward the maximum length
 - Throws ArgumentException if maxLength is 0 or negative
+- Uses `var` only when type is obvious (truncateAt variable)
 - Related snippets: [String Helpers](string-helpers.md)

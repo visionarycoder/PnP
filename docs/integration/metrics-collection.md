@@ -251,32 +251,32 @@ public class MetricsCollector : IMetricsCollector
     private void InitializeCommonMetrics()
     {
         // HTTP request metrics
-        GetOrCreateCounter("http_requests_total");
-        GetOrCreateHistogram("http_request_duration_seconds");
-        GetOrCreateCounter("http_requests_errors_total");
+        GetOrCreateCounter("httpRequestsTotal");
+        GetOrCreateHistogram("httpRequestDurationSeconds");
+        GetOrCreateCounter("httpRequestsErrorsTotal");
         
         // Document processing metrics
-        GetOrCreateCounter("documents_processed_total");
-        GetOrCreateHistogram("document_processing_duration_seconds");
-        GetOrCreateCounter("document_processing_errors_total");
+        GetOrCreateCounter("documentsProcessedTotal");
+        GetOrCreateHistogram("documentProcessingDurationSeconds");
+        GetOrCreateCounter("documentProcessingErrorsTotal");
         
         // System metrics
-        GetOrCreateGauge("active_connections");
-        GetOrCreateGauge("memory_usage_bytes");
-        GetOrCreateGauge("cpu_usage_percent");
+        GetOrCreateGauge("activeConnections");
+        GetOrCreateGauge("memoryUsageBytes");
+        GetOrCreateGauge("cpuUsagePercent");
     }
     
     private static string GetMetricDescription(string name) => name switch
     {
-        "http_requests_total" => "Total number of HTTP requests processed",
-        "http_request_duration_seconds" => "HTTP request processing duration in seconds",
-        "http_requests_errors_total" => "Total number of HTTP request errors",
-        "documents_processed_total" => "Total number of documents processed",
-        "document_processing_duration_seconds" => "Document processing duration in seconds",
-        "document_processing_errors_total" => "Total number of document processing errors",
-        "active_connections" => "Number of active connections",
-        "memory_usage_bytes" => "Memory usage in bytes",
-        "cpu_usage_percent" => "CPU usage percentage",
+        "httpRequestsTotal" => "Total number of HTTP requests processed",
+        "httpRequestDurationSeconds" => "HTTP request processing duration in seconds",
+        "httpRequestsErrorsTotal" => "Total number of HTTP request errors",
+        "documentsProcessedTotal" => "Total number of documents processed",
+        "documentProcessingDurationSeconds" => "Document processing duration in seconds",
+        "documentProcessingErrorsTotal" => "Total number of document processing errors",
+        "activeConnections" => "Number of active connections",
+        "memoryUsageBytes" => "Memory usage in bytes",
+        "cpuUsagePercent" => "CPU usage percentage",
         _ => $"Metric: {name}"
     };
     
@@ -341,17 +341,17 @@ public class BusinessMetricsCollector(IMetricsCollector metricsCollector) : IBus
     {
         var tags = new[]
         {
-            new KeyValuePair<string, object?>("document_type", documentType),
+            new KeyValuePair<string, object?>("documentType", documentType),
             new KeyValuePair<string, object?>("success", success.ToString().ToLower())
         };
         
-        metricsCollector.IncrementCounter("documents_processed_total", 1, tags);
-        metricsCollector.RecordHistogram("document_processing_duration_seconds", processingTime.TotalSeconds, tags);
+        metricsCollector.IncrementCounter("documentsProcessedTotal", 1, tags);
+        metricsCollector.RecordHistogram("documentProcessingDurationSeconds", processingTime.TotalSeconds, tags);
         
         if (!success)
         {
-            metricsCollector.IncrementCounter("document_processing_errors_total", 1, 
-                new KeyValuePair<string, object?>("document_type", documentType));
+            metricsCollector.IncrementCounter("documentProcessingErrorsTotal", 1, 
+                new KeyValuePair<string, object?>("documentType", documentType));
         }
     }
     
@@ -473,9 +473,9 @@ public class PerformanceMetricsCollector(
         {
             var performance = GetCurrentPerformanceAsync().Result;
             
-            metricsCollector.RecordGauge("memory_usage_bytes", performance.MemoryUsageBytes);
+            metricsCollector.RecordGauge("memoryUsageBytes", performance.MemoryUsageBytes);
             metricsCollector.RecordGauge("working_set_bytes", performance.WorkingSetBytes);
-            metricsCollector.RecordGauge("cpu_usage_percent", (long)performance.CpuUsagePercent);
+            metricsCollector.RecordGauge("cpuUsagePercent", (long)performance.CpuUsagePercent);
             metricsCollector.RecordGauge("thread_count", performance.ThreadCount);
             metricsCollector.RecordGauge("handle_count", performance.HandleCount);
             
@@ -566,8 +566,8 @@ public class MetricsMiddleware(
             new KeyValuePair<string, object?>("path", path)
         };
         
-        using var timer = metricsCollector.StartTimer("http_request_duration_seconds", tags);
-        metricsCollector.IncrementCounter("http_requests_total", 1, tags);
+        using var timer = metricsCollector.StartTimer("httpRequestDurationSeconds", tags);
+        metricsCollector.IncrementCounter("httpRequestsTotal", 1, tags);
         
         var startTime = Stopwatch.GetTimestamp();
         
@@ -586,7 +586,7 @@ public class MetricsMiddleware(
             
             if (statusCode >= 400)
             {
-                metricsCollector.IncrementCounter("http_requests_errors_total", 1, statusTags);
+                metricsCollector.IncrementCounter("httpRequestsErrorsTotal", 1, statusTags);
             }
             
             var elapsedMs = Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
@@ -605,7 +605,7 @@ public class MetricsMiddleware(
                 new KeyValuePair<string, object?>("status_class", "5xx")
             }).ToArray();
             
-            metricsCollector.IncrementCounter("http_requests_errors_total", 1, errorTags);
+            metricsCollector.IncrementCounter("httpRequestsErrorsTotal", 1, errorTags);
             metricsCollector.IncrementCounter("http_responses_total", 1, errorTags);
             
             throw;
@@ -751,28 +751,28 @@ public class CustomMetricRequest
 ```yaml
 # prometheus.yml
 global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
+  scrapeinterval: 15s
+  evaluationinterval: 15s
 
-rule_files:
+rulefiles:
   - "alert_rules.yml"
 
-scrape_configs:
-  - job_name: 'document-processing-api'
-    static_configs:
+scrapeconfigs:
+  - jobname: 'document-processing-api'
+    staticconfigs:
       - targets: ['localhost:5000']
-    scrape_interval: 10s
-    metrics_path: '/metrics'
+    scrapeinterval: 10s
+    metricspath: '/metrics'
     
-  - job_name: 'document-processing-worker'
-    static_configs:
+  - jobname: 'document-processing-worker'
+    staticconfigs:
       - targets: ['localhost:5001']
-    scrape_interval: 15s
-    metrics_path: '/metrics'
+    scrapeinterval: 15s
+    metricspath: '/metrics'
 
 alerting:
   alertmanagers:
-    - static_configs:
+    - staticconfigs:
         - targets:
           - alertmanager:9093
 ```
@@ -793,7 +793,7 @@ alerting:
         "type": "stat",
         "targets": [
           {
-            "expr": "rate(http_requests_total[5m])",
+            "expr": "rate(httpRequestsTotal[5m])",
             "legendFormat": "Requests/sec"
           }
         ],
@@ -815,11 +815,11 @@ alerting:
         "type": "timeseries",
         "targets": [
           {
-            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "expr": "histogram_quantile(0.95, rate(httpRequestDurationSeconds_bucket[5m]))",
             "legendFormat": "95th percentile"
           },
           {
-            "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))",
+            "expr": "histogram_quantile(0.50, rate(httpRequestDurationSeconds_bucket[5m]))",
             "legendFormat": "50th percentile"
           }
         ]
@@ -830,7 +830,7 @@ alerting:
         "type": "timeseries",
         "targets": [
           {
-            "expr": "rate(documents_processed_total[5m])",
+            "expr": "rate(documentsProcessedTotal[5m])",
             "legendFormat": "Documents/sec"
           }
         ]
@@ -841,7 +841,7 @@ alerting:
         "type": "timeseries",
         "targets": [
           {
-            "expr": "rate(http_requests_errors_total[5m]) / rate(http_requests_total[5m])",
+            "expr": "rate(httpRequestsErrorsTotal[5m]) / rate(httpRequestsTotal[5m])",
             "legendFormat": "Error Rate %"
           }
         ]
@@ -864,7 +864,7 @@ groups:
   - name: document_processing_alerts
     rules:
       - alert: HighErrorRate
-        expr: rate(http_requests_errors_total[5m]) / rate(http_requests_total[5m]) > 0.05
+        expr: rate(httpRequestsErrorsTotal[5m]) / rate(httpRequestsTotal[5m]) > 0.05
         for: 2m
         labels:
           severity: warning
@@ -873,7 +873,7 @@ groups:
           description: "Error rate is {{ $value | humanizePercentage }} for the last 5 minutes"
           
       - alert: SlowResponseTime
-        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1.0
+        expr: histogram_quantile(0.95, rate(httpRequestDurationSeconds_bucket[5m])) > 1.0
         for: 5m
         labels:
           severity: warning
@@ -891,7 +891,7 @@ groups:
           description: "Memory usage is {{ $value | humanize }}GB"
           
       - alert: DocumentProcessingStalled
-        expr: rate(documents_processed_total[10m]) == 0
+        expr: rate(documentsProcessedTotal[10m]) == 0
         for: 5m
         labels:
           severity: critical

@@ -101,11 +101,10 @@ public interface IDataClassificationService
 
 public class DataClassificationService : IDataClassificationService
 {
-    private readonly Dictionary<DataClassification, DataSensitivityLevel> _defaultLevels;
+    private readonly Dictionary<DataClassification, DataSensitivityLevel> defaultLevels;
 
     public DataClassificationService()
-    {
-        _defaultLevels = new Dictionary<DataClassification, DataSensitivityLevel>
+    {defaultLevels = new Dictionary<DataClassification, DataSensitivityLevel>
         {
             [DataClassification.Public] = new DataSensitivityLevel(
                 DataClassification.Public,
@@ -280,19 +279,17 @@ public interface IGdprConsentService
 
 public class GdprConsentService : IGdprConsentService
 {
-    private readonly IConsentRepository _consentRepository;
-    private readonly ILogger<GdprConsentService> _logger;
-    private readonly TimeSpan _defaultConsentDuration = TimeSpan.FromDays(365 * 2); // 2 years
+    private readonly IConsentRepository consentRepository;
+    private readonly ILogger<GdprConsentService> logger;
+    private readonly TimeSpan defaultConsentDuration = TimeSpan.FromDays(365 * 2); // 2 years
 
     public GdprConsentService(IConsentRepository consentRepository, ILogger<GdprConsentService> logger)
-    {
-        _consentRepository = consentRepository;
-        _logger = logger;
+    {consentRepository = consentRepository;logger = logger;
     }
 
     public async Task<bool> HasValidConsentAsync(int userId, ConsentPurpose purpose)
     {
-        var consent = await _consentRepository.GetLatestConsentAsync(userId, purpose);
+        var consent = await consentRepository.GetLatestConsentAsync(userId, purpose);
         
         if (consent == null || consent.Status != ConsentStatus.Given)
             return false;
@@ -300,7 +297,7 @@ public class GdprConsentService : IGdprConsentService
         if (consent.ExpiresAt <= DateTime.UtcNow)
         {
             // Mark as expired
-            await _consentRepository.UpdateConsentStatusAsync(consent with { Status = ConsentStatus.Expired });
+            await consentRepository.UpdateConsentStatusAsync(consent with { Status = ConsentStatus.Expired });
             return false;
         }
 
@@ -315,20 +312,18 @@ public class GdprConsentService : IGdprConsentService
             ConsentStatus.Given,
             DateTime.UtcNow,
             null,
-            DateTime.UtcNow.Add(_defaultConsentDuration),
+            DateTime.UtcNow.Add(defaultConsentDuration),
             ipAddress,
             userAgent,
             legalBasis,
             null);
 
-        await _consentRepository.SaveConsentAsync(consent);
-        
-        _logger.LogInformation("Consent granted for user {UserId} and purpose {Purpose}", userId, purpose);
+        await consentRepository.SaveConsentAsync(consent);logger.LogInformation("Consent granted for user {UserId} and purpose {Purpose}", userId, purpose);
     }
 
     public async Task WithdrawConsentAsync(int userId, ConsentPurpose purpose)
     {
-        var consent = await _consentRepository.GetLatestConsentAsync(userId, purpose);
+        var consent = await consentRepository.GetLatestConsentAsync(userId, purpose);
         if (consent?.Status == ConsentStatus.Given)
         {
             var withdrawnConsent = consent with 
@@ -337,33 +332,29 @@ public class GdprConsentService : IGdprConsentService
                 WithdrawnAt = DateTime.UtcNow
             };
             
-            await _consentRepository.UpdateConsentStatusAsync(withdrawnConsent);
-            
-            _logger.LogInformation("Consent withdrawn for user {UserId} and purpose {Purpose}", userId, purpose);
+            await consentRepository.UpdateConsentStatusAsync(withdrawnConsent);logger.LogInformation("Consent withdrawn for user {UserId} and purpose {Purpose}", userId, purpose);
         }
     }
 
     public async Task<List<ConsentRecord>> GetUserConsentsAsync(int userId)
     {
-        return await _consentRepository.GetUserConsentsAsync(userId);
+        return await consentRepository.GetUserConsentsAsync(userId);
     }
 
     public async Task<ConsentStatus> GetConsentStatusAsync(int userId, ConsentPurpose purpose)
     {
-        var consent = await _consentRepository.GetLatestConsentAsync(userId, purpose);
+        var consent = await consentRepository.GetLatestConsentAsync(userId, purpose);
         return consent?.Status ?? ConsentStatus.NotGiven;
     }
 
     public async Task RefreshExpiredConsentsAsync()
     {
-        var expiredConsents = await _consentRepository.GetExpiredConsentsAsync();
+        var expiredConsents = await consentRepository.GetExpiredConsentsAsync();
         
         foreach (var consent in expiredConsents)
         {
-            await _consentRepository.UpdateConsentStatusAsync(consent with { Status = ConsentStatus.Expired });
-        }
-        
-        _logger.LogInformation("Updated {Count} expired consents", expiredConsents.Count);
+            await consentRepository.UpdateConsentStatusAsync(consent with { Status = ConsentStatus.Expired });
+        }logger.LogInformation("Updated {Count} expired consents", expiredConsents.Count);
     }
 }
 
@@ -381,21 +372,17 @@ public interface IGdprSubjectRightsService
 
 public class GdprSubjectRightsService : IGdprSubjectRightsService
 {
-    private readonly ISubjectRightRepository _requestRepository;
-    private readonly IUserDataService _userDataService;
-    private readonly IDataExportService _exportService;
-    private readonly ILogger<GdprSubjectRightsService> _logger;
+    private readonly ISubjectRightRepository requestRepository;
+    private readonly IUserDataService userDataService;
+    private readonly IDataExportService exportService;
+    private readonly ILogger<GdprSubjectRightsService> logger;
 
     public GdprSubjectRightsService(
         ISubjectRightRepository requestRepository,
         IUserDataService userDataService,
         IDataExportService exportService,
         ILogger<GdprSubjectRightsService> logger)
-    {
-        _requestRepository = requestRepository;
-        _userDataService = userDataService;
-        _exportService = exportService;
-        _logger = logger;
+    {requestRepository = requestRepository;userDataService = userDataService;exportService = exportService;logger = logger;
     }
 
     public async Task<int> CreateRequestAsync(int userId, SubjectRightType requestType, string requestDetails)
@@ -411,9 +398,7 @@ public class GdprSubjectRightsService : IGdprSubjectRightsService
             null,
             null);
 
-        var requestId = await _requestRepository.CreateRequestAsync(request);
-        
-        _logger.LogInformation("GDPR request created: Type={RequestType}, UserId={UserId}, RequestId={RequestId}",
+        var requestId = await requestRepository.CreateRequestAsync(request);logger.LogInformation("GDPR request created: Type={RequestType}, UserId={UserId}, RequestId={RequestId}",
             requestType, userId, requestId);
 
         return requestId;
@@ -421,27 +406,27 @@ public class GdprSubjectRightsService : IGdprSubjectRightsService
 
     public async Task<SubjectRightRequest?> GetRequestAsync(int requestId)
     {
-        return await _requestRepository.GetRequestAsync(requestId);
+        return await requestRepository.GetRequestAsync(requestId);
     }
 
     public async Task<List<SubjectRightRequest>> GetUserRequestsAsync(int userId)
     {
-        return await _requestRepository.GetUserRequestsAsync(userId);
+        return await requestRepository.GetUserRequestsAsync(userId);
     }
 
     public async Task ProcessAccessRequestAsync(int requestId)
     {
-        var request = await _requestRepository.GetRequestAsync(requestId);
+        var request = await requestRepository.GetRequestAsync(requestId);
         if (request?.RequestType != SubjectRightType.AccessRequest || request.Status != SubjectRightStatus.Pending)
             return;
 
         try
         {
-            await _requestRepository.UpdateStatusAsync(requestId, SubjectRightStatus.InProgress);
+            await requestRepository.UpdateStatusAsync(requestId, SubjectRightStatus.InProgress);
 
             // Generate comprehensive data export
-            var userData = await _userDataService.GetAllUserDataAsync(request.UserId);
-            var exportData = await _exportService.ExportToJsonAsync(userData);
+            var userData = await userDataService.GetAllUserDataAsync(request.UserId);
+            var exportData = await exportService.ExportToJsonAsync(userData);
 
             var completedRequest = request with
             {
@@ -450,29 +435,26 @@ public class GdprSubjectRightsService : IGdprSubjectRightsService
                 ResponseData = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(exportData))
             };
 
-            await _requestRepository.UpdateRequestAsync(completedRequest);
-            
-            _logger.LogInformation("Access request completed for RequestId={RequestId}", requestId);
+            await requestRepository.UpdateRequestAsync(completedRequest);logger.LogInformation("Access request completed for RequestId={RequestId}", requestId);
         }
         catch (Exception ex)
         {
-            await _requestRepository.UpdateStatusAsync(requestId, SubjectRightStatus.Rejected);
-            _logger.LogError(ex, "Failed to process access request {RequestId}", requestId);
+            await requestRepository.UpdateStatusAsync(requestId, SubjectRightStatus.Rejected);logger.LogError(ex, "Failed to process access request {RequestId}", requestId);
         }
     }
 
     public async Task ProcessErasureRequestAsync(int requestId)
     {
-        var request = await _requestRepository.GetRequestAsync(requestId);
+        var request = await requestRepository.GetRequestAsync(requestId);
         if (request?.RequestType != SubjectRightType.ErasureRequest || request.Status != SubjectRightStatus.Pending)
             return;
 
         try
         {
-            await _requestRepository.UpdateStatusAsync(requestId, SubjectRightStatus.InProgress);
+            await requestRepository.UpdateStatusAsync(requestId, SubjectRightStatus.InProgress);
 
             // Perform right to be forgotten
-            await _userDataService.EraseUserDataAsync(request.UserId);
+            await userDataService.EraseUserDataAsync(request.UserId);
 
             var completedRequest = request with
             {
@@ -481,30 +463,27 @@ public class GdprSubjectRightsService : IGdprSubjectRightsService
                 ResponseData = "User data has been permanently erased from all systems"
             };
 
-            await _requestRepository.UpdateRequestAsync(completedRequest);
-            
-            _logger.LogInformation("Erasure request completed for RequestId={RequestId}", requestId);
+            await requestRepository.UpdateRequestAsync(completedRequest);logger.LogInformation("Erasure request completed for RequestId={RequestId}", requestId);
         }
         catch (Exception ex)
         {
-            await _requestRepository.UpdateStatusAsync(requestId, SubjectRightStatus.Rejected);
-            _logger.LogError(ex, "Failed to process erasure request {RequestId}", requestId);
+            await requestRepository.UpdateStatusAsync(requestId, SubjectRightStatus.Rejected);logger.LogError(ex, "Failed to process erasure request {RequestId}", requestId);
         }
     }
 
     public async Task ProcessPortabilityRequestAsync(int requestId)
     {
-        var request = await _requestRepository.GetRequestAsync(requestId);
+        var request = await requestRepository.GetRequestAsync(requestId);
         if (request?.RequestType != SubjectRightType.DataPortability || request.Status != SubjectRightStatus.Pending)
             return;
 
         try
         {
-            await _requestRepository.UpdateStatusAsync(requestId, SubjectRightStatus.InProgress);
+            await requestRepository.UpdateStatusAsync(requestId, SubjectRightStatus.InProgress);
 
             // Export data in portable format
-            var userData = await _userDataService.GetPortableUserDataAsync(request.UserId);
-            var portableData = await _exportService.ExportToPortableFormatAsync(userData);
+            var userData = await userDataService.GetPortableUserDataAsync(request.UserId);
+            var portableData = await exportService.ExportToPortableFormatAsync(userData);
 
             var completedRequest = request with
             {
@@ -513,20 +492,17 @@ public class GdprSubjectRightsService : IGdprSubjectRightsService
                 ResponseData = Convert.ToBase64String(portableData)
             };
 
-            await _requestRepository.UpdateRequestAsync(completedRequest);
-            
-            _logger.LogInformation("Data portability request completed for RequestId={RequestId}", requestId);
+            await requestRepository.UpdateRequestAsync(completedRequest);logger.LogInformation("Data portability request completed for RequestId={RequestId}", requestId);
         }
         catch (Exception ex)
         {
-            await _requestRepository.UpdateStatusAsync(requestId, SubjectRightStatus.Rejected);
-            _logger.LogError(ex, "Failed to process portability request {RequestId}", requestId);
+            await requestRepository.UpdateStatusAsync(requestId, SubjectRightStatus.Rejected);logger.LogError(ex, "Failed to process portability request {RequestId}", requestId);
         }
     }
 
     public async Task RejectRequestAsync(int requestId, string reason)
     {
-        var request = await _requestRepository.GetRequestAsync(requestId);
+        var request = await requestRepository.GetRequestAsync(requestId);
         if (request == null) return;
 
         var rejectedRequest = request with
@@ -536,9 +512,7 @@ public class GdprSubjectRightsService : IGdprSubjectRightsService
             RejectionReason = reason
         };
 
-        await _requestRepository.UpdateRequestAsync(rejectedRequest);
-        
-        _logger.LogInformation("Request {RequestId} rejected: {Reason}", requestId, reason);
+        await requestRepository.UpdateRequestAsync(rejectedRequest);logger.LogInformation("Request {RequestId} rejected: {Reason}", requestId, reason);
     }
 }
 ```
@@ -569,21 +543,17 @@ public interface IFieldEncryptionService
 
 public class FieldEncryptionService : IFieldEncryptionService
 {
-    private readonly IKeyVaultService _keyVault;
-    private readonly IMemoryCache _cache;
-    private readonly EncryptionConfiguration _config;
-    private readonly ILogger<FieldEncryptionService> _logger;
+    private readonly IKeyVaultService keyVault;
+    private readonly IMemoryCache cache;
+    private readonly EncryptionConfiguration config;
+    private readonly ILogger<FieldEncryptionService> logger;
 
     public FieldEncryptionService(
         IKeyVaultService keyVault,
         IMemoryCache cache,
         IOptions<EncryptionConfiguration> config,
         ILogger<FieldEncryptionService> logger)
-    {
-        _keyVault = keyVault;
-        _cache = cache;
-        _config = config.Value;
-        _logger = logger;
+    {keyVault = keyVault;cache = cache;config = config.Value;logger = logger;
     }
 
     public async Task<string> EncryptAsync(string plaintext, string? keyId = null)
@@ -591,7 +561,7 @@ public class FieldEncryptionService : IFieldEncryptionService
         if (string.IsNullOrEmpty(plaintext))
             return plaintext;
 
-        var key = await GetEncryptionKeyAsync(keyId ?? _config.MasterKeyId);
+        var key = await GetEncryptionKeyAsync(keyId ?? config.MasterKeyId);
         
         using var aes = Aes.Create();
         aes.Key = key;
@@ -610,7 +580,7 @@ public class FieldEncryptionService : IFieldEncryptionService
         Array.Copy(aes.IV, 0, result, 0, aes.IV.Length);
         Array.Copy(encrypted, 0, result, aes.IV.Length, encrypted.Length);
         
-        return $"{keyId ?? _config.MasterKeyId}:{Convert.ToBase64String(result)}";
+        return $"{keyId ?? config.MasterKeyId}:{Convert.ToBase64String(result)}";
     }
 
     public async Task<string> DecryptAsync(string ciphertext, string? keyId = null)
@@ -648,7 +618,7 @@ public class FieldEncryptionService : IFieldEncryptionService
 
     public async Task<byte[]> EncryptBytesAsync(byte[] plaintext, string? keyId = null)
     {
-        var key = await GetEncryptionKeyAsync(keyId ?? _config.MasterKeyId);
+        var key = await GetEncryptionKeyAsync(keyId ?? config.MasterKeyId);
         
         using var aes = Aes.Create();
         aes.Key = key;
@@ -671,7 +641,7 @@ public class FieldEncryptionService : IFieldEncryptionService
 
     public async Task<byte[]> DecryptBytesAsync(byte[] ciphertext, string? keyId = null)
     {
-        var key = await GetEncryptionKeyAsync(keyId ?? _config.MasterKeyId);
+        var key = await GetEncryptionKeyAsync(keyId ?? config.MasterKeyId);
         
         using var aes = Aes.Create();
         aes.Key = key;
@@ -702,30 +672,26 @@ public class FieldEncryptionService : IFieldEncryptionService
 
     public async Task RotateKeysAsync()
     {
-        var newKeyId = await _keyVault.CreateKeyAsync($"dek-{DateTime.UtcNow:yyyyMMdd-HHmmss}");
+        var newKeyId = await keyVault.CreateKeyAsync($"dek-{DateTime.UtcNow:yyyyMMdd-HHmmss}");
         
-        // Update configuration to use new key
-        _config.MasterKeyId = newKeyId;
+        // Update configuration to use new keyconfig.MasterKeyId = newKeyId;
         
-        // Clear cache to force key refresh
-        _cache.Remove($"encryption_key_{_config.MasterKeyId}");
-        
-        _logger.LogInformation("Encryption key rotated to {KeyId}", newKeyId);
+        // Clear cache to force key refreshcache.Remove($"encryption_key_{config.MasterKeyId}");logger.LogInformation("Encryption key rotated to {KeyId}", newKeyId);
     }
 
     public async Task<string> GenerateDataEncryptionKeyAsync()
     {
-        return await _keyVault.CreateKeyAsync($"dek-{Guid.NewGuid()}");
+        return await keyVault.CreateKeyAsync($"dek-{Guid.NewGuid()}");
     }
 
     private async Task<byte[]> GetEncryptionKeyAsync(string keyId)
     {
         var cacheKey = $"encryption_key_{keyId}";
         
-        return await _cache.GetOrCreateAsync(cacheKey, async entry =>
+        return await cache.GetOrCreateAsync(cacheKey, async entry =>
         {
             entry.SetAbsoluteExpiration(TimeSpan.FromMinutes(30));
-            return await _keyVault.GetKeyAsync(keyId);
+            return await keyVault.GetKeyAsync(keyId);
         }) ?? throw new InvalidOperationException($"Encryption key {keyId} not found");
     }
 }
@@ -754,17 +720,15 @@ public class EncryptedByteArrayConverter : ValueConverter<byte[]?, byte[]?>
 // Entity Framework Context with Encryption
 public class EncryptedDbContext : DbContext
 {
-    private readonly IFieldEncryptionService _encryptionService;
-    private readonly IDataClassificationService _classificationService;
+    private readonly IFieldEncryptionService encryptionService;
+    private readonly IDataClassificationService classificationService;
 
     public EncryptedDbContext(
         DbContextOptions<EncryptedDbContext> options,
         IFieldEncryptionService encryptionService,
         IDataClassificationService classificationService) 
         : base(options)
-    {
-        _encryptionService = encryptionService;
-        _classificationService = classificationService;
+    {encryptionService = encryptionService;classificationService = classificationService;
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -779,17 +743,17 @@ public class EncryptedDbContext : DbContext
                 if (property.ClrType == typeof(string) || property.ClrType == typeof(string?))
                 {
                     var propertyInfo = property.PropertyInfo;
-                    if (propertyInfo != null && _classificationService.RequiresEncryption(propertyInfo))
+                    if (propertyInfo != null && classificationService.RequiresEncryption(propertyInfo))
                     {
-                        property.SetValueConverter(new EncryptedStringConverter(_encryptionService));
+                        property.SetValueConverter(new EncryptedStringConverter(encryptionService));
                     }
                 }
                 else if (property.ClrType == typeof(byte[]) || property.ClrType == typeof(byte[]?))
                 {
                     var propertyInfo = property.PropertyInfo;
-                    if (propertyInfo != null && _classificationService.RequiresEncryption(propertyInfo))
+                    if (propertyInfo != null && classificationService.RequiresEncryption(propertyInfo))
                     {
-                        property.SetValueConverter(new EncryptedByteArrayConverter(_encryptionService));
+                        property.SetValueConverter(new EncryptedByteArrayConverter(encryptionService));
                     }
                 }
             }
@@ -843,23 +807,20 @@ public interface IDataLineageService
 
 public class DataLineageService : IDataLineageService
 {
-    private readonly IDataLineageRepository _repository;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly ILogger<DataLineageService> _logger;
+    private readonly IDataLineageRepository repository;
+    private readonly IHttpContextAccessor httpContextAccessor;
+    private readonly ILogger<DataLineageService> logger;
 
     public DataLineageService(
         IDataLineageRepository repository,
         IHttpContextAccessor httpContextAccessor,
         ILogger<DataLineageService> logger)
-    {
-        _repository = repository;
-        _httpContextAccessor = httpContextAccessor;
-        _logger = logger;
+    {repository = repository;httpContextAccessor = httpContextAccessor;logger = logger;
     }
 
     public async Task RecordOperationAsync<T>(string entityId, DataOperation operation, T? oldEntity, T? newEntity, string? reason = null)
     {
-        var httpContext = _httpContextAccessor.HttpContext;
+        var httpContext =httpContextAccessor.HttpContext;
         var userId = GetCurrentUserId(httpContext);
         var userName = GetCurrentUserName(httpContext);
         var ipAddress = httpContext?.Connection?.RemoteIpAddress?.ToString();
@@ -880,25 +841,23 @@ public class DataLineageService : IDataLineageService
             ipAddress,
             userAgent);
 
-        await _repository.SaveLineageEventAsync(lineageEvent);
-
-        _logger.LogInformation("Data lineage recorded: Entity={EntityType}/{EntityId}, Operation={Operation}, User={UserId}",
+        await repository.SaveLineageEventAsync(lineageEvent);logger.LogInformation("Data lineage recorded: Entity={EntityType}/{EntityId}, Operation={Operation}, User={UserId}",
             typeof(T).Name, entityId, operation, userId);
     }
 
     public async Task<List<DataLineageEvent>> GetEntityHistoryAsync(string entityType, string entityId)
     {
-        return await _repository.GetEntityHistoryAsync(entityType, entityId);
+        return await repository.GetEntityHistoryAsync(entityType, entityId);
     }
 
     public async Task<List<DataLineageEvent>> GetUserActivityAsync(int userId, DateTime? from = null, DateTime? to = null)
     {
-        return await _repository.GetUserActivityAsync(userId, from ?? DateTime.UtcNow.AddDays(-30), to ?? DateTime.UtcNow);
+        return await repository.GetUserActivityAsync(userId, from ?? DateTime.UtcNow.AddDays(-30), to ?? DateTime.UtcNow);
     }
 
     public async Task<List<DataLineageEvent>> GetSystemActivityAsync(string systemSource, DateTime? from = null, DateTime? to = null)
     {
-        return await _repository.GetSystemActivityAsync(systemSource, from ?? DateTime.UtcNow.AddDays(-30), to ?? DateTime.UtcNow);
+        return await repository.GetSystemActivityAsync(systemSource, from ?? DateTime.UtcNow.AddDays(-30), to ?? DateTime.UtcNow);
     }
 
     public async Task<DataLineageReport> GenerateLineageReportAsync(string entityType, string entityId)
@@ -967,11 +926,10 @@ public record DataLineageReport(
 // Entity Framework Integration for Automatic Lineage Tracking
 public class LineageTrackingInterceptor : SaveChangesInterceptor
 {
-    private readonly IDataLineageService _lineageService;
+    private readonly IDataLineageService lineageService;
 
     public LineageTrackingInterceptor(IDataLineageService lineageService)
-    {
-        _lineageService = lineageService;
+    {lineageService = lineageService;
     }
 
     public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
@@ -1024,7 +982,7 @@ public class LineageTrackingInterceptor : SaveChangesInterceptor
                 oldEntity = entry.Entity;
             }
 
-            await _lineageService.RecordOperationAsync(entityId, operation, oldEntity, newEntity);
+            await lineageService.RecordOperationAsync(entityId, operation, oldEntity, newEntity);
         }
     }
 
@@ -1055,22 +1013,21 @@ public class LineageTrackingInterceptor : SaveChangesInterceptor
 // 1. Data Classification Usage
 public class CustomerService
 {
-    private readonly IDataClassificationService _classificationService;
+    private readonly IDataClassificationService classificationService;
 
     public CustomerService(IDataClassificationService classificationService)
-    {
-        _classificationService = classificationService;
+    {classificationService = classificationService;
     }
 
     public async Task<bool> CanProcessPersonalDataAsync(Type entityType)
     {
-        var sensitivityLevel = _classificationService.GetSensitivityLevel(entityType);
+        var sensitivityLevel =classificationService.GetSensitivityLevel(entityType);
         return sensitivityLevel.Classification != DataClassification.Restricted;
     }
 
     public List<string> GetPersonalDataFields<T>()
     {
-        var personalDataProperties = _classificationService.GetPersonalDataProperties(typeof(T));
+        var personalDataProperties =classificationService.GetPersonalDataProperties(typeof(T));
         return personalDataProperties.Select(p => p.Name).ToList();
     }
 }
@@ -1078,11 +1035,10 @@ public class CustomerService
 // 2. GDPR Consent Management
 public class ConsentController : ControllerBase
 {
-    private readonly IGdprConsentService _consentService;
+    private readonly IGdprConsentService consentService;
 
     public ConsentController(IGdprConsentService consentService)
-    {
-        _consentService = consentService;
+    {consentService = consentService;
     }
 
     [HttpPost("consent")]
@@ -1092,7 +1048,7 @@ public class ConsentController : ControllerBase
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         var userAgent = Request.Headers["User-Agent"].ToString();
 
-        await _consentService.RecordConsentAsync(
+        await consentService.RecordConsentAsync(
             userId, 
             request.Purpose, 
             ipAddress, 
@@ -1106,7 +1062,7 @@ public class ConsentController : ControllerBase
     public async Task<IActionResult> WithdrawConsent(ConsentPurpose purpose)
     {
         var userId = GetCurrentUserId();
-        await _consentService.WithdrawConsentAsync(userId, purpose);
+        await consentService.WithdrawConsentAsync(userId, purpose);
         return Ok();
     }
 
@@ -1114,7 +1070,7 @@ public class ConsentController : ControllerBase
     public async Task<IActionResult> GetConsents()
     {
         var userId = GetCurrentUserId();
-        var consents = await _consentService.GetUserConsentsAsync(userId);
+        var consents = await consentService.GetUserConsentsAsync(userId);
         return Ok(consents);
     }
 
@@ -1125,18 +1081,17 @@ public class ConsentController : ControllerBase
 // 3. GDPR Subject Rights
 public class DataSubjectController : ControllerBase
 {
-    private readonly IGdprSubjectRightsService _subjectRightsService;
+    private readonly IGdprSubjectRightsService subjectRightsService;
 
     public DataSubjectController(IGdprSubjectRightsService subjectRightsService)
-    {
-        _subjectRightsService = subjectRightsService;
+    {subjectRightsService = subjectRightsService;
     }
 
     [HttpPost("data-request")]
     public async Task<IActionResult> CreateDataRequest([FromBody] DataRequestModel request)
     {
         var userId = GetCurrentUserId();
-        var requestId = await _subjectRightsService.CreateRequestAsync(
+        var requestId = await subjectRightsService.CreateRequestAsync(
             userId, 
             request.RequestType, 
             request.Details);
@@ -1147,7 +1102,7 @@ public class DataSubjectController : ControllerBase
     [HttpGet("data-request/{requestId}")]
     public async Task<IActionResult> GetDataRequest(int requestId)
     {
-        var request = await _subjectRightsService.GetRequestAsync(requestId);
+        var request = await subjectRightsService.GetRequestAsync(requestId);
         if (request?.UserId != GetCurrentUserId())
             return NotFound();
 
@@ -1158,7 +1113,7 @@ public class DataSubjectController : ControllerBase
     public async Task<IActionResult> GetUserRequests()
     {
         var userId = GetCurrentUserId();
-        var requests = await _subjectRightsService.GetUserRequestsAsync(userId);
+        var requests = await subjectRightsService.GetUserRequestsAsync(userId);
         return Ok(requests);
     }
 
@@ -1169,15 +1124,13 @@ public class DataSubjectController : ControllerBase
 // 4. Encryption Usage
 public class SecureDocumentService
 {
-    private readonly IFieldEncryptionService _encryptionService;
-    private readonly IDataClassificationService _classificationService;
+    private readonly IFieldEncryptionService encryptionService;
+    private readonly IDataClassificationService classificationService;
 
     public SecureDocumentService(
         IFieldEncryptionService encryptionService,
         IDataClassificationService classificationService)
-    {
-        _encryptionService = encryptionService;
-        _classificationService = classificationService;
+    {encryptionService = encryptionService;classificationService = classificationService;
     }
 
     public async Task<Document> SecureDocumentAsync(Document document)
@@ -1186,12 +1139,12 @@ public class SecureDocumentService
         
         foreach (var property in properties)
         {
-            if (_classificationService.RequiresEncryption(property) && property.PropertyType == typeof(string))
+            if (classificationService.RequiresEncryption(property) && property.PropertyType == typeof(string))
             {
                 var value = (string?)property.GetValue(document);
                 if (!string.IsNullOrEmpty(value))
                 {
-                    var encryptedValue = await _encryptionService.EncryptAsync(value);
+                    var encryptedValue = await encryptionService.EncryptAsync(value);
                     property.SetValue(document, encryptedValue);
                 }
             }
@@ -1204,21 +1157,19 @@ public class SecureDocumentService
 // 5. Data Lineage Usage
 public class AuditableService<T> where T : class
 {
-    private readonly IDataLineageService _lineageService;
-    private readonly IRepository<T> _repository;
+    private readonly IDataLineageService lineageService;
+    private readonly IRepository<T> repository;
 
     public AuditableService(IDataLineageService lineageService, IRepository<T> repository)
-    {
-        _lineageService = lineageService;
-        _repository = repository;
+    {lineageService = lineageService;repository = repository;
     }
 
     public async Task<T> CreateAsync(T entity)
     {
-        var created = await _repository.CreateAsync(entity);
+        var created = await repository.CreateAsync(entity);
         var entityId = GetEntityId(created);
         
-        await _lineageService.RecordOperationAsync(
+        await lineageService.RecordOperationAsync(
             entityId, 
             DataOperation.Create, 
             null, 
@@ -1230,10 +1181,10 @@ public class AuditableService<T> where T : class
 
     public async Task<T> UpdateAsync(string id, T updatedEntity)
     {
-        var existing = await _repository.GetByIdAsync(id);
-        var updated = await _repository.UpdateAsync(id, updatedEntity);
+        var existing = await repository.GetByIdAsync(id);
+        var updated = await repository.UpdateAsync(id, updatedEntity);
         
-        await _lineageService.RecordOperationAsync(
+        await lineageService.RecordOperationAsync(
             id, 
             DataOperation.Update, 
             existing, 
@@ -1245,10 +1196,10 @@ public class AuditableService<T> where T : class
 
     public async Task DeleteAsync(string id)
     {
-        var existing = await _repository.GetByIdAsync(id);
-        await _repository.DeleteAsync(id);
+        var existing = await repository.GetByIdAsync(id);
+        await repository.DeleteAsync(id);
         
-        await _lineageService.RecordOperationAsync(
+        await lineageService.RecordOperationAsync(
             id, 
             DataOperation.Delete, 
             existing, 

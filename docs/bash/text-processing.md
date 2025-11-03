@@ -8,21 +8,102 @@
 **Code**:
 
 ```bash
-# grep - Pattern matching
-grep "pattern" file.txt                    # Search for pattern
-grep -i "pattern" file.txt                 # Case insensitive
-grep -r "pattern" directory/               # Recursive search
-grep -v "pattern" file.txt                 # Invert match (exclude)
-grep -n "pattern" file.txt                 # Show line numbers
-grep -c "pattern" file.txt                 # Count matches
-grep -A 3 -B 3 "pattern" file.txt         # Show 3 lines after and before
+#!/bin/bash
+set -euo pipefail
 
-# Extended regex
-grep -E "(pattern1|pattern2)" file.txt
-grep -P "\d+" file.txt                     # Perl regex (if supported)
+# Advanced grep operations with error handling
+safe_grep() {
+    local pattern="$1"
+    local file="$2"
+    local options="${3:-}"
+    
+    # Validate inputs
+    [[ -z "$pattern" ]] && { echo "ERROR: Pattern required" >&2; return 1; }
+    [[ -z "$file" ]] && { echo "ERROR: File path required" >&2; return 1; }
+    [[ ! -f "$file" ]] && { echo "ERROR: File not found: $file" >&2; return 1; }
+    
+    # Build grep command with options
+    local grep_cmd="grep"
+    [[ -n "$options" ]] && grep_cmd="grep $options"
+    
+    # Execute with error handling
+    if $grep_cmd "$pattern" "$file"; then
+        return 0
+    else
+        local exit_code=$?
+        case $exit_code in
+            1)
+                echo "INFO: No matches found for pattern: $pattern" >&2
+                return 1
+                ;;
+            2)
+                echo "ERROR: Grep syntax error or file access issue" >&2
+                return 2
+                ;;
+            *)
+                echo "ERROR: Unexpected grep error (code: $exit_code)" >&2
+                return $exit_code
+                ;;
+        esac
+    fi
+}
 
-# Multiple patterns
-grep -f patterns.txt file.txt             # Patterns from file
+# Multi-file pattern search with summary
+search_pattern() {
+    local pattern="$1"
+    local search_path="${2:-.}"
+    local file_pattern="${3:-*}"
+    
+    [[ -z "$pattern" ]] && { echo "ERROR: Search pattern required" >&2; return 1; }
+    
+    local temp_file
+    temp_file=$(mktemp)
+    trap 'rm -f "$temp_file"' EXIT
+    
+    echo "Searching for pattern '$pattern' in $search_path..."
+    
+    # Find files and search pattern
+    find "$search_path" -name "$file_pattern" -type f -exec grep -l "$pattern" {} + 2>/dev/null > "$temp_file" || true
+    
+    local match_count
+    match_count=$(wc -l < "$temp_file")
+    
+    if [[ "$match_count" -eq 0 ]]; then
+        echo "INFO: No files contain the pattern '$pattern'"
+        return 1
+    fi
+    
+    echo "Found pattern in $match_count files:"
+    while IFS= read -r file; do
+        local line_count
+        line_count=$(grep -c "$pattern" "$file" 2>/dev/null || echo "0")
+        printf "  %s (%d matches)\n" "$file" "$line_count"
+    done < "$temp_file"
+}
+
+# Context-aware grep with highlighting
+context_grep() {
+    local pattern="$1"
+    local file="$2"
+    local context_lines="${3:-3}"
+    
+    [[ -z "$pattern" || -z "$file" ]] && {
+        echo "Usage: context_grep <pattern> <file> [context_lines]" >&2
+        return 1
+    }
+    
+    if command -v grep --color=always >/dev/null 2>&1; then
+        grep --color=always -n -C "$context_lines" "$pattern" "$file" 2>/dev/null || {
+            echo "INFO: No matches found" >&2
+            return 1
+        }
+    else
+        grep -n -C "$context_lines" "$pattern" "$file" 2>/dev/null || {
+            echo "INFO: No matches found" >&2
+            return 1
+        }
+    fi
+}
 ```
 
 ## sed - Stream Editor

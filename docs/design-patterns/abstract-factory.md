@@ -182,48 +182,48 @@ public class LinuxUIFactory : IUIFactory
 // Client code that uses the factory
 public class Application
 {
-    private readonly IUIFactory _uiFactory;
-    private readonly List<IButton> _buttons = new();
-    private readonly List<ICheckbox> _checkboxes = new();
-    private readonly List<ITextField> _textFields = new();
+    private readonly IUIFactory uiFactory;
+    private readonly List<IButton> buttons = new();
+    private readonly List<ICheckbox> checkboxes = new();
+    private readonly List<ITextField> textFields = new();
     
     public Application(IUIFactory uiFactory)
     {
-        _uiFactory = uiFactory;
+        uiFactory = uiFactory;
     }
     
     public void CreateUI()
     {
         // Create UI elements using the factory
-        var button = _uiFactory.CreateButton();
-        var checkbox = _uiFactory.CreateCheckbox();
-        var textField = _uiFactory.CreateTextField();
+        var button = uiFactory.CreateButton();
+        var checkbox = uiFactory.CreateCheckbox();
+        var textField = uiFactory.CreateTextField();
         
-        _buttons.Add(button);
-        _checkboxes.Add(checkbox);
-        _textFields.Add(textField);
+        buttons.Add(button);
+        checkboxes.Add(checkbox);
+        textFields.Add(textField);
         
-        Console.WriteLine("UI Created with factory: " + _uiFactory.GetType().Name);
+        Console.WriteLine("UI Created with factory: " + uiFactory.GetType().Name);
     }
     
     public void RenderUI()
     {
         Console.WriteLine("Rendering UI...");
-        foreach (var button in _buttons)
+        foreach (var button in buttons)
             button.Render();
-        foreach (var checkbox in _checkboxes)
+        foreach (var checkbox in checkboxes)
             checkbox.Render();
-        foreach (var textField in _textFields)
+        foreach (var textField in textFields)
             textField.Render();
     }
     
     public void InteractWithUI()
     {
-        if (_buttons.Count > 0)
+        if (buttons.Count > 0)
             _buttons[0].Click();
-        if (_checkboxes.Count > 0)
+        if (checkboxes.Count > 0)
             _checkboxes[0].Toggle();
-        if (_textFields.Count > 0)
+        if (textFields.Count > 0)
             _textFields[0].SetText("Hello World");
     }
 }

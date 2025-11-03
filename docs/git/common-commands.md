@@ -1,6 +1,6 @@
-# Common Git Commands
+# Enterprise Git Command Reference
 
-**Description**: Essential Git commands and workflows for version control.
+**Description**: Professional Git workflows and commands for enterprise software development teams.
 
 **Language/Technology**: Git
 

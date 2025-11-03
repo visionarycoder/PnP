@@ -1,8 +1,8 @@
 # Strategy Pattern
 
-**Description**: Defines a family of algorithms, encapsulates each one, and makes them interchangeable. Allows the algorithm to vary independently from clients that use it.
+**Description**: Defines a family of algorithms, encapsulates each one, and makes them interchangeable. Allows the algorithm to vary independently from clients that use it. **Use dependency injection for algorithm selection.**
 
-**Language/Technology**: C# / .NET
+**Language/Technology**: C# / .NET 8.0
 
 **Code**:
 
@@ -20,18 +20,11 @@ public interface IPaymentStrategy
 }
 
 // Concrete Strategies
-public class CreditCardPayment : IPaymentStrategy
+public class CreditCardPayment(string cardNumber, string cvv, string expiryDate) : IPaymentStrategy
 {
-    private readonly string _cardNumber;
-    private readonly string _cvv;
-    private readonly string _expiryDate;
-    
-    public CreditCardPayment(string cardNumber, string cvv, string expiryDate)
-    {
-        _cardNumber = cardNumber;
-        _cvv = cvv;
-        _expiryDate = expiryDate;
-    }
+    private readonly string cardNumber = cardNumber;
+    private readonly string cvv = cvv;
+    private readonly string expiryDate = expiryDate;
     
     public decimal CalculateFee(decimal amount)
     {
@@ -56,20 +49,14 @@ public class CreditCardPayment : IPaymentStrategy
     private bool ValidateCard()
     {
         // Simulate card validation (always true for demo)
-        return !string.IsNullOrEmpty(_cardNumber) && !string.IsNullOrEmpty(_cvv);
+        return !string.IsNullOrEmpty(cardNumber) && !string.IsNullOrEmpty(cvv);
     }
 }
 
-public class PayPalPayment : IPaymentStrategy
+public class PayPalPayment(string email, string password) : IPaymentStrategy
 {
-    private readonly string _email;
-    private readonly string _password;
-    
-    public PayPalPayment(string email, string password)
-    {
-        _email = email;
-        _password = password;
-    }
+    private readonly string email = email;
+    private readonly string password = password;
     
     public decimal CalculateFee(decimal amount)
     {
@@ -93,19 +80,19 @@ public class PayPalPayment : IPaymentStrategy
     
     private bool ValidateAccount()
     {
-        return !string.IsNullOrEmpty(_email) && _email.Contains("@");
+        return !string.IsNullOrEmpty(email) && email.Contains("@");
     }
 }
 
 public class BankTransferPayment : IPaymentStrategy
 {
-    private readonly string _accountNumber;
-    private readonly string _routingNumber;
+    private readonly string accountNumber;
+    private readonly string routingNumber;
     
     public BankTransferPayment(string accountNumber, string routingNumber)
     {
-        _accountNumber = accountNumber;
-        _routingNumber = routingNumber;
+        accountNumber = accountNumber;
+        routingNumber = routingNumber;
     }
     
     public decimal CalculateFee(decimal amount)
@@ -130,19 +117,19 @@ public class BankTransferPayment : IPaymentStrategy
     
     private bool ValidateAccount()
     {
-        return !string.IsNullOrEmpty(_accountNumber) && !string.IsNullOrEmpty(_routingNumber);
+        return !string.IsNullOrEmpty(accountNumber) && !string.IsNullOrEmpty(routingNumber);
     }
 }
 
 public class CryptocurrencyPayment : IPaymentStrategy
 {
-    private readonly string _walletAddress;
-    private readonly string _cryptoType;
+    private readonly string walletAddress;
+    private readonly string cryptoType;
     
     public CryptocurrencyPayment(string walletAddress, string cryptoType = "Bitcoin")
     {
-        _walletAddress = walletAddress;
-        _cryptoType = cryptoType;
+        walletAddress = walletAddress;
+        cryptoType = cryptoType;
     }
     
     public decimal CalculateFee(decimal amount)
@@ -167,36 +154,36 @@ public class CryptocurrencyPayment : IPaymentStrategy
     
     private bool ValidateWallet()
     {
-        return !string.IsNullOrEmpty(_walletAddress) && _walletAddress.Length > 20;
+        return !string.IsNullOrEmpty(walletAddress) && walletAddress.Length > 20;
     }
 }
 
 // Context class that uses strategies
 public class PaymentProcessor
 {
-    private IPaymentStrategy _paymentStrategy;
+    private IPaymentStrategy paymentStrategy;
     
     public void SetPaymentStrategy(IPaymentStrategy strategy)
     {
-        _paymentStrategy = strategy ?? throw new ArgumentNullException(nameof(strategy));
+        paymentStrategy = strategy ?? throw new ArgumentNullException(nameof(strategy));
     }
     
     public bool ProcessOrder(decimal orderAmount, string merchantId = "MERCH_001")
     {
-        if (_paymentStrategy == null)
+        if (paymentStrategy == null)
         {
             throw new InvalidOperationException("Payment strategy must be set before processing");
         }
         
         Console.WriteLine($"\n💰 Processing order: ${orderAmount:F2}");
-        Console.WriteLine($"Payment Method: {_paymentStrategy.GetPaymentMethod()}");
+        Console.WriteLine($"Payment Method: {paymentStrategy.GetPaymentMethod()}");
         
-        var fee = _paymentStrategy.CalculateFee(orderAmount);
+        var fee = paymentStrategy.CalculateFee(orderAmount);
         var totalAmount = orderAmount + fee;
         
         Console.WriteLine($"Total Amount (including fees): ${totalAmount:F2}");
         
-        return _paymentStrategy.ProcessPayment(orderAmount, merchantId);
+        return paymentStrategy.ProcessPayment(orderAmount, merchantId);
     }
     
     public void ComparePaymentMethods(decimal amount, params IPaymentStrategy[] strategies)
@@ -282,24 +269,24 @@ public class QuickSortStrategy<T> : ISortStrategy<T> where T : IComparable<T>
 
 public class Sorter<T> where T : IComparable<T>
 {
-    private ISortStrategy<T> _sortStrategy;
+    private ISortStrategy<T> sortStrategy;
     
     public void SetSortStrategy(ISortStrategy<T> strategy)
     {
-        _sortStrategy = strategy;
+        sortStrategy = strategy;
     }
     
     public void Sort(T[] array)
     {
-        if (_sortStrategy == null)
+        if (sortStrategy == null)
         {
             throw new InvalidOperationException("Sort strategy must be set");
         }
         
-        Console.WriteLine($"Sorting using {_sortStrategy.GetAlgorithmName()}");
+        Console.WriteLine($"Sorting using {sortStrategy.GetAlgorithmName()}");
         var watch = System.Diagnostics.Stopwatch.StartNew();
         
-        _sortStrategy.Sort(array);
+        sortStrategy.Sort(array);
         
         watch.Stop();
         Console.WriteLine($"Sorted {array.Length} elements in {watch.ElapsedMilliseconds}ms");

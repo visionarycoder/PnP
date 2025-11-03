@@ -23,20 +23,17 @@ public interface IResourceDependencyManager
 
 public class ResourceDependencyManager : IResourceDependencyManager
 {
-    private readonly IServiceProvider _serviceProvider;
-    private readonly IConfiguration _configuration;
-    private readonly ILogger<ResourceDependencyManager> _logger;
-    private readonly ConcurrentDictionary<string, ResourceInfo> _resourceCache = new();
-    private readonly ConcurrentDictionary<string, SemaphoreSlim> _resourceLocks = new();
+    private readonly IServiceProvider serviceProvider;
+    private readonly IConfiguration configuration;
+    private readonly ILogger<ResourceDependencyManager> logger;
+    private readonly ConcurrentDictionary<string, ResourceInfo> resourceCache = new();
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> resourceLocks = new();
 
     public ResourceDependencyManager(
         IServiceProvider serviceProvider,
         IConfiguration configuration,
         ILogger<ResourceDependencyManager> logger)
-    {
-        _serviceProvider = serviceProvider;
-        _configuration = configuration;
-        _logger = logger;
+    {serviceProvider = serviceProvider;configuration = configuration;logger = logger;
     }
 
     public async Task<T> GetResourceAsync<T>(string resourceName, CancellationToken cancellationToken = default) where T : class
@@ -45,17 +42,16 @@ public class ResourceDependencyManager : IResourceDependencyManager
         activity?.SetTag("resource.name", resourceName);
         activity?.SetTag("resource.type", typeof(T).Name);
 
-        var resourceLock = _resourceLocks.GetOrAdd(resourceName, _ => new SemaphoreSlim(1, 1));
+        var resourceLock =resourceLocks.GetOrAdd(resourceName, _ => new SemaphoreSlim(1, 1));
         
         await resourceLock.WaitAsync(cancellationToken);
         try
         {
             // Check cache first
-            if (_resourceCache.TryGetValue(resourceName, out var cachedInfo) && 
+            if (resourceCache.TryGetValue(resourceName, out var cachedInfo) && 
                 cachedInfo.Resource is T cachedResource &&
                 cachedInfo.ExpiresAt > DateTime.UtcNow)
-            {
-                _logger.LogDebug("Retrieved cached resource {ResourceName}", resourceName);
+            {logger.LogDebug("Retrieved cached resource {ResourceName}", resourceName);
                 return cachedResource;
             }
 
@@ -69,11 +65,7 @@ public class ResourceDependencyManager : IResourceDependencyManager
                 Type = typeof(T),
                 CreatedAt = DateTime.UtcNow,
                 ExpiresAt = DateTime.UtcNow.AddMinutes(5) // 5-minute cache
-            };
-            
-            _resourceCache.AddOrUpdate(resourceName, resourceInfo, (_, _) => resourceInfo);
-            
-            _logger.LogDebug("Resolved and cached resource {ResourceName}", resourceName);
+            };resourceCache.AddOrUpdate(resourceName, resourceInfo, (_, _) => resourceInfo);logger.LogDebug("Resolved and cached resource {ResourceName}", resourceName);
             return resource;
         }
         finally
@@ -90,8 +82,7 @@ public class ResourceDependencyManager : IResourceDependencyManager
             return health.Status == ResourceHealthStatus.Healthy;
         }
         catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to check availability of resource {ResourceName}", resourceName);
+        {logger.LogWarning(ex, "Failed to check availability of resource {ResourceName}", resourceName);
             return false;
         }
     }
@@ -115,13 +106,10 @@ public class ResourceDependencyManager : IResourceDependencyManager
             {
                 if (await IsResourceAvailableAsync(resourceName, combinedCts.Token))
                 {
-                    var waitTime = DateTime.UtcNow - startTime;
-                    _logger.LogInformation("Resource {ResourceName} became available after {WaitTime}ms", 
+                    var waitTime = DateTime.UtcNow - startTime;logger.LogInformation("Resource {ResourceName} became available after {WaitTime}ms", 
                         resourceName, waitTime.TotalMilliseconds);
                     return;
-                }
-
-                _logger.LogDebug("Resource {ResourceName} not yet available, retrying in {RetryDelay}ms", 
+                }logger.LogDebug("Resource {ResourceName} not yet available, retrying in {RetryDelay}ms", 
                     resourceName, retryDelay.TotalMilliseconds);
 
                 await Task.Delay(retryDelay, combinedCts.Token);
@@ -147,8 +135,7 @@ public class ResourceDependencyManager : IResourceDependencyManager
             return await healthChecker.CheckHealthAsync(cancellationToken);
         }
         catch (Exception ex)
-        {
-            _logger.LogError(ex, "Health check failed for resource {ResourceName}", resourceName);
+        {logger.LogError(ex, "Health check failed for resource {ResourceName}", resourceName);
             return new ResourceHealth
             {
                 ResourceName = resourceName,
@@ -164,9 +151,7 @@ public class ResourceDependencyManager : IResourceDependencyManager
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         using var activity = Activity.Current?.Source.StartActivity("ResourceDependency.WatchResource");
-        activity?.SetTag("resource.name", resourceName);
-
-        _logger.LogDebug("Starting to watch resource {ResourceName}", resourceName);
+        activity?.SetTag("resource.name", resourceName);logger.LogDebug("Starting to watch resource {ResourceName}", resourceName);
 
         var previousHealth = await CheckResourceHealthAsync(resourceName, cancellationToken);
         yield return new ResourceStatusUpdate
@@ -186,8 +171,7 @@ public class ResourceDependencyManager : IResourceDependencyManager
                 var currentHealth = await CheckResourceHealthAsync(resourceName, cancellationToken);
                 
                 if (currentHealth.Status != previousHealth.Status)
-                {
-                    _logger.LogInformation("Resource {ResourceName} status changed from {PreviousStatus} to {CurrentStatus}",
+                {logger.LogInformation("Resource {ResourceName} status changed from {PreviousStatus} to {CurrentStatus}",
                         resourceName, previousHealth.Status, currentHealth.Status);
 
                     yield return new ResourceStatusUpdate
@@ -203,8 +187,7 @@ public class ResourceDependencyManager : IResourceDependencyManager
                 }
             }
             catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error watching resource {ResourceName}", resourceName);
+            {logger.LogError(ex, "Error watching resource {ResourceName}", resourceName);
                 
                 yield return new ResourceStatusUpdate
                 {
@@ -220,14 +203,14 @@ public class ResourceDependencyManager : IResourceDependencyManager
     private async Task<T> ResolveResourceAsync<T>(string resourceName, CancellationToken cancellationToken) where T : class
     {
         // Try to resolve from service provider first
-        var service = _serviceProvider.GetService<T>();
+        var service =serviceProvider.GetService<T>();
         if (service != null)
         {
             return service;
         }
 
         // Try to resolve by name
-        var namedService = _serviceProvider.GetKeyedService<T>(resourceName);
+        var namedService =serviceProvider.GetKeyedService<T>(resourceName);
         if (namedService != null)
         {
             return namedService;
@@ -236,7 +219,7 @@ public class ResourceDependencyManager : IResourceDependencyManager
         // Try connection strings for database resources
         if (typeof(T) == typeof(IDbConnection) || typeof(T).IsAssignableTo(typeof(IDbConnection)))
         {
-            var connectionString = _configuration.GetConnectionString(resourceName);
+            var connectionString =configuration.GetConnectionString(resourceName);
             if (!string.IsNullOrEmpty(connectionString))
             {
                 return CreateDatabaseConnection<T>(connectionString);
@@ -246,7 +229,7 @@ public class ResourceDependencyManager : IResourceDependencyManager
         // Try HTTP clients
         if (typeof(T) == typeof(HttpClient) || typeof(T).IsAssignableTo(typeof(HttpClient)))
         {
-            var httpClientFactory = _serviceProvider.GetService<IHttpClientFactory>();
+            var httpClientFactory =serviceProvider.GetService<IHttpClientFactory>();
             if (httpClientFactory != null)
             {
                 var httpClient = httpClientFactory.CreateClient(resourceName);
@@ -273,21 +256,21 @@ public class ResourceDependencyManager : IResourceDependencyManager
     private async Task<IResourceHealthChecker> GetHealthCheckerAsync(string resourceName, CancellationToken cancellationToken)
     {
         // Try to get a named health checker
-        var namedChecker = _serviceProvider.GetKeyedService<IResourceHealthChecker>(resourceName);
+        var namedChecker =serviceProvider.GetKeyedService<IResourceHealthChecker>(resourceName);
         if (namedChecker != null)
         {
             return namedChecker;
         }
 
         // Fall back to default health checker
-        var defaultChecker = _serviceProvider.GetService<IResourceHealthChecker>();
+        var defaultChecker =serviceProvider.GetService<IResourceHealthChecker>();
         if (defaultChecker != null)
         {
             return defaultChecker;
         }
 
         // Create a basic health checker based on resource type
-        return new BasicResourceHealthChecker(resourceName, _serviceProvider, _configuration, _logger);
+        return new BasicResourceHealthChecker(resourceName, serviceProvider, configuration, logger);
     }
 }
 
@@ -308,21 +291,17 @@ public interface IResourceHealthChecker
 
 public class BasicResourceHealthChecker : IResourceHealthChecker
 {
-    private readonly string _resourceName;
-    private readonly IServiceProvider _serviceProvider;
-    private readonly IConfiguration _configuration;
-    private readonly ILogger _logger;
+    private readonly string resourceName;
+    private readonly IServiceProvider serviceProvider;
+    private readonly IConfiguration configuration;
+    private readonly ILogger logger;
 
     public BasicResourceHealthChecker(
         string resourceName,
         IServiceProvider serviceProvider,
         IConfiguration configuration,
         ILogger logger)
-    {
-        _resourceName = resourceName;
-        _serviceProvider = serviceProvider;
-        _configuration = configuration;
-        _logger = logger;
+    {resourceName = resourceName;serviceProvider = serviceProvider;configuration = configuration;logger = logger;
     }
 
     public async Task<ResourceHealth> CheckHealthAsync(CancellationToken cancellationToken = default)
@@ -330,14 +309,14 @@ public class BasicResourceHealthChecker : IResourceHealthChecker
         try
         {
             // Check if it's a database connection
-            var connectionString = _configuration.GetConnectionString(_resourceName);
+            var connectionString =configuration.GetConnectionString(resourceName);
             if (!string.IsNullOrEmpty(connectionString))
             {
                 return await CheckDatabaseHealthAsync(connectionString, cancellationToken);
             }
 
             // Check if it's an HTTP endpoint
-            var httpClient = _serviceProvider.GetService<IHttpClientFactory>()?.CreateClient(_resourceName);
+            var httpClient =serviceProvider.GetService<IHttpClientFactory>()?.CreateClient(resourceName);
             if (httpClient != null)
             {
                 return await CheckHttpHealthAsync(httpClient, cancellationToken);
@@ -346,7 +325,7 @@ public class BasicResourceHealthChecker : IResourceHealthChecker
             // Default to healthy if no specific check available
             return new ResourceHealth
             {
-                ResourceName = _resourceName,
+                ResourceName =resourceName,
                 Status = ResourceHealthStatus.Healthy,
                 CheckedAt = DateTime.UtcNow
             };
@@ -355,7 +334,7 @@ public class BasicResourceHealthChecker : IResourceHealthChecker
         {
             return new ResourceHealth
             {
-                ResourceName = _resourceName,
+                ResourceName =resourceName,
                 Status = ResourceHealthStatus.Unhealthy,
                 Error = ex.Message,
                 CheckedAt = DateTime.UtcNow
@@ -376,7 +355,7 @@ public class BasicResourceHealthChecker : IResourceHealthChecker
 
             return new ResourceHealth
             {
-                ResourceName = _resourceName,
+                ResourceName =resourceName,
                 Status = ResourceHealthStatus.Healthy,
                 CheckedAt = DateTime.UtcNow,
                 Details = new Dictionary<string, object>
@@ -390,7 +369,7 @@ public class BasicResourceHealthChecker : IResourceHealthChecker
         {
             return new ResourceHealth
             {
-                ResourceName = _resourceName,
+                ResourceName =resourceName,
                 Status = ResourceHealthStatus.Unhealthy,
                 Error = ex.Message,
                 CheckedAt = DateTime.UtcNow
@@ -412,7 +391,7 @@ public class BasicResourceHealthChecker : IResourceHealthChecker
 
             return new ResourceHealth
             {
-                ResourceName = _resourceName,
+                ResourceName =resourceName,
                 Status = status,
                 CheckedAt = DateTime.UtcNow,
                 Details = new Dictionary<string, object>
@@ -426,7 +405,7 @@ public class BasicResourceHealthChecker : IResourceHealthChecker
         {
             return new ResourceHealth
             {
-                ResourceName = _resourceName,
+                ResourceName =resourceName,
                 Status = ResourceHealthStatus.Unhealthy,
                 Error = ex.Message,
                 CheckedAt = DateTime.UtcNow
@@ -454,18 +433,15 @@ public interface IServiceDiscovery
 // Aspire-based service discovery
 public class AspireServiceDiscovery : IServiceDiscovery
 {
-    private readonly IConfiguration _configuration;
-    private readonly ILogger<AspireServiceDiscovery> _logger;
-    private readonly ConcurrentDictionary<string, List<ServiceEndpoint>> _serviceCache = new();
-    private readonly Timer _cacheRefreshTimer;
+    private readonly IConfiguration configuration;
+    private readonly ILogger<AspireServiceDiscovery> logger;
+    private readonly ConcurrentDictionary<string, List<ServiceEndpoint>> serviceCache = new();
+    private readonly Timer cacheRefreshTimer;
 
     public AspireServiceDiscovery(IConfiguration configuration, ILogger<AspireServiceDiscovery> logger)
-    {
-        _configuration = configuration;
-        _logger = logger;
+    {configuration = configuration;logger = logger;
         
-        // Refresh cache every 30 seconds
-        _cacheRefreshTimer = new Timer(RefreshServiceCache, null, TimeSpan.Zero, TimeSpan.FromSeconds(30));
+        // Refresh cache every 30 secondscacheRefreshTimer = new Timer(RefreshServiceCache, null, TimeSpan.Zero, TimeSpan.FromSeconds(30));
     }
 
     public async Task<ServiceEndpoint?> DiscoverServiceAsync(string serviceName, CancellationToken cancellationToken = default)
@@ -480,9 +456,8 @@ public class AspireServiceDiscovery : IServiceDiscovery
         activity?.SetTag("service.name", serviceName);
 
         // Check cache first
-        if (_serviceCache.TryGetValue(serviceName, out var cachedServices))
-        {
-            _logger.LogDebug("Found {ServiceCount} cached endpoints for service {ServiceName}", 
+        if (serviceCache.TryGetValue(serviceName, out var cachedServices))
+        {logger.LogDebug("Found {ServiceCount} cached endpoints for service {ServiceName}", 
                 cachedServices.Count, serviceName);
             return cachedServices;
         }
@@ -490,10 +465,7 @@ public class AspireServiceDiscovery : IServiceDiscovery
         // Discover from configuration
         var services = await DiscoverFromConfigurationAsync(serviceName, cancellationToken);
         
-        // Cache the results
-        _serviceCache.AddOrUpdate(serviceName, services, (_, _) => services);
-        
-        _logger.LogDebug("Discovered {ServiceCount} endpoints for service {ServiceName}", 
+        // Cache the resultsserviceCache.AddOrUpdate(serviceName, services, (_, _) => services);logger.LogDebug("Discovered {ServiceCount} endpoints for service {ServiceName}", 
             services.Count, serviceName);
 
         return services;
@@ -502,24 +474,21 @@ public class AspireServiceDiscovery : IServiceDiscovery
     public Task RegisterServiceAsync(ServiceRegistration registration, CancellationToken cancellationToken = default)
     {
         // In Aspire, services are typically registered through the AppHost
-        // This method could integrate with a service registry if needed
-        _logger.LogInformation("Service registration requested for {ServiceName} at {Endpoint}", 
+        // This method could integrate with a service registry if neededlogger.LogInformation("Service registration requested for {ServiceName} at {Endpoint}", 
             registration.ServiceName, registration.Endpoint);
         
         return Task.CompletedTask;
     }
 
     public Task UnregisterServiceAsync(string serviceId, CancellationToken cancellationToken = default)
-    {
-        _logger.LogInformation("Service unregistration requested for {ServiceId}", serviceId);
+    {logger.LogInformation("Service unregistration requested for {ServiceId}", serviceId);
         return Task.CompletedTask;
     }
 
     public async IAsyncEnumerable<ServiceDiscoveryEvent> WatchServicesAsync(
         string serviceName, 
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        _logger.LogDebug("Starting to watch services for {ServiceName}", serviceName);
+    {logger.LogDebug("Starting to watch services for {ServiceName}", serviceName);
 
         var previousServices = await DiscoverServicesAsync(serviceName, cancellationToken);
         
@@ -540,8 +509,7 @@ public class AspireServiceDiscovery : IServiceDiscovery
                 var currentServices = await DiscoverServicesAsync(serviceName, cancellationToken);
                 
                 if (!ServiceEndpointsEqual(previousServices, currentServices))
-                {
-                    _logger.LogInformation("Service endpoints changed for {ServiceName}: {PreviousCount} -> {CurrentCount}",
+                {logger.LogInformation("Service endpoints changed for {ServiceName}: {PreviousCount} -> {CurrentCount}",
                         serviceName, previousServices.Count, currentServices.Count);
 
                     yield return new ServiceDiscoveryEvent
@@ -557,8 +525,7 @@ public class AspireServiceDiscovery : IServiceDiscovery
                 }
             }
             catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error watching services for {ServiceName}", serviceName);
+            {logger.LogError(ex, "Error watching services for {ServiceName}", serviceName);
                 
                 yield return new ServiceDiscoveryEvent
                 {
@@ -578,7 +545,7 @@ public class AspireServiceDiscovery : IServiceDiscovery
         var endpoints = new List<ServiceEndpoint>();
 
         // Try to find service endpoints in configuration
-        var serviceSection = _configuration.GetSection($"Services:{serviceName}");
+        var serviceSection =configuration.GetSection($"Services:{serviceName}");
         if (serviceSection.Exists())
         {
             var endpointUrls = serviceSection.GetSection("Endpoints").Get<string[]>();
@@ -606,7 +573,7 @@ public class AspireServiceDiscovery : IServiceDiscovery
         }
 
         // Try connection strings as fallback
-        var connectionString = _configuration.GetConnectionString(serviceName);
+        var connectionString =configuration.GetConnectionString(serviceName);
         if (!string.IsNullOrEmpty(connectionString) && endpoints.Count == 0)
         {
             var endpoint = ParseConnectionStringEndpoint(serviceName, connectionString);
@@ -664,8 +631,7 @@ public class AspireServiceDiscovery : IServiceDiscovery
             return null;
         }
         catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to parse connection string for service {ServiceName}", serviceName);
+        {logger.LogWarning(ex, "Failed to parse connection string for service {ServiceName}", serviceName);
             return null;
         }
     }
@@ -674,7 +640,7 @@ public class AspireServiceDiscovery : IServiceDiscovery
     {
         try
         {
-            var servicesToRefresh = _serviceCache.Keys.ToList();
+            var servicesToRefresh =serviceCache.Keys.ToList();
             
             foreach (var serviceName in servicesToRefresh)
             {
@@ -682,19 +648,16 @@ public class AspireServiceDiscovery : IServiceDiscovery
                 {
                     try
                     {
-                        var services = await DiscoverFromConfigurationAsync(serviceName, CancellationToken.None);
-                        _serviceCache.AddOrUpdate(serviceName, services, (_, _) => services);
+                        var services = await DiscoverFromConfigurationAsync(serviceName, CancellationToken.None);serviceCache.AddOrUpdate(serviceName, services, (_, _) => services);
                     }
                     catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to refresh cache for service {ServiceName}", serviceName);
+                    {logger.LogWarning(ex, "Failed to refresh cache for service {ServiceName}", serviceName);
                     }
                 });
             }
         }
         catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error during service cache refresh");
+        {logger.LogError(ex, "Error during service cache refresh");
         }
     }
 
@@ -710,33 +673,29 @@ public class AspireServiceDiscovery : IServiceDiscovery
 
     public void Dispose()
     {
-        _cacheRefreshTimer?.Dispose();
+        cacheRefreshTimer?.Dispose();
     }
 }
 
 // Dependency-aware HTTP client factory
 public class DependencyAwareHttpClientFactory : IHttpClientFactory
 {
-    private readonly IHttpClientFactory _innerFactory;
-    private readonly IServiceDiscovery _serviceDiscovery;
-    private readonly IResourceDependencyManager _dependencyManager;
-    private readonly ILogger<DependencyAwareHttpClientFactory> _logger;
+    private readonly IHttpClientFactory innerFactory;
+    private readonly IServiceDiscovery serviceDiscovery;
+    private readonly IResourceDependencyManager dependencyManager;
+    private readonly ILogger<DependencyAwareHttpClientFactory> logger;
 
     public DependencyAwareHttpClientFactory(
         IHttpClientFactory innerFactory,
         IServiceDiscovery serviceDiscovery,
         IResourceDependencyManager dependencyManager,
         ILogger<DependencyAwareHttpClientFactory> logger)
-    {
-        _innerFactory = innerFactory;
-        _serviceDiscovery = serviceDiscovery;
-        _dependencyManager = dependencyManager;
-        _logger = logger;
+    {innerFactory = innerFactory;serviceDiscovery = serviceDiscovery;dependencyManager = dependencyManager;logger = logger;
     }
 
     public HttpClient CreateClient(string name)
     {
-        var client = _innerFactory.CreateClient(name);
+        var client =innerFactory.CreateClient(name);
         
         // If the client doesn't have a base address, try to discover it
         if (client.BaseAddress == null)
@@ -745,17 +704,15 @@ public class DependencyAwareHttpClientFactory : IHttpClientFactory
             {
                 try
                 {
-                    var endpoint = await _serviceDiscovery.DiscoverServiceAsync(name);
+                    var endpoint = await serviceDiscovery.DiscoverServiceAsync(name);
                     if (endpoint != null)
                     {
-                        client.BaseAddress = new Uri($"{endpoint.Scheme}://{endpoint.Host}:{endpoint.Port}");
-                        _logger.LogDebug("Set base address for HTTP client {ClientName} to {BaseAddress}", 
+                        client.BaseAddress = new Uri($"{endpoint.Scheme}://{endpoint.Host}:{endpoint.Port}");logger.LogDebug("Set base address for HTTP client {ClientName} to {BaseAddress}", 
                             name, client.BaseAddress);
                     }
                 }
                 catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to discover endpoint for HTTP client {ClientName}", name);
+                {logger.LogWarning(ex, "Failed to discover endpoint for HTTP client {ClientName}", name);
                 }
             });
         }
@@ -873,15 +830,13 @@ public static class DependencyInjectionExtensions
 // Health check for resource dependencies
 public class ResourceDependencyHealthCheck : IHealthCheck
 {
-    private readonly IResourceDependencyManager _dependencyManager;
-    private readonly ILogger<ResourceDependencyHealthCheck> _logger;
+    private readonly IResourceDependencyManager dependencyManager;
+    private readonly ILogger<ResourceDependencyHealthCheck> logger;
 
     public ResourceDependencyHealthCheck(
         IResourceDependencyManager dependencyManager,
         ILogger<ResourceDependencyHealthCheck> logger)
-    {
-        _dependencyManager = dependencyManager;
-        _logger = logger;
+    {dependencyManager = dependencyManager;logger = logger;
     }
 
     public async Task<HealthCheckResult> CheckHealthAsync(
@@ -896,7 +851,7 @@ public class ResourceDependencyHealthCheck : IHealthCheck
 
             foreach (var resource in criticalResources)
             {
-                var health = await _dependencyManager.CheckResourceHealthAsync(resource, cancellationToken);
+                var health = await dependencyManager.CheckResourceHealthAsync(resource, cancellationToken);
                 healthResults[resource] = new
                 {
                     status = health.Status.ToString(),
@@ -915,8 +870,7 @@ public class ResourceDependencyHealthCheck : IHealthCheck
                 : HealthCheckResult.Degraded("Some resources are not healthy", null, healthResults);
         }
         catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error checking resource dependencies health");
+        {logger.LogError(ex, "Error checking resource dependencies health");
             return HealthCheckResult.Unhealthy("Failed to check resource dependencies", ex);
         }
     }
@@ -925,20 +879,18 @@ public class ResourceDependencyHealthCheck : IHealthCheck
 // Specific health checkers
 public class DatabaseHealthChecker : IResourceHealthChecker
 {
-    private readonly string _connectionString;
-    private readonly ILogger<DatabaseHealthChecker> _logger;
+    private readonly string connectionString;
+    private readonly ILogger<DatabaseHealthChecker> logger;
 
     public DatabaseHealthChecker(string connectionString, ILogger<DatabaseHealthChecker> logger)
-    {
-        _connectionString = connectionString;
-        _logger = logger;
+    {connectionString = connectionString;logger = logger;
     }
 
     public async Task<ResourceHealth> CheckHealthAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            using var connection = new Npgsql.NpgsqlConnection(_connectionString);
+            using var connection = new Npgsql.NpgsqlConnection(connectionString);
             await connection.OpenAsync(cancellationToken);
 
             using var command = connection.CreateCommand();
@@ -959,8 +911,7 @@ public class DatabaseHealthChecker : IResourceHealthChecker
             };
         }
         catch (Exception ex)
-        {
-            _logger.LogError(ex, "Database health check failed");
+        {logger.LogError(ex, "Database health check failed");
             return new ResourceHealth
             {
                 ResourceName = "database",
@@ -974,20 +925,18 @@ public class DatabaseHealthChecker : IResourceHealthChecker
 
 public class RedisHealthChecker : IResourceHealthChecker
 {
-    private readonly string _connectionString;
-    private readonly ILogger<RedisHealthChecker> _logger;
+    private readonly string connectionString;
+    private readonly ILogger<RedisHealthChecker> logger;
 
     public RedisHealthChecker(string connectionString, ILogger<RedisHealthChecker> logger)
-    {
-        _connectionString = connectionString;
-        _logger = logger;
+    {connectionString = connectionString;logger = logger;
     }
 
     public async Task<ResourceHealth> CheckHealthAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            using var redis = StackExchange.Redis.ConnectionMultiplexer.Connect(_connectionString);
+            using var redis = StackExchange.Redis.ConnectionMultiplexer.Connect(connectionString);
             var database = redis.GetDatabase();
             
             await database.PingAsync();
@@ -1005,8 +954,7 @@ public class RedisHealthChecker : IResourceHealthChecker
             };
         }
         catch (Exception ex)
-        {
-            _logger.LogError(ex, "Redis health check failed");
+        {logger.LogError(ex, "Redis health check failed");
             return new ResourceHealth
             {
                 ResourceName = "cache",

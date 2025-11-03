@@ -34,27 +34,23 @@ public interface IRoleBasedAccessControl
 
 public class RoleBasedAccessControlService : IRoleBasedAccessControl
 {
-    private readonly IUserRoleRepository _userRoleRepository;
-    private readonly IRoleRepository _roleRepository;
-    private readonly IMemoryCache _cache;
-    private readonly ILogger<RoleBasedAccessControlService> _logger;
+    private readonly IUserRoleRepository userRoleRepository;
+    private readonly IRoleRepository roleRepository;
+    private readonly IMemoryCache cache;
+    private readonly ILogger<RoleBasedAccessControlService> logger;
 
     public RoleBasedAccessControlService(
         IUserRoleRepository userRoleRepository,
         IRoleRepository roleRepository,
         IMemoryCache cache,
         ILogger<RoleBasedAccessControlService> logger)
-    {
-        _userRoleRepository = userRoleRepository;
-        _roleRepository = roleRepository;
-        _cache = cache;
-        _logger = logger;
+    {userRoleRepository = userRoleRepository;roleRepository = roleRepository;cache = cache;logger = logger;
     }
 
     public async Task<bool> HasPermissionAsync(int userId, string resource, string action, string? scope = null)
     {
         var cacheKey = $"user_permissions_{userId}";
-        var permissions = await _cache.GetOrCreateAsync(cacheKey, async entry =>
+        var permissions = await cache.GetOrCreateAsync(cacheKey, async entry =>
         {
             entry.SetAbsoluteExpiration(TimeSpan.FromMinutes(15));
             return await GetUserPermissionsAsync(userId);
@@ -69,10 +65,10 @@ public class RoleBasedAccessControlService : IRoleBasedAccessControl
 
     public async Task<List<Permission>> GetUserPermissionsAsync(int userId)
     {
-        var userRoles = await _userRoleRepository.GetActiveUserRolesAsync(userId);
+        var userRoles = await userRoleRepository.GetActiveUserRolesAsync(userId);
         var roleIds = userRoles.Select(ur => ur.RoleId).ToList();
         
-        var roles = await _roleRepository.GetRolesWithPermissionsAsync(roleIds);
+        var roles = await roleRepository.GetRolesWithPermissionsAsync(roleIds);
         
         return roles
             .Where(r => r.IsActive)
@@ -84,30 +80,24 @@ public class RoleBasedAccessControlService : IRoleBasedAccessControl
     public async Task AssignRoleAsync(int userId, int roleId, DateTime? expiresAt = null)
     {
         var userRole = new UserRole(userId, roleId, DateTime.UtcNow, expiresAt);
-        await _userRoleRepository.AssignRoleAsync(userRole);
+        await userRoleRepository.AssignRoleAsync(userRole);
         
-        // Invalidate cache
-        _cache.Remove($"user_permissions_{userId}");
-        
-        _logger.LogInformation("Role {RoleId} assigned to user {UserId}", roleId, userId);
+        // Invalidate cachecache.Remove($"user_permissions_{userId}");logger.LogInformation("Role {RoleId} assigned to user {UserId}", roleId, userId);
     }
 
     public async Task RevokeRoleAsync(int userId, int roleId)
     {
-        await _userRoleRepository.RevokeRoleAsync(userId, roleId);
+        await userRoleRepository.RevokeRoleAsync(userId, roleId);
         
-        // Invalidate cache
-        _cache.Remove($"user_permissions_{userId}");
-        
-        _logger.LogInformation("Role {RoleId} revoked from user {UserId}", roleId, userId);
+        // Invalidate cachecache.Remove($"user_permissions_{userId}");logger.LogInformation("Role {RoleId} revoked from user {UserId}", roleId, userId);
     }
 
     public async Task<List<Role>> GetUserRolesAsync(int userId)
     {
-        var userRoles = await _userRoleRepository.GetActiveUserRolesAsync(userId);
+        var userRoles = await userRoleRepository.GetActiveUserRolesAsync(userId);
         var roleIds = userRoles.Select(ur => ur.RoleId).ToList();
         
-        return await _roleRepository.GetRolesAsync(roleIds);
+        return await roleRepository.GetRolesAsync(roleIds);
     }
 
     private static bool IsWildcardMatch(string pattern, string value)
@@ -228,32 +218,27 @@ public interface IAttributeBasedAccessControl
 
 public class AttributeBasedAccessControlEngine : IAttributeBasedAccessControl
 {
-    private readonly List<AuthorizationPolicy> _policies = new();
-    private readonly IUserAttributeService _userAttributeService;
-    private readonly IResourceAttributeService _resourceAttributeService;
-    private readonly ILogger<AttributeBasedAccessControlEngine> _logger;
+    private readonly List<AuthorizationPolicy> policies = new();
+    private readonly IUserAttributeService userAttributeService;
+    private readonly IResourceAttributeService resourceAttributeService;
+    private readonly ILogger<AttributeBasedAccessControlEngine> logger;
 
     public AttributeBasedAccessControlEngine(
         IUserAttributeService userAttributeService,
         IResourceAttributeService resourceAttributeService,
         ILogger<AttributeBasedAccessControlEngine> logger)
-    {
-        _userAttributeService = userAttributeService;
-        _resourceAttributeService = resourceAttributeService;
-        _logger = logger;
+    {userAttributeService = userAttributeService;resourceAttributeService = resourceAttributeService;logger = logger;
     }
 
     public void RegisterPolicy(AuthorizationPolicy policy)
-    {
-        _policies.Add(policy);
-        _logger.LogInformation("Registered policy: {PolicyName}", policy.Name);
+    {policies.Add(policy);logger.LogInformation("Registered policy: {PolicyName}", policy.Name);
     }
 
     public async Task<PolicyResult> EvaluateAsync(AuthorizationContext context)
     {
         var results = new List<PolicyResult>();
 
-        foreach (var policy in _policies)
+        foreach (var policy in policies)
         {
             try
             {
@@ -261,14 +246,12 @@ public class AttributeBasedAccessControlEngine : IAttributeBasedAccessControl
                 results.Add(result);
 
                 if (result.Decision == PolicyDecision.Deny)
-                {
-                    _logger.LogWarning("Policy {PolicyName} denied access: {Reason}", policy.Name, result.Reason);
+                {logger.LogWarning("Policy {PolicyName} denied access: {Reason}", policy.Name, result.Reason);
                     return result; // Fail fast on explicit deny
                 }
             }
             catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error evaluating policy {PolicyName}", policy.Name);
+            {logger.LogError(ex, "Error evaluating policy {PolicyName}", policy.Name);
                 results.Add(new PolicyResult(PolicyDecision.Deny, $"Policy evaluation error: {ex.Message}"));
             }
         }
@@ -288,14 +271,14 @@ public class AttributeBasedAccessControlEngine : IAttributeBasedAccessControl
         var context = new AuthorizationContext { Action = action };
 
         // Add subject attributes
-        var userAttributes = await _userAttributeService.GetUserAttributesAsync(userId);
+        var userAttributes = await userAttributeService.GetUserAttributesAsync(userId);
         foreach (var attr in userAttributes)
         {
             context.AddSubjectAttribute(attr.Key, attr.Value);
         }
 
         // Add resource attributes
-        var resourceAttributes = await _resourceAttributeService.GetResourceAttributesAsync(resourceId);
+        var resourceAttributes = await resourceAttributeService.GetResourceAttributesAsync(resourceId);
         foreach (var attr in resourceAttributes)
         {
             context.AddResourceAttribute(attr.Key, attr.Value);
@@ -405,37 +388,32 @@ public class BusinessHoursHandler : AuthorizationHandler<BusinessHoursRequiremen
 // Dynamic Policy Builder
 public class DynamicPolicyBuilder
 {
-    private readonly List<IAuthorizationRequirement> _requirements = new();
-    private readonly List<string> _roles = new();
-    private readonly List<string> _authenticationSchemes = new();
+    private readonly List<IAuthorizationRequirement> requirements = new();
+    private readonly List<string> roles = new();
+    private readonly List<string> authenticationSchemes = new();
 
     public DynamicPolicyBuilder RequireMinimumAge(int age)
-    {
-        _requirements.Add(new MinimumAgeRequirement(age));
+    {requirements.Add(new MinimumAgeRequirement(age));
         return this;
     }
 
     public DynamicPolicyBuilder RequireDepartment(params string[] departments)
-    {
-        _requirements.Add(new DepartmentRequirement(departments));
+    {requirements.Add(new DepartmentRequirement(departments));
         return this;
     }
 
     public DynamicPolicyBuilder RequireBusinessHours(TimeSpan start, TimeSpan end)
-    {
-        _requirements.Add(new BusinessHoursRequirement(start, end));
+    {requirements.Add(new BusinessHoursRequirement(start, end));
         return this;
     }
 
     public DynamicPolicyBuilder RequireRole(string role)
-    {
-        _roles.Add(role);
+    {roles.Add(role);
         return this;
     }
 
     public DynamicPolicyBuilder RequireAuthenticationScheme(string scheme)
-    {
-        _authenticationSchemes.Add(scheme);
+    {authenticationSchemes.Add(scheme);
         return this;
     }
 
@@ -443,21 +421,21 @@ public class DynamicPolicyBuilder
     {
         var policyBuilder = new AuthorizationPolicyBuilder();
 
-        if (_authenticationSchemes.Any())
+        if (authenticationSchemes.Any())
         {
-            policyBuilder.AddAuthenticationSchemes(_authenticationSchemes.ToArray());
+            policyBuilder.AddAuthenticationSchemes(authenticationSchemes.ToArray());
         }
         else
         {
             policyBuilder.RequireAuthenticatedUser();
         }
 
-        foreach (var role in _roles)
+        foreach (var role in roles)
         {
             policyBuilder.RequireRole(role);
         }
 
-        foreach (var requirement in _requirements)
+        foreach (var requirement in requirements)
         {
             policyBuilder.AddRequirements(requirement);
         }
@@ -477,23 +455,21 @@ public interface IPolicyRegistry
 
 public class PolicyRegistry : IPolicyRegistry
 {
-    private readonly Dictionary<string, AuthorizationPolicy> _policies = new();
-    private readonly ILogger<PolicyRegistry> _logger;
+    private readonly Dictionary<string, AuthorizationPolicy> policies = new();
+    private readonly ILogger<PolicyRegistry> logger;
 
     public PolicyRegistry(ILogger<PolicyRegistry> logger)
-    {
-        _logger = logger;
+    {logger = logger;
     }
 
     public void RegisterPolicy(string name, AuthorizationPolicy policy)
     {
-        _policies[name] = policy;
-        _logger.LogInformation("Registered authorization policy: {PolicyName}", name);
+        _policies[name] = policy;logger.LogInformation("Registered authorization policy: {PolicyName}", name);
     }
 
     public AuthorizationPolicy? GetPolicy(string name)
     {
-        return _policies.GetValueOrDefault(name);
+        return policies.GetValueOrDefault(name);
     }
 
     public void RegisterDynamicPolicy(string name, Func<DynamicPolicyBuilder, AuthorizationPolicy> builder)
@@ -504,7 +480,7 @@ public class PolicyRegistry : IPolicyRegistry
 
     public List<string> GetPolicyNames()
     {
-        return _policies.Keys.ToList();
+        return policies.Keys.ToList();
     }
 }
 ```
@@ -515,11 +491,11 @@ public class PolicyRegistry : IPolicyRegistry
 // Permission Hierarchy Implementation
 public class PermissionHierarchy
 {
-    private readonly Dictionary<string, List<string>> _hierarchy = new();
+    private readonly Dictionary<string, List<string>> hierarchy = new();
     
     public void AddParentChild(string parent, string child)
     {
-        if (!_hierarchy.ContainsKey(parent))
+        if (!hierarchy.ContainsKey(parent))
             _hierarchy[parent] = new List<string>();
             
         if (!_hierarchy[parent].Contains(child))
@@ -536,7 +512,7 @@ public class PermissionHierarchy
         {
             var current = toProcess.Dequeue();
             
-            if (_hierarchy.ContainsKey(current))
+            if (hierarchy.ContainsKey(current))
             {
                 foreach (var child in _hierarchy[current])
                 {
@@ -570,11 +546,11 @@ public interface IPermissionService
 
 public class HierarchicalPermissionService : IPermissionService
 {
-    private readonly IRoleBasedAccessControl _rbacService;
-    private readonly IPermissionRepository _permissionRepository;
-    private readonly PermissionHierarchy _hierarchy;
-    private readonly IMemoryCache _cache;
-    private readonly ILogger<HierarchicalPermissionService> _logger;
+    private readonly IRoleBasedAccessControl rbacService;
+    private readonly IPermissionRepository permissionRepository;
+    private readonly PermissionHierarchy hierarchy;
+    private readonly IMemoryCache cache;
+    private readonly ILogger<HierarchicalPermissionService> logger;
 
     public HierarchicalPermissionService(
         IRoleBasedAccessControl rbacService,
@@ -582,53 +558,44 @@ public class HierarchicalPermissionService : IPermissionService
         PermissionHierarchy hierarchy,
         IMemoryCache cache,
         ILogger<HierarchicalPermissionService> logger)
-    {
-        _rbacService = rbacService;
-        _permissionRepository = permissionRepository;
-        _hierarchy = hierarchy;
-        _cache = cache;
-        _logger = logger;
+    {rbacService = rbacService;permissionRepository = permissionRepository;hierarchy = hierarchy;cache = cache;logger = logger;
     }
 
     public async Task<bool> HasPermissionAsync(int userId, string permission)
     {
         var effectivePermissions = await GetEffectivePermissionsAsync(userId);
-        return _hierarchy.HasPermission(effectivePermissions, permission);
+        return hierarchy.HasPermission(effectivePermissions, permission);
     }
 
     public async Task<List<string>> GetEffectivePermissionsAsync(int userId)
     {
         var cacheKey = $"effective_permissions_{userId}";
         
-        return await _cache.GetOrCreateAsync(cacheKey, async entry =>
+        return await cache.GetOrCreateAsync(cacheKey, async entry =>
         {
             entry.SetAbsoluteExpiration(TimeSpan.FromMinutes(10));
             
             // Get permissions from roles
-            var rolePermissions = await _rbacService.GetUserPermissionsAsync(userId);
+            var rolePermissions = await rbacService.GetUserPermissionsAsync(userId);
             var rolePermissionNames = rolePermissions.Select(p => p.GetPermissionString()).ToList();
             
             // Get direct permissions
-            var directPermissions = await _permissionRepository.GetUserDirectPermissionsAsync(userId);
+            var directPermissions = await permissionRepository.GetUserDirectPermissionsAsync(userId);
             
             // Combine and get all implied permissions
             var allPermissions = rolePermissionNames.Concat(directPermissions).Distinct().ToList();
-            return allPermissions.SelectMany(_hierarchy.GetAllImpliedPermissions).Distinct().ToList();
+            return allPermissions.SelectMany(hierarchy.GetAllImpliedPermissions).Distinct().ToList();
         });
     }
 
     public async Task GrantPermissionAsync(int userId, string permission, DateTime? expiresAt = null)
     {
-        await _permissionRepository.GrantDirectPermissionAsync(userId, permission, expiresAt);
-        _cache.Remove($"effective_permissions_{userId}");
-        _logger.LogInformation("Granted permission {Permission} to user {UserId}", permission, userId);
+        await permissionRepository.GrantDirectPermissionAsync(userId, permission, expiresAt);cache.Remove($"effective_permissions_{userId}");logger.LogInformation("Granted permission {Permission} to user {UserId}", permission, userId);
     }
 
     public async Task RevokePermissionAsync(int userId, string permission)
     {
-        await _permissionRepository.RevokeDirectPermissionAsync(userId, permission);
-        _cache.Remove($"effective_permissions_{userId}");
-        _logger.LogInformation("Revoked permission {Permission} from user {UserId}", permission, userId);
+        await permissionRepository.RevokeDirectPermissionAsync(userId, permission);cache.Remove($"effective_permissions_{userId}");logger.LogInformation("Revoked permission {Permission} from user {UserId}", permission, userId);
     }
 
     public async Task<bool> CanDelegatePermissionAsync(int fromUserId, int toUserId, string permission)
@@ -659,18 +626,15 @@ public class RequirePermissionAttribute : AuthorizeAttribute
 // Authorization Middleware
 public class AuthorizationMiddleware
 {
-    private readonly RequestDelegate _next;
-    private readonly IPermissionService _permissionService;
-    private readonly ILogger<AuthorizationMiddleware> _logger;
+    private readonly RequestDelegate next;
+    private readonly IPermissionService permissionService;
+    private readonly ILogger<AuthorizationMiddleware> logger;
 
     public AuthorizationMiddleware(
         RequestDelegate next,
         IPermissionService permissionService,
         ILogger<AuthorizationMiddleware> logger)
-    {
-        _next = next;
-        _permissionService = permissionService;
-        _logger = logger;
+    {next = next;permissionService = permissionService;logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -679,7 +643,7 @@ public class AuthorizationMiddleware
         var endpoint = context.GetEndpoint();
         if (endpoint?.Metadata?.GetMetadata<AllowAnonymousAttribute>() != null)
         {
-            await _next(context);
+            await next(context);
             return;
         }
 
@@ -696,29 +660,27 @@ public class AuthorizationMiddleware
         if (permissionAttribute != null)
         {
             var requiredPermission = permissionAttribute.Policy.Replace("Permission:", "");
-            var hasPermission = await _permissionService.HasPermissionAsync(userId, requiredPermission);
+            var hasPermission = await permissionService.HasPermissionAsync(userId, requiredPermission);
             
             if (!hasPermission)
-            {
-                _logger.LogWarning("User {UserId} denied access to {Path} - missing permission {Permission}",
+            {logger.LogWarning("User {UserId} denied access to {Path} - missing permission {Permission}",
                     userId, context.Request.Path, requiredPermission);
                 context.Response.StatusCode = 403;
                 return;
             }
         }
 
-        await _next(context);
+        await next(context);
     }
 }
 
 // Policy-Based Authorization Handler
 public class PermissionAuthorizationHandler : IAuthorizationHandler
 {
-    private readonly IPermissionService _permissionService;
+    private readonly IPermissionService permissionService;
 
     public PermissionAuthorizationHandler(IPermissionService permissionService)
-    {
-        _permissionService = permissionService;
+    {permissionService = permissionService;
     }
 
     public async Task HandleAsync(AuthorizationHandlerContext context)
@@ -736,7 +698,7 @@ public class PermissionAuthorizationHandler : IAuthorizationHandler
                     // Handle permission requirements
                     if (req is PermissionRequirement permReq)
                     {
-                        var hasPermission = await _permissionService.HasPermissionAsync(userId, permReq.Permission);
+                        var hasPermission = await permissionService.HasPermissionAsync(userId, permReq.Permission);
                         if (hasPermission)
                         {
                             context.Succeed(requirement);

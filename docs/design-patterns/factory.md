@@ -144,6 +144,7 @@ compositeLogger.Log("This will be logged to all registered loggers");
 ```
 
 **Notes**:
+
 - **Simple Factory**: Encapsulates object creation logic in a single method
 - **Flexibility**: Easy to add new logger types without changing client code
 - **Configuration**: Supports parameterized creation for different configurations
@@ -154,6 +155,7 @@ compositeLogger.Log("This will be logged to all registered loggers");
 - **Testability**: Easy to mock and unit test individual logger implementations
 
 **Related Patterns**:
+
 - Strategy Pattern: For interchangeable logging strategies
 - Abstract Factory: For creating families of related logging components
 - Builder Pattern: For complex logger configuration

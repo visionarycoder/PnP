@@ -5,6 +5,7 @@
 **Language/Technology**: Python 3.12+
 
 **Code**:
+
 ```python
 import os
 from pathlib import Path
@@ -138,6 +139,7 @@ class FileOperations:
 ```
 
 **Usage**:
+
 ```python
 # Example 1: Read entire file
 content = FileOperations.read_file_safely('data.txt')
@@ -166,7 +168,8 @@ if FileOperations.file_exists('data.txt'):
     print(f"File size: {size} bytes")
 ```
 
-**Notes**: 
+**Notes**:
+
 - Uses context managers (`with` statement) for safe file handling
 - Automatically creates parent directories when writing files
 - Generator pattern for memory-efficient processing of large files

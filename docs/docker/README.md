@@ -19,6 +19,7 @@ This section covers enterprise-grade Docker patterns focusing on:
 ## Security Foundation
 
 ### Trusted Base Images
+
 ```dockerfile
 # Use official images with specific tags for reproducibility
 FROM node:18.19-alpine AS base
@@ -29,6 +30,7 @@ export DOCKER_CONTENT_TRUST=1
 ```
 
 ### Non-Root Security
+
 ```dockerfile
 # Create dedicated application user
 RUN addgroup -g 1001 -S appgroup && \
@@ -43,6 +45,7 @@ COPY --chown=appuser:appgroup package*.json ./
 ```
 
 ### Vulnerability Management
+
 ```bash
 # Scan images for security vulnerabilities
 docker scout cves myapp:latest

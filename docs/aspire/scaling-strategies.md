@@ -12,11 +12,11 @@
 1. [Auto-Scaling Fundamentals](#auto-scaling-fundamentals)
 2. [Container Scaling Patterns](#container-scaling-patterns)
 3. [Service Load Balancing](#service-load-balancing)
-4. [Resource-Based Scaling](#resource-based-scaling)
-5. [Orleans Cluster Scaling](#orleans-cluster-scaling)
-6. [Database Connection Scaling](#database-connection-scaling)
-7. [Monitoring and Metrics](#monitoring-and-metrics)
-8. [Configuration Management](#configuration-management)
+4. [Resource-Based Scaling Policies](#resource-based-scaling-policies)
+5. [Orleans Cluster Scaling Patterns](#orleans-cluster-scaling-patterns)
+6. [Monitoring and Alerting Integration](#monitoring-and-alerting-integration)
+7. [Implementation Summary](#implementation-summary)
+8. [Related Patterns](#related-patterns)
 
 ## Auto-Scaling Fundamentals
 

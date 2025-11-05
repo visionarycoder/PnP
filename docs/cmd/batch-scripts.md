@@ -207,8 +207,7 @@ REM ============================================================================
     
     call :LogMessage "DEBUG" "File processed successfully: %~nx1"
     exit /b 0
-```
-
+```cmd
 **Usage**:
 
 ```cmd
@@ -225,8 +224,7 @@ C:\Scripts>enterprise_template.bat
 [Fri 11/01/2025 14:32:15.54] [INFO] Script completed successfully
 [Fri 11/01/2025 14:32:15.55] [INFO] Performing cleanup operations
 [Fri 11/01/2025 14:32:15.56] [INFO] Script execution finished
-```
-
+```cmd
 ## Automated Backup System
 
 **Description**: Enterprise-grade backup automation with versioning, compression, and retention policies
@@ -454,8 +452,7 @@ exit /b %BACKUP_RESULT%
     echo [%TIMESTAMP%] [%LEVEL%] %MESSAGE% >> "%LOG_FILE%"
     
     exit /b 0
-```
-
+```cmd
 **Usage**:
 
 ```cmd
@@ -472,8 +469,7 @@ C:\Scripts>backup_system.bat
 [Fri 11/01/2025 14:30:35.69] [INFO] Cleaning up backups older than 30 days
 [Fri 11/01/2025 14:30:36.12] [INFO] Cleanup completed - 2 old backups removed
 [Fri 11/01/2025 14:30:36.15] [INFO] Backup report generated: D:\Backups\backup_report_20251101.txt
-```
-
+```cmd
 ## System Monitoring & Service Management
 
 **Description**: Comprehensive system monitoring with service health checks, performance monitoring, and automated remediation
@@ -722,8 +718,7 @@ exit /b 0
     echo [%TIMESTAMP%] [%LEVEL%] %MESSAGE% >> "%LOG_FILE%"
     
     exit /b 0
-```
-
+```cmd
 **Usage**:
 
 ```cmd
@@ -747,7 +742,7 @@ C:\Scripts>system_monitor.bat
 [Fri 11/01/2025 15:00:19.12] [INFO] Generating comprehensive system report
 [Fri 11/01/2025 15:00:20.45] [INFO] System report saved: C:\Scripts\system_status_20251101.html
 [Fri 11/01/2025 15:00:20.47] [INFO] System monitoring session completed
-```
+```cmd
 echo ========================================== > "%REPORT_FILE%"
 echo SYSTEM INFORMATION REPORT >> "%REPORT_FILE%"
 echo Generated on: %date% at %time% >> "%REPORT_FILE%"
@@ -780,8 +775,7 @@ ipconfig /all >> "%REPORT_FILE%"
 echo Report generated: %REPORT_FILE%
 echo Opening report in notepad...
 notepad "%REPORT_FILE%"
-```
-
+```cmd
 **Usage**:
 
 ```cmd
@@ -789,8 +783,7 @@ C:\Scripts>system_info.bat
 Generating system information report...
 Report generated: system_report_20251101.txt
 Opening report in notepad...
-```
-
+```cmd
 ## Menu-Driven Script
 
 **Code**:
@@ -877,8 +870,7 @@ goto MENU
 echo Goodbye!
 pause
 exit /b 0
-```
-
+```cmd
 **Usage**:
 
 ```cmd
@@ -901,8 +893,7 @@ OS Name:                   Microsoft Windows 11 Pro
 Total Physical Memory:     16,384 MB
 System Type:              x64-based PC
 Press any key to continue . . .
-```
-
+```cmd
 ## Error Handling and Logging
 
 **Code**:
@@ -959,8 +950,7 @@ if %ERROR_COUNT% gtr 0 (
     echo Check %LOG_FILE% for details.
     type "%LOG_FILE%"
 )
-```
-
+```cmd
 **Usage**:
 
 ```cmd
@@ -975,8 +965,7 @@ Fri 11/01/2025 14:45:12.36: ERROR: Copying files failed
 Fri 11/01/2025 14:45:12.37: WARNING: Deleting temporary files - no files found or access denied
 Fri 11/01/2025 14:45:12.38: Operation completed with 1 errors
 === Operation Finished ===
-```
-
+```cmd
 **Notes**:
 
 **Enterprise Batch Scripting Best Practices**:

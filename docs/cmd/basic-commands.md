@@ -614,7 +614,7 @@ exit /b 0
     exit /b 0
 ```
 
-## Directory Management
+## Advanced Directory Automation
 
 **Description**: Advanced directory operations with comprehensive safety checks and automation features
 

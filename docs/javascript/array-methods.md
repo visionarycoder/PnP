@@ -5,6 +5,7 @@
 **Language/Technology**: JavaScript (ES6+) / TypeScript
 
 **Code**:
+
 ```javascript
 // 1. Filter and Map - Transform and filter arrays
 const filterAndTransform = <T, R>(
@@ -144,6 +145,7 @@ const sortedByAge = sortBy(people, p => p.age);
 ```
 
 **Usage**:
+
 ```javascript
 // Practical example: Process user data
 const userData = [
@@ -176,7 +178,8 @@ console.log(ageCounts);
 // Result: { 25: 2, 30: 1, 35: 1 }
 ```
 
-**Notes**: 
+**Notes**:
+
 - All methods are immutable (don't modify original arrays)
 - Uses ES6+ features (arrow functions, spread operator, etc.)
 - Works in modern browsers (Chrome 45+, Firefox 45+, Safari 10+, Edge 12+)

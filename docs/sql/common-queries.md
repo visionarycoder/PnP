@@ -13,7 +13,7 @@
 -- Secure, parameterized query with explicit column selection and proper indexing hints
 
 -- Standard SQL (parameterized - use with prepared statements)
-SELECT 
+SELECT
     prod.product_id,
     prod.product_name,
     prod.price,
@@ -22,7 +22,7 @@ SELECT
     prod.last_updated
 FROM products prod
 INNER JOIN categories cat ON prod.category_id = cat.category_id
-WHERE prod.stock_quantity > ? 
+WHERE prod.stock_quantity > ?
     AND prod.is_active = 1
     AND prod.price BETWEEN ? AND ?
 ORDER BY prod.price DESC, prod.product_name ASC
@@ -42,7 +42,7 @@ OFFSET ? ROWS FETCH NEXT ? ROWS ONLY; -- SQL Server/PostgreSQL
 -- Enterprise pattern with security, performance, and compliance considerations
 
 WITH order_enriched AS (
-    SELECT 
+    SELECT
         ord.order_id,
         ord.customer_id,
         ord.order_date,
@@ -52,23 +52,23 @@ WITH order_enriched AS (
         DATEDIFF(DAY, ord.order_date, GETDATE()) AS days_since_order,
         -- Window function for customer analytics
         ROW_NUMBER() OVER (
-            PARTITION BY ord.customer_id 
+            PARTITION BY ord.customer_id
             ORDER BY ord.order_date DESC
         ) AS customer_order_sequence
     FROM orders ord
     WHERE ord.order_date >= DATEADD(MONTH, -3, GETDATE())
         AND ord.is_deleted = 0
 )
-SELECT 
+SELECT
     oe.order_id,
     -- PII handling with conditional masking
-    CASE 
+    CASE
         WHEN @user_role = 'ADMIN' THEN cust.customer_name
         ELSE LEFT(cust.customer_name, 1) + '***'
     END AS customer_display_name,
-    CASE 
+    CASE
         WHEN @user_role IN ('ADMIN', 'SUPPORT') THEN cust.email
-        ELSE CONCAT(LEFT(cust.email, 3), '***@', 
+        ELSE CONCAT(LEFT(cust.email, 3), '***@',
                    RIGHT(cust.email, CHARINDEX('@', REVERSE(cust.email)) + 2))
     END AS email_display,
     prod.product_name,
@@ -91,7 +91,7 @@ ORDER BY oe.order_date DESC, oe.order_id ASC;
 -- Enterprise-grade analytics with performance optimization and statistical analysis
 
 WITH sales_metrics AS (
-    SELECT 
+    SELECT
         cat.category_id,
         cat.category_name,
         prod.product_id,
@@ -119,7 +119,7 @@ WITH sales_metrics AS (
         AND prod.is_active = 1
 ),
 category_summary AS (
-    SELECT 
+    SELECT
         category_id,
         category_name,
         COUNT(DISTINCT product_id) AS unique_products,
@@ -134,7 +134,7 @@ category_summary AS (
     FROM sales_metrics
     GROUP BY category_id, category_name
 )
-SELECT 
+SELECT
     cs.category_name,
     cs.unique_products,
     cs.total_line_items,
@@ -144,14 +144,14 @@ SELECT
     CAST(cs.median_unit_price AS DECIMAL(10,2)) AS median_unit_price,
     CAST(cs.revenue_std_deviation AS DECIMAL(10,2)) AS revenue_volatility,
     -- Performance indicators
-    CASE 
+    CASE
         WHEN cs.total_revenue > 50000 THEN 'High Performance'
         WHEN cs.total_revenue > 20000 THEN 'Medium Performance'
         ELSE 'Needs Attention'
     END AS performance_tier,
     -- Revenue share calculation
     CAST(
-        (cs.total_revenue * 100.0) / SUM(cs.total_revenue) OVER() 
+        (cs.total_revenue * 100.0) / SUM(cs.total_revenue) OVER()
         AS DECIMAL(5,2)
     ) AS revenue_share_percent
 FROM category_summary cs
@@ -159,7 +159,7 @@ WHERE cs.total_revenue > @minimum_revenue_threshold -- Parameterized filter
 ORDER BY cs.total_revenue DESC, cs.category_name ASC;
 
 -- 4. Subquery - Find customers with above-average orders
-SELECT 
+SELECT
     c.customer_id,
     c.customer_name,
     COUNT(o.order_id) AS order_count,
@@ -184,18 +184,18 @@ WHERE cd.active = 1
 -- 6. INSERT with SELECT
 -- Copy active customers to a marketing list
 INSERT INTO marketing_list (customer_id, customer_name, email, segment)
-SELECT 
+SELECT
     c.customer_id,
     c.customer_name,
     c.email,
-    CASE 
+    CASE
         WHEN total_spent > 1000 THEN 'VIP'
         WHEN total_spent > 500 THEN 'Premium'
         ELSE 'Standard'
     END AS segment
 FROM customers c
 INNER JOIN (
-    SELECT 
+    SELECT
         customer_id,
         SUM(total_amount) AS total_spent
     FROM orders
@@ -211,11 +211,11 @@ WHERE status = 'COMPLETED'
   AND order_date < DATE_SUB(CURRENT_DATE, INTERVAL 2 YEAR);
 
 -- 8. CASE statement for conditional logic
-SELECT 
+SELECT
     product_id,
     product_name,
     stock_quantity,
-    CASE 
+    CASE
         WHEN stock_quantity = 0 THEN 'Out of Stock'
         WHEN stock_quantity < 10 THEN 'Low Stock'
         WHEN stock_quantity < 50 THEN 'Medium Stock'
@@ -227,7 +227,7 @@ ORDER BY stock_quantity ASC;
 -- 9. Common Table Expression (CTE)
 -- Find customers and their most recent order
 WITH RecentOrders AS (
-    SELECT 
+    SELECT
         customer_id,
         order_id,
         order_date,
@@ -235,7 +235,7 @@ WITH RecentOrders AS (
         ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY order_date DESC) AS rn
     FROM orders
 )
-SELECT 
+SELECT
     c.customer_name,
     c.email,
     ro.order_id,
@@ -247,7 +247,7 @@ WHERE c.active = 1;
 
 -- 10. EXISTS clause for checking related records
 -- Find customers who have never placed an order
-SELECT 
+SELECT
     customer_id,
     customer_name,
     email,
@@ -267,6 +267,8 @@ ORDER BY registration_date DESC;
 -- Enterprise patterns that work across major database platforms
 
 -- Universal date range filtering with parameterized inputs
+
+```sql
 -- SQL Server / Azure SQL
 CREATE PROCEDURE GetSalesReport_SQLSERVER
     @start_date DATE,
@@ -275,9 +277,9 @@ CREATE PROCEDURE GetSalesReport_SQLSERVER
 AS
 BEGIN
     SET NOCOUNT ON;
-    
+
     WITH monthly_sales AS (
-        SELECT 
+        SELECT
             YEAR(o.order_date) AS year_num,
             MONTH(o.order_date) AS month_num,
             FORMAT(o.order_date, 'yyyy-MM') AS month_key,
@@ -294,13 +296,13 @@ BEGIN
             AND o.order_date <= @end_date
             AND o.order_status = 'COMPLETED'
             AND (@category_filter IS NULL OR c.category_name = @category_filter)
-        GROUP BY 
+        GROUP BY
             YEAR(o.order_date),
             MONTH(o.order_date),
             FORMAT(o.order_date, 'yyyy-MM'),
             c.category_name
     )
-    SELECT 
+    SELECT
         ms.year_num,
         ms.month_num,
         ms.month_key,
@@ -311,20 +313,20 @@ BEGIN
         CAST(ms.avg_order_value AS DECIMAL(10,2)) AS avg_order_value,
         -- Comparative metrics
         LAG(ms.revenue) OVER (
-            PARTITION BY ms.category_name 
+            PARTITION BY ms.category_name
             ORDER BY ms.year_num, ms.month_num
         ) AS previous_month_revenue,
-        CASE 
+        CASE
             WHEN LAG(ms.revenue) OVER (
-                PARTITION BY ms.category_name 
+                PARTITION BY ms.category_name
                 ORDER BY ms.year_num, ms.month_num
             ) > 0 THEN
                 CAST(
                     ((ms.revenue - LAG(ms.revenue) OVER (
-                        PARTITION BY ms.category_name 
+                        PARTITION BY ms.category_name
                         ORDER BY ms.year_num, ms.month_num
                     )) * 100.0) / LAG(ms.revenue) OVER (
-                        PARTITION BY ms.category_name 
+                        PARTITION BY ms.category_name
                         ORDER BY ms.year_num, ms.month_num
                     ) AS DECIMAL(5,2)
                 )
@@ -333,6 +335,7 @@ BEGIN
     FROM monthly_sales ms
     ORDER BY ms.category_name, ms.year_num DESC, ms.month_num DESC;
 END;
+```
 
 -- PostgreSQL equivalent with JSON aggregation
 CREATE OR REPLACE FUNCTION get_sales_report_postgresql(
@@ -345,7 +348,7 @@ CREATE OR REPLACE FUNCTION get_sales_report_postgresql(
 BEGIN
     RETURN QUERY
     WITH monthly_sales AS (
-        SELECT 
+        SELECT
             EXTRACT(YEAR FROM o.order_date)::INTEGER AS year_num,
             EXTRACT(MONTH FROM o.order_date)::INTEGER AS month_num,
             TO_CHAR(o.order_date, 'YYYY-MM') AS month_key,
@@ -362,13 +365,13 @@ BEGIN
             AND o.order_date <= p_end_date
             AND o.order_status = 'COMPLETED'
             AND (p_category_filter IS NULL OR c.category_name = p_category_filter)
-        GROUP BY 
+        GROUP BY
             EXTRACT(YEAR FROM o.order_date),
             EXTRACT(MONTH FROM o.order_date),
             TO_CHAR(o.order_date, 'YYYY-MM'),
             c.category_name
     )
-    SELECT 
+    SELECT
         jsonb_build_object(
             'year', ms.year_num,
             'month', ms.month_num,
@@ -382,21 +385,21 @@ BEGIN
             ),
             'growth_analysis', jsonb_build_object(
                 'previous_month_revenue', LAG(ms.revenue) OVER (
-                    PARTITION BY ms.category_name 
+                    PARTITION BY ms.category_name
                     ORDER BY ms.year_num, ms.month_num
                 ),
-                'growth_rate_percent', 
-                CASE 
+                'growth_rate_percent',
+                CASE
                     WHEN LAG(ms.revenue) OVER (
-                        PARTITION BY ms.category_name 
+                        PARTITION BY ms.category_name
                         ORDER BY ms.year_num, ms.month_num
                     ) > 0 THEN
                         ROUND(
                             ((ms.revenue - LAG(ms.revenue) OVER (
-                                PARTITION BY ms.category_name 
+                                PARTITION BY ms.category_name
                                 ORDER BY ms.year_num, ms.month_num
                             )) * 100.0) / LAG(ms.revenue) OVER (
-                                PARTITION BY ms.category_name 
+                                PARTITION BY ms.category_name
                                 ORDER BY ms.year_num, ms.month_num
                             ), 2
                         )
@@ -416,7 +419,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Efficient pagination with offset alternatives
 WITH ranked_products AS (
-    SELECT 
+    SELECT
         p.product_id,
         p.product_name,
         p.price,
@@ -431,7 +434,7 @@ WITH ranked_products AS (
         AND (@price_min IS NULL OR p.price >= @price_min)
         AND (@price_max IS NULL OR p.price <= @price_max)
 )
-SELECT 
+SELECT
     rp.product_id,
     rp.product_name,
     CAST(rp.price AS DECIMAL(10,2)) AS price,
@@ -442,7 +445,7 @@ SELECT
     CAST(CEILING(rp.total_count / CAST(@page_size AS FLOAT)) AS INT) AS total_pages,
     @current_page AS current_page
 FROM ranked_products rp
-WHERE rp.row_num BETWEEN (@current_page - 1) * @page_size + 1 
+WHERE rp.row_num BETWEEN (@current_page - 1) * @page_size + 1
                      AND @current_page * @page_size
 ORDER BY rp.row_num;
 
@@ -454,7 +457,7 @@ CREATE PROCEDURE SearchProductsCrossPlatform
 AS
 BEGIN
     SET NOCOUNT ON;
-    
+
     -- Parse category filter
     DECLARE @category_table TABLE (category_id INT);
     IF @category_ids IS NOT NULL
@@ -464,9 +467,9 @@ BEGIN
         FROM STRING_SPLIT(@category_ids, ',')
         WHERE ISNUMERIC(value) = 1;
     END
-    
+
     WITH search_results AS (
-        SELECT 
+        SELECT
             p.product_id,
             p.product_name,
             p.description,
@@ -474,15 +477,15 @@ BEGIN
             c.category_name,
             p.created_date,
             -- Relevance scoring
-            (CASE 
+            (CASE
                 WHEN p.product_name LIKE '%' + @search_term + '%' THEN 10
                 ELSE 0
             END +
-            CASE 
+            CASE
                 WHEN p.description LIKE '%' + @search_term + '%' THEN 5
                 ELSE 0
             END +
-            CASE 
+            CASE
                 WHEN c.category_name LIKE '%' + @search_term + '%' THEN 3
                 ELSE 0
             END) AS relevance_score,
@@ -492,7 +495,7 @@ BEGIN
         FROM products p
         INNER JOIN categories c ON p.category_id = c.category_id
         LEFT JOIN (
-            SELECT 
+            SELECT
                 oi.product_id,
                 SUM(oi.quantity) AS total_sold,
                 AVG(CAST(pr.rating AS DECIMAL(3,2))) AS avg_rating
@@ -505,7 +508,7 @@ BEGIN
         ) ps ON p.product_id = ps.product_id
         WHERE p.is_active = 1
             AND (
-                @search_term IS NULL 
+                @search_term IS NULL
                 OR p.product_name LIKE '%' + @search_term + '%'
                 OR p.description LIKE '%' + @search_term + '%'
                 OR c.category_name LIKE '%' + @search_term + '%'
@@ -515,7 +518,7 @@ BEGIN
                 OR c.category_id IN (SELECT category_id FROM @category_table)
             )
     )
-    SELECT 
+    SELECT
         sr.product_id,
         sr.product_name,
         sr.description,
@@ -527,7 +530,7 @@ BEGIN
         CAST(sr.avg_customer_rating AS DECIMAL(3,2)) AS avg_customer_rating
     FROM search_results sr
     WHERE sr.relevance_score > 0 OR @search_term IS NULL
-    ORDER BY 
+    ORDER BY
         CASE WHEN @sort_order = 'relevance' THEN sr.relevance_score END DESC,
         CASE WHEN @sort_order = 'price_asc' THEN sr.price END ASC,
         CASE WHEN @sort_order = 'price_desc' THEN sr.price END DESC,
@@ -550,45 +553,45 @@ AS
 BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON; -- Automatic rollback on errors
-    
+
     DECLARE @error_number INT = 0;
     DECLARE @error_message NVARCHAR(4000) = '';
     DECLARE @transaction_id UNIQUEIDENTIFIER = NEWID();
-    
+
     BEGIN TRY
         BEGIN TRANSACTION ProcessOrder;
-        
+
         -- Validate customer
         IF NOT EXISTS (
-            SELECT 1 FROM customers 
+            SELECT 1 FROM customers
             WHERE customer_id = @customer_id AND is_active = 1
         )
         BEGIN
             THROW 50001, 'Invalid or inactive customer ID', 1;
         END
-        
+
         -- Create order header
         INSERT INTO orders (
-            customer_id, order_date, order_status, 
+            customer_id, order_date, order_status,
             payment_method, transaction_id, created_date
         )
         VALUES (
             @customer_id, GETUTCDATE(), 'PENDING',
             @payment_method, @transaction_id, GETUTCDATE()
         );
-        
+
         SET @order_id = SCOPE_IDENTITY();
-        
+
         -- Process order items from JSON
         WITH parsed_items AS (
-            SELECT 
+            SELECT
                 JSON_VALUE(value, '$.product_id') AS product_id,
                 CAST(JSON_VALUE(value, '$.quantity') AS INT) AS quantity,
                 CAST(JSON_VALUE(value, '$.unit_price') AS DECIMAL(10,2)) AS unit_price
             FROM OPENJSON(@order_items)
         ),
         validated_items AS (
-            SELECT 
+            SELECT
                 pi.product_id,
                 pi.quantity,
                 pi.unit_price,
@@ -604,53 +607,53 @@ BEGIN
         INSERT INTO order_items (
             order_id, product_id, quantity, unit_price, line_total
         )
-        SELECT 
+        SELECT
             @order_id,
             vi.product_id,
             vi.quantity,
             vi.unit_price,
             vi.quantity * vi.unit_price
         FROM validated_items vi;
-        
+
         -- Update inventory
         UPDATE p
-        SET 
+        SET
             stock_quantity = p.stock_quantity - oi.quantity,
             last_sale_date = GETUTCDATE()
         FROM products p
         INNER JOIN order_items oi ON p.product_id = oi.product_id
         WHERE oi.order_id = @order_id;
-        
+
         -- Calculate order total
         UPDATE orders
         SET total_amount = (
-            SELECT SUM(line_total) 
-            FROM order_items 
+            SELECT SUM(line_total)
+            FROM order_items
             WHERE order_id = @order_id
         )
         WHERE order_id = @order_id;
-        
+
         -- Log successful processing
         INSERT INTO order_processing_log (
-            order_id, transaction_id, processing_stage, 
+            order_id, transaction_id, processing_stage,
             status, message, created_date
         )
         VALUES (
             @order_id, @transaction_id, 'ORDER_CREATED',
             'SUCCESS', 'Order processed successfully', GETUTCDATE()
         );
-        
+
         COMMIT TRANSACTION ProcessOrder;
-        
+
     END TRY
     BEGIN CATCH
         IF @@TRANCOUNT > 0
             ROLLBACK TRANSACTION ProcessOrder;
-        
-        SELECT 
+
+        SELECT
             @error_number = ERROR_NUMBER(),
             @error_message = ERROR_MESSAGE();
-        
+
         -- Log error details
         INSERT INTO order_processing_log (
             order_id, transaction_id, processing_stage,
@@ -660,7 +663,7 @@ BEGIN
             ISNULL(@order_id, 0), @transaction_id, 'ORDER_PROCESSING',
             'ERROR', @error_message, @error_number, GETUTCDATE()
         );
-        
+
         -- Re-throw error for caller handling
         THROW;
     END CATCH

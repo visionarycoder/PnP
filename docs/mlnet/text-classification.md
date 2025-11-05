@@ -508,7 +508,8 @@ foreach (var result in results)
 }
 ```
 
-**Notes**: 
+**Notes**:
+
 - Use SDCA Maximum Entropy for large datasets and fast training
 - LBfgs Maximum Entropy provides better accuracy for smaller datasets
 - Naive Bayes works well for text with clear feature separation
@@ -518,7 +519,8 @@ foreach (var result in results)
 
 **Performance**: Training time scales with data size and feature complexity. Prediction is fast (< 10ms per document). Memory usage depends on vocabulary size and model complexity.
 
-**Related Snippets**: 
+**Related Snippets**:
+
 - [Sentiment Analysis](sentiment-analysis.md) - Specialized sentiment classification
 - [Topic Modeling](topic-modeling.md) - Unsupervised text clustering
 - [Model Evaluation](model-evaluation.md) - Comprehensive model assessment

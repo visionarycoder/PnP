@@ -59,18 +59,21 @@ exit /b 0
 ## Key Features
 
 ### Production Standards
+
 - **Error Handling**: Comprehensive `%ERRORLEVEL%` checking and meaningful error messages
 - **Input Validation**: Parameter validation with usage instructions
 - **Logging**: Structured logging with timestamps for audit trails
 - **Security**: Input sanitization and safe file operations
 
 ### Modern Practices
+
 - **Delayed Expansion**: Proper use of `setlocal enabledelayedexpansion` for variable scope
 - **Function Design**: Modular functions with local variable scoping
 - **Path Handling**: Robust handling of paths with spaces using quotes
 - **Documentation**: Complete header comments with version and purpose
 
 ### Enterprise Features
+
 - **Robocopy Integration**: Reliable file operations with progress reporting
 - **PowerShell Hybrid**: Integration with PowerShell for advanced operations
 - **Service Management**: Windows service control and monitoring
@@ -79,24 +82,28 @@ exit /b 0
 ## Categories
 
 ### File & Directory Operations
+
 - **Advanced Navigation**: `pushd`/`popd`, relative paths with `%~dp0`
 - **Robust File Operations**: `robocopy` with retry logic and logging
 - **Permission Management**: `icacls` for access control and security
 - **Disk Management**: Space monitoring, cleanup automation
 
 ### System Administration
+
 - **Service Control**: Start, stop, configure Windows services
 - **Process Management**: `tasklist`, `taskkill` with filtering and safety checks
 - **Registry Operations**: Safe key manipulation with backup procedures
 - **Event Log Management**: Reading and writing Windows Event Log
 
 ### Network & Security
+
 - **Connectivity Testing**: Advanced `ping`, `tracert` with logging
 - **Network Configuration**: `netsh` commands for interface management  
 - **Security Scanning**: Port checking, service enumeration
 - **Certificate Management**: SSL/TLS certificate operations
 
 ### Automation & Integration
+
 - **Scheduled Tasks**: `schtasks` for automated job management
 - **WMI Queries**: `wmic` for system information gathering
 - **PowerShell Integration**: Hybrid scripts leveraging both engines

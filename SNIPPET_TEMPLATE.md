@@ -5,6 +5,7 @@
 **Language/Technology**: [e.g., C#, Python, JavaScript, SQL, Bash, etc.]
 
 **Code**:
+
 ```[language]
 [Your code here]
 
@@ -14,6 +15,7 @@
 ```
 
 **Usage**:
+
 ```[language]
 [Provide clear examples of how to use the snippet]
 
@@ -23,11 +25,13 @@
 ```
 
 **Prerequisites** (if any):
+
 - Dependency or library version requirements
 - Platform requirements (e.g., Windows, Linux, specific OS version)
 - Configuration requirements
 
-**Notes**: 
+**Notes**:
+
 - Any important considerations when using this snippet
 - Performance implications
 - Security considerations
@@ -36,10 +40,12 @@
 - Links to related snippets or documentation
 
 **Related Snippets**:
+
 - [Related Snippet 1](../category/related-snippet.md)
 - [Related Snippet 2](../category/another-snippet.md)
 
 **References**:
+
 - [External documentation](https://example.com)
 - [Blog post or article](https://example.com)
 

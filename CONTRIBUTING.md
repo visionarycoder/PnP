@@ -324,7 +324,6 @@ Run this once after cloning:
 
 git config commit.template .gitmessage.txt
 
-
 ## License
 
 By contributing to this repository, you agree that your contributions will be subject to the same license as the repository.

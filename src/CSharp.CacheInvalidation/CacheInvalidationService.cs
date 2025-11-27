@@ -12,36 +12,6 @@ using Microsoft.Extensions.Options;
 namespace CSharp.CacheInvalidation;
 
 // Core cache invalidation interfaces
-public interface ICacheInvalidationService
-{
-    Task InvalidateAsync(string key, CancellationToken token = default);
-    Task InvalidateAsync(IEnumerable<string> keys, CancellationToken token = default);
-    Task InvalidateByPatternAsync(string pattern, CancellationToken token = default);
-    Task InvalidateByTagAsync(string tag, CancellationToken token = default);
-    Task InvalidateByTagsAsync(IEnumerable<string> tags, CancellationToken token = default);
-    Task InvalidateDependenciesAsync(string dependencyKey, CancellationToken token = default);
-    Task InvalidateHierarchyAsync(string hierarchyKey, CancellationToken token = default);
-    void RegisterInvalidationRule(ICacheInvalidationRule rule);
-    Task<ICacheInvalidationStatistics> GetStatisticsAsync(CancellationToken token = default);
-}
-
-public interface ICacheInvalidationRule
-{
-    string Name { get; }
-    bool ShouldInvalidate(CacheInvalidationContext context);
-    Task<IEnumerable<string>> GetKeysToInvalidateAsync(CacheInvalidationContext context, 
-        CancellationToken token = default);
-}
-
-public class CacheInvalidationContext
-{
-    public string TriggerKey { get; set; } = string.Empty;
-    public string TriggerType { get; set; } = string.Empty;
-    public DateTime Timestamp { get; set; }
-    public IDictionary<string, object> Properties { get; set; } = new Dictionary<string, object>();
-    public string UserId { get; set; } = string.Empty;
-    public string TenantId { get; set; } = string.Empty;
-}
 
 // Comprehensive cache invalidation service
 public class CacheInvalidationService : ICacheInvalidationService, IDisposable

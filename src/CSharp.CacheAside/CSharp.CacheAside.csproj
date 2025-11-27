@@ -3,6 +3,8 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <RootNamespace>CSharp.CacheAside</RootNamespace>
+      <TargetFramework>net9.0</TargetFramework>
+      <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>

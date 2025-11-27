@@ -1,11 +1,6 @@
-using Microsoft.Extensions.Logging;
-
 namespace CSharp.ActorModel;
 
 // Example actor messages
-public record IncrementMessage(int Amount = 1) : ActorMessage;
-public record GetCountMessage() : ActorMessage;
-public record CountResponseMessage(int Count) : ActorMessage;
 
 // Example Counter actor implementation
 public class CounterActor : ActorBase

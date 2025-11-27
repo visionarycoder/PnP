@@ -1,25 +1,10 @@
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 
 namespace CSharp.ProducerConsumer;
 
 // Extension method for ToAsyncEnumerable
-public static class AsyncEnumerableExtensions
-{
-    public static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(
-        this IEnumerable<T> source,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        foreach (var item in source)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            yield return item;
-            await Task.Yield(); // Allow other work to proceed
-        }
-    }
-}
 
 class Program
 {

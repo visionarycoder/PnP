@@ -45,7 +45,7 @@ Follow the **strict template format** from `SNIPPET_TEMPLATE.md`:
 ### Adding New Code Snippets
 1. Copy `SNIPPET_TEMPLATE.md` to appropriate category folder
 2. Follow the exact template structure - all sections are required
-3. Update the category's `README.md` index with your snippet
+3. Update the category's `readme.md` index with your snippet
 4. Use **language-specific best practices** from `CONTRIBUTING.md`
 
 ### Working with C# Library
@@ -58,7 +58,7 @@ dotnet test --collect:"XPlat Code Coverage"
 
 ### Key Development Commands
 - Testing: `dotnet test` (xUnit with coverlet.collector for coverage)
-- Building: `dotnet build` (targets .NET 9.0)
+- Building: `dotnet build` (supports .NET 8.0, 9.0, and 10.0)
 - Solution: Use `Internal.Snippet.sln` for multi-project operations
 
 ## Critical Implementation Details
@@ -106,7 +106,7 @@ Before adding snippets, verify:
 
 ## Integration Points & Dependencies
 
-- **Target Framework**: .NET 9.0 with nullable reference types enabled
+- **Target Framework**: .NET 8.0+ (supports 8.0, 9.0, and 10.0) with nullable reference types enabled
 - **Test Framework**: xUnit with Visual Studio test runner integration
 - **Coverage**: Coverlet collector for code coverage analysis
 - **Solution Structure**: Multi-project with shared dependencies

@@ -1,0 +1,501 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/.best-practices/">
+    <File Path=".best-practices/radar.md" />
+  </Folder>
+  <Folder Name="/.best-practices/cloud-architecture/">
+    <File Path=".best-practices/cloud-architecture/readme.md" />
+  </Folder>
+  <Folder Name="/.best-practices/data-analytics/">
+    <File Path=".best-practices/data-analytics/ReadMe.md" />
+  </Folder>
+  <Folder Name="/.best-practices/devops/">
+    <File Path=".best-practices/devops/ReadMe.md" />
+  </Folder>
+  <Folder Name="/.best-practices/integration/">
+    <File Path=".best-practices/integration/ReadMe.md" />
+  </Folder>
+  <Folder Name="/.best-practices/observability/">
+    <File Path=".best-practices/observability/ReadMe.md" />
+  </Folder>
+  <Folder Name="/.best-practices/security/">
+    <File Path=".best-practices/security/ReadMe.md" />
+  </Folder>
+  <Folder Name="/.best-practices/software-architecture/">
+    <File Path=".best-practices/software-architecture/ReadMe.md" />
+  </Folder>
+  <Folder Name="/.best-practices/templates/">
+    <File Path=".best-practices/templates/ReadMe.md" />
+  </Folder>
+  <Folder Name="/.copilot/">
+    <File Path=".copilot/design-patterns.md" />
+    <File Path=".copilot/repo-standards.md" />
+  </Folder>
+  <Folder Name="/.github/">
+    <File Path=".github/copilot-instructions.md" />
+    <File Path=".github/ReadMe.md" />
+  </Folder>
+  <Folder Name="/.github/chatmodes/">
+    <File Path=".github/chatmodes/Architect.chatmode.md" />
+    <File Path=".github/chatmodes/CSharpDeveloper.chatmode.md" />
+  </Folder>
+  <Folder Name="/.github/instructions/">
+    <File Path=".github/instructions/algorithms.instructions.md" />
+    <File Path=".github/instructions/angular.instructions.md" />
+    <File Path=".github/instructions/aspire.instructions.md" />
+    <File Path=".github/instructions/bash.instructions.md" />
+    <File Path=".github/instructions/cmd.instructions.md" />
+    <File Path=".github/instructions/csharp.instructions.md" />
+    <File Path=".github/instructions/database.instructions.md" />
+    <File Path=".github/instructions/design-patterns.instructions.md" />
+    <File Path=".github/instructions/docker.instructions.md" />
+    <File Path=".github/instructions/git.instructions.md" />
+    <File Path=".github/instructions/graphql.instructions.md" />
+    <File Path=".github/instructions/html.instructions.md" />
+    <File Path=".github/instructions/integration.instructions.md" />
+    <File Path=".github/instructions/javascript.instructions.md" />
+    <File Path=".github/instructions/mlnet.instructions.md" />
+    <File Path=".github/instructions/notebooks.instructions.md" />
+    <File Path=".github/instructions/orleans.instructions.md" />
+    <File Path=".github/instructions/playwright.instructions.md" />
+    <File Path=".github/instructions/powershell.instructions.md" />
+    <File Path=".github/instructions/python.instructions.md" />
+    <File Path=".github/instructions/sql.instructions.md" />
+    <File Path=".github/instructions/testing.instructions.md" />
+    <File Path=".github/instructions/utilities.instructions.md" />
+    <File Path=".github/instructions/web.instructions.md" />
+  </Folder>
+  <Folder Name="/.github/ISSUE-TEMPLATE/">
+    <File Path=".github/ISSUE-TEMPLATE/radar-change-proposal.md" />
+  </Folder>
+  <Folder Name="/.github/workflows/">
+    <File Path=".github/workflows/publish.yml" />
+    <File Path=".github/workflows/update-adr-index,yml" />
+    <File Path=".github/workflows/update_changelog.yml" />
+    <File Path=".github/workflows/verify-copilot-instructions.yml" />
+  </Folder>
+  <Folder Name="/.nuget/" />
+  <Folder Name="/.nuget/NuGet/">
+    <File Path=".nuget/NuGet/NuGet.config" />
+  </Folder>
+  <Folder Name="/docs/" />
+  <Folder Name="/docs/snippets/">
+    <File Path="docs/readme.md" />
+  </Folder>
+  <Folder Name="/docs/snippets/algorithms/">
+    <File Path="docs/algorithms/data-structures.md" />
+    <File Path="docs/algorithms/dynamic-programming.md" />
+    <File Path="docs/algorithms/graph-algorithms.md" />
+    <File Path="docs/algorithms/README.md" />
+    <File Path="docs/algorithms/searching-algorithms.md" />
+    <File Path="docs/algorithms/sorting-algorithms.md" />
+    <File Path="docs/algorithms/string-algorithms.md" />
+  </Folder>
+  <Folder Name="/docs/snippets/aspire/">
+    <File Path="docs/aspire/configuration-management.md" />
+    <File Path="docs/aspire/deployment-strategies.md" />
+    <File Path="docs/aspire/document-pipeline-architecture.md" />
+    <File Path="docs/aspire/health-monitoring.md" />
+    <File Path="docs/aspire/local-development.md" />
+    <File Path="docs/aspire/local-ml-development.md" />
+    <File Path="docs/aspire/ml-service-orchestration.md" />
+    <File Path="docs/aspire/orleans-integration.md" />
+    <File Path="docs/aspire/production-deployment.md" />
+    <File Path="docs/aspire/README.md" />
+    <File Path="docs/aspire/resource-dependencies.md" />
+    <File Path="docs/aspire/scaling-strategies.md" />
+    <File Path="docs/aspire/service-orchestration.md" />
+  </Folder>
+  <Folder Name="/docs/snippets/bash/">
+    <File Path="docs/bash/file-operations.md" />
+    <File Path="docs/bash/README.md" />
+    <File Path="docs/bash/system-admin.md" />
+    <File Path="docs/bash/text-processing.md" />
+  </Folder>
+  <Folder Name="/docs/snippets/cmd/">
+    <File Path="docs/cmd/basic-commands.md" />
+    <File Path="docs/cmd/batch-scripts.md" />
+    <File Path="docs/cmd/README.md" />
+  </Folder>
+  <Folder Name="/docs/snippets/csharp/">
+    <File Path="docs/csharp/actor-model.md" />
+    <File Path="docs/csharp/async-enumerable.md" />
+    <File Path="docs/csharp/async-lazy-loading.md" />
+    <File Path="docs/csharp/azure-managed-identity.md" />
+    <File Path="docs/csharp/cache-aside.md" />
+    <File Path="docs/csharp/cache-invalidation.md" />
+    <File Path="docs/csharp/cancellation-patterns.md" />
+    <File Path="docs/csharp/circuit-breaker.md" />
+    <File Path="docs/csharp/concurrent-collections.md" />
+    <File Path="docs/csharp/distributed-cache.md" />
+    <File Path="docs/csharp/event-sourcing.md" />
+    <File Path="docs/csharp/exception-handling.md" />
+    <File Path="docs/csharp/functional-linq.md" />
+    <File Path="docs/csharp/jwt-authentication.md" />
+    <File Path="docs/csharp/linq-extensions.md" />
+    <File Path="docs/csharp/logging-patterns.md" />
+    <File Path="docs/csharp/memoization.md" />
+    <File Path="docs/csharp/memory-pools.md" />
+    <File Path="docs/csharp/message-queue.md" />
+    <File Path="docs/csharp/micro-optimizations.md" />
+    <File Path="docs/csharp/oauth-integration.md" />
+    <File Path="docs/csharp/password-security.md" />
+    <File Path="docs/csharp/performance-linq.md" />
+    <File Path="docs/csharp/polly-patterns.md" />
+    <File Path="docs/csharp/producer-consumer.md" />
+    <File Path="docs/csharp/pub-sub.md" />
+    <File Path="docs/csharp/query-optimization.md" />
+    <File Path="docs/csharp/reader-writer-locks.md" />
+    <File Path="docs/csharp/README.md" />
+    <File Path="docs/csharp/retry-pattern.md" />
+    <File Path="docs/csharp/role-based-authorization.md" />
+    <File Path="docs/csharp/saga-patterns.md" />
+    <File Path="docs/csharp/span-operations.md" />
+    <File Path="docs/csharp/string-truncate.md" />
+    <File Path="docs/csharp/task-combinators.md" />
+    <File Path="docs/csharp/vectorization.md" />
+    <File Path="docs/csharp/web-security.md" />
+  </Folder>
+  <Folder Name="/docs/snippets/database/">
+    <File Path="docs/database/ml-database-examples.md" />
+    <File Path="docs/database/ml-databases.md" />
+    <File Path="docs/database/README.md" />
+  </Folder>
+  <Folder Name="/docs/snippets/design-patterns/">
+    <File Path="docs/design-patterns/README.md" />
+  </Folder>
+  <Folder Name="/docs/snippets/design-patterns/behavioral/">
+    <File Path="docs/design-patterns/chain-of-responsibility.md" />
+    <File Path="docs/design-patterns/command.md" />
+    <File Path="docs/design-patterns/interpreter.md" />
+    <File Path="docs/design-patterns/iterator.md" />
+    <File Path="docs/design-patterns/mediator.md" />
+    <File Path="docs/design-patterns/memento.md" />
+    <File Path="docs/design-patterns/observer.md" />
+    <File Path="docs/design-patterns/state.md" />
+    <File Path="docs/design-patterns/strategy.md" />
+    <File Path="docs/design-patterns/template-method.md" />
+    <File Path="docs/design-patterns/visitor.md" />
+  </Folder>
+  <Folder Name="/docs/snippets/design-patterns/creational/">
+    <File Path="docs/design-patterns/abstract-factory.md" />
+    <File Path="docs/design-patterns/builder.md" />
+    <File Path="docs/design-patterns/factory-method.md" />
+    <File Path="docs/design-patterns/prototype.md" />
+    <File Path="docs/design-patterns/singleton.md" />
+  </Folder>
+  <Folder Name="/docs/snippets/design-patterns/structural/">
+    <File Path="docs/design-patterns/adapter.md" />
+    <File Path="docs/design-patterns/bridge.md" />
+    <File Path="docs/design-patterns/composite.md" />
+    <File Path="docs/design-patterns/decorator.md" />
+    <File Path="docs/design-patterns/facade.md" />
+    <File Path="docs/design-patterns/flyweight.md" />
+    <File Path="docs/design-patterns/proxy.md" />
+    <File Path="docs/design-patterns/singleton.md" />
+  </Folder>
+  <Folder Name="/docs/snippets/docker/">
+    <File Path="docs/docker/dockerfile-examples.md" />
+    <File Path="docs/docker/README.md" />
+  </Folder>
+  <Folder Name="/docs/snippets/git/">
+    <File Path="docs/git/advanced-techniques.md" />
+    <File Path="docs/git/common-commands.md" />
+    <File Path="docs/git/README.md" />
+    <File Path="docs/git/worktrees.md" />
+  </Folder>
+  <Folder Name="/docs/snippets/graphql/">
+    <File Path="docs/graphql/authorization.md" />
+    <File Path="docs/graphql/database-integration.md" />
+    <File Path="docs/graphql/dataloader-patterns.md" />
+    <File Path="docs/graphql/error-handling.md" />
+    <File Path="docs/graphql/mlnet-integration.md" />
+    <File Path="docs/graphql/mutation-patterns.md" />
+    <File Path="docs/graphql/orleans-integration.md" />
+    <File Path="docs/graphql/performance-optimization.md" />
+    <File Path="docs/graphql/query-patterns.md" />
+    <File Path="docs/graphql/README.md" />
+    <File Path="docs/graphql/realtime-processing.md" />
+    <File Path="docs/graphql/schema-design.md" />
+    <File Path="docs/graphql/subscription-patterns.md" />
+  </Folder>
+  <Folder Name="/docs/snippets/integration/">
+    <File Path="docs/integration/audit-compliance.md" />
+    <File Path="docs/integration/authentication-flow.md" />
+    <File Path="docs/integration/authorization-patterns.md" />
+    <File Path="docs/integration/cicd-pipelines.md" />
+    <File Path="docs/integration/container-orchestration.md" />
+    <File Path="docs/integration/data-flow.md" />
+    <File Path="docs/integration/data-governance.md" />
+    <File Path="docs/integration/distributed-tracing.md" />
+    <File Path="docs/integration/end-to-end-workflow.md" />
+    <File Path="docs/integration/environment-management.md" />
+    <File Path="docs/integration/error-handling.md" />
+    <File Path="docs/integration/health-monitoring.md" />
+    <File Path="docs/integration/logging-strategy.md" />
+    <File Path="docs/integration/metrics-collection.md" />
+    <File Path="docs/integration/README.md" />
+    <File Path="docs/integration/scaling-strategies.md" />
+    <File Path="docs/integration/service-communication.md" />
+  </Folder>
+  <Folder Name="/docs/snippets/javascript/">
+    <File Path="docs/javascript/array-methods.md" />
+    <File Path="docs/javascript/README.md" />
+  </Folder>
+  <Folder Name="/docs/snippets/mlnet/">
+    <File Path="docs/mlnet/batch-processing.md" />
+    <File Path="docs/mlnet/custom-model-training.md" />
+    <File Path="docs/mlnet/feature-engineering.md" />
+    <File Path="docs/mlnet/model-deployment.md" />
+    <File Path="docs/mlnet/model-evaluation.md" />
+    <File Path="docs/mlnet/named-entity-recognition.md" />
+    <File Path="docs/mlnet/orleans-integration.md" />
+    <File Path="docs/mlnet/README.md" />
+    <File Path="docs/mlnet/realtime-processing.md" />
+    <File Path="docs/mlnet/sentiment-analysis.md" />
+    <File Path="docs/mlnet/text-classification.md" />
+    <File Path="docs/mlnet/topic-modeling.md" />
+  </Folder>
+  <Folder Name="/docs/snippets/notebooks/">
+    <File Path="docs/notebooks/readme.md" />
+  </Folder>
+  <Folder Name="/docs/snippets/orleans/">
+    <File Path="docs/orleans/database-integration.md" />
+    <File Path="docs/orleans/document-processing-grains.md" />
+    <File Path="docs/orleans/error-handling.md" />
+    <File Path="docs/orleans/external-services.md" />
+    <File Path="docs/orleans/grain-fundamentals.md" />
+    <File Path="docs/orleans/grain-placement.md" />
+    <File Path="docs/orleans/monitoring-diagnostics.md" />
+    <File Path="docs/orleans/performance-optimization.md" />
+    <File Path="docs/orleans/README.md" />
+    <File Path="docs/orleans/state-management.md" />
+    <File Path="docs/orleans/streaming-patterns.md" />
+    <File Path="docs/orleans/testing-strategies.md" />
+  </Folder>
+  <Folder Name="/docs/snippets/powershell/">
+    <File Path="docs/powershell/active-directory.md" />
+    <File Path="docs/powershell/automation-scripts.md" />
+    <File Path="docs/powershell/file-operations.md" />
+    <File Path="docs/powershell/network-operations.md" />
+    <File Path="docs/powershell/powershell-basics.md" />
+    <File Path="docs/powershell/README.md" />
+    <File Path="docs/powershell/system-admin.md" />
+  </Folder>
+  <Folder Name="/docs/snippets/python/">
+    <File Path="docs/python/file-operations.md" />
+    <File Path="docs/python/README.md" />
+  </Folder>
+  <Folder Name="/docs/snippets/sql/">
+    <File Path="docs/sql/common-queries.md" />
+    <File Path="docs/sql/README.md" />
+  </Folder>
+  <Folder Name="/docs/snippets/utilities/">
+    <File Path="docs/utilities/configuration-helpers.md" />
+    <File Path="docs/utilities/general-utilities.md" />
+    <File Path="docs/utilities/logging-utilities.md" />
+    <File Path="docs/utilities/README.md" />
+  </Folder>
+  <Folder Name="/docs/snippets/web/">
+    <File Path="docs/web/accessibility.md" />
+    <File Path="docs/web/css-layouts.md" />
+    <File Path="docs/web/html-templates.md" />
+    <File Path="docs/web/README.md" />
+  </Folder>
+  <Folder Name="/scripts/">
+    <File Path="scripts/setup-ml-databases.ps1" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path=".gitmessage.txt" />
+    <File Path="CONTRIBUTING.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Build.targets" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="README.md" />
+    <File Path="SNIPPET_TEMPLATE.md" />
+  </Folder>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Algorithms/">
+    <Project Path="src/Algorithm.DataStructures/Algorithm.DataStructures.csproj" />
+    <Project Path="src/Algorithm.DynamicProgramming/Algorithm.DynamicProgramming.csproj" />
+    <Project Path="src/Algorithm.GraphAlgorithms/Algorithm.GraphAlgorithms.csproj" />
+    <Project Path="src/Algorithm.SearchingAlgorithms/Algorithm.SearchingAlgorithms.csproj" />
+    <Project Path="src/Algorithm.SortingAlgorithms/Algorithm.SortingAlgorithms.csproj" />
+    <Project Path="src/Algorithm.StringAlgorithms/Algorithm.StringAlgorithms.csproj" />
+  </Folder>
+  <Folder Name="/src/Aspire/">
+    <Project Path="src/Aspire.ConfigurationManagement/Aspire.ConfigurationManagement.csproj" />
+    <Project Path="src/Aspire.DeploymentStrategies/Aspire.DeploymentStrategies.csproj" />
+    <Project Path="src/Aspire.DocumentPipelineArchitecture/Aspire.DocumentPipelineArchitecture.csproj" />
+    <Project Path="src/Aspire.HealthMonitoring/Aspire.HealthMonitoring.csproj" />
+    <Project Path="src/Aspire.LocalDevelopment/Aspire.LocalDevelopment.csproj" />
+    <Project Path="src/Aspire.LocalMLDevelopment/Aspire.LocalMLDevelopment.csproj" />
+    <Project Path="src/Aspire.MLServiceOrchestration/Aspire.MLServiceOrchestration.csproj" />
+    <Project Path="src/Aspire.OrleansIntegration/Aspire.OrleansIntegration.csproj" />
+    <Project Path="src/Aspire.ProductionDeployment/Aspire.ProductionDeployment.csproj" />
+    <Project Path="src/Aspire.ResourceDependencies/Aspire.ResourceDependencies.csproj" />
+    <Project Path="src/Aspire.ScalingStrategies/Aspire.ScalingStrategies.csproj" />
+    <Project Path="src/Aspire.ServiceOrchestration/Aspire.ServiceOrchestration.csproj" />
+  </Folder>
+  <Folder Name="/src/Bash/">
+    <Project Path="src/Bash.FileOperations/Bash.FileOperations.csproj" />
+    <Project Path="src/Bash.SystemAdmin/Bash.SystemAdmin.csproj" />
+    <Project Path="src/Bash.TextProcessing/Bash.TextProcessing.csproj" />
+  </Folder>
+  <Folder Name="/src/Cmd/">
+    <Project Path="src/Cmd.BasicCommands/Cmd.BasicCommands.csproj" />
+    <Project Path="src/Cmd.BatchScripts/Cmd.BatchScripts.csproj" />
+  </Folder>
+  <Folder Name="/src/CSharp/">
+    <Project Path="src/CSharp.ActorModel/CSharp.ActorModel.csproj" />
+    <Project Path="src/CSharp.AsyncEnumerable/CSharp.AsyncEnumerable.csproj" />
+    <Project Path="src/CSharp.AsyncLazyLoading/CSharp.AsyncLazyLoading.csproj" />
+    <Project Path="src/CSharp.AzureManagedIdentity/CSharp.AzureManagedIdentity.csproj" />
+    <Project Path="src/CSharp.CacheAside/CSharp.CacheAside.csproj" />
+    <Project Path="src/CSharp.CacheInvalidation/CSharp.CacheInvalidation.csproj" />
+    <Project Path="src/CSharp.CancellationPatterns/CSharp.CancellationPatterns.csproj" />
+    <Project Path="src/CSharp.CircuitBreaker/CSharp.CircuitBreaker.csproj" />
+    <Project Path="src/CSharp.ConcurrentCollections/CSharp.ConcurrentCollections.csproj" />
+    <Project Path="src/CSharp.DistributedCache/CSharp.DistributedCache.csproj" />
+    <Project Path="src/CSharp.EventSourcing/CSharp.EventSourcing.csproj" />
+    <Project Path="src/CSharp.ExceptionHandling/CSharp.ExceptionHandling.csproj" />
+    <Project Path="src/CSharp.FunctionalLinq/CSharp.FunctionalLinq.csproj" />
+    <Project Path="src/CSharp.JwtAuthentication/CSharp.JwtAuthentication.csproj" />
+    <Project Path="src/CSharp.LinqExtensions/CSharp.LinqExtensions.csproj" />
+    <Project Path="src/CSharp.LoggingPatterns/CSharp.LoggingPatterns.csproj" />
+    <Project Path="src/CSharp.Memoization/CSharp.Memoization.csproj" />
+    <Project Path="src/CSharp.MemoryPools/CSharp.MemoryPools.csproj" />
+    <Project Path="src/CSharp.MessageQueue/CSharp.MessageQueue.csproj" />
+    <Project Path="src/CSharp.MicroOptimizations/CSharp.MicroOptimizations.csproj" />
+    <Project Path="src/CSharp.OAuthIntegration/CSharp.OAuthIntegration.csproj" />
+    <Project Path="src/CSharp.PasswordSecurity/CSharp.PasswordSecurity.csproj" />
+    <Project Path="src/CSharp.PerformanceLinq/CSharp.PerformanceLinq.csproj" />
+    <Project Path="src/CSharp.PollyPatterns/CSharp.PollyPatterns.csproj" />
+    <Project Path="src/CSharp.ProducerConsumer/CSharp.ProducerConsumer.csproj" />
+    <Project Path="src/CSharp.PubSub/CSharp.PubSub.csproj" />
+    <Project Path="src/CSharp.QueryOptimization/CSharp.QueryOptimization.csproj" />
+    <Project Path="src/CSharp.ReaderWriterLocks/CSharp.ReaderWriterLocks.csproj" />
+    <Project Path="src/CSharp.RetryPattern/CSharp.RetryPattern.csproj" />
+    <Project Path="src/CSharp.RoleBasedAuthorization/CSharp.RoleBasedAuthorization.csproj" />
+    <Project Path="src/CSharp.SagaPatterns/CSharp.SagaPatterns.csproj" />
+    <Project Path="src/CSharp.SpanOperations/CSharp.SpanOperations.csproj" />
+    <Project Path="src/CSharp.StringTruncate/CSharp.StringTruncate.csproj" />
+    <Project Path="src/CSharp.TaskCombinators/CSharp.TaskCombinators.csproj" />
+    <Project Path="src/CSharp.Vectorization/CSharp.Vectorization.csproj" />
+    <Project Path="src/CSharp.WebSecurity/CSharp.WebSecurity.csproj" />
+  </Folder>
+  <Folder Name="/src/Database/">
+    <Project Path="src/Database.MLDatabaseExamples/Database.MLDatabaseExamples.csproj" />
+    <Project Path="src/Database.MLDatabases/Database.MLDatabases.csproj" />
+  </Folder>
+  <Folder Name="/src/DesignPatterns/">
+    <Project Path="src/DesignPatterns.Behavioral/DesignPatterns.Behavioral.csproj" />
+    <Project Path="src/DesignPatterns.Creational/DesignPatterns.Creational.csproj" />
+    <Project Path="src/DesignPatterns.Structural/DesignPatterns.Structural.csproj" />
+  </Folder>
+  <Folder Name="/src/Docker/">
+    <Project Path="src/Docker.DockerfileExamples/Docker.DockerfileExamples.csproj" />
+  </Folder>
+  <Folder Name="/src/Git/">
+    <Project Path="src/Git.AdvancedTechniques/Git.AdvancedTechniques.csproj" />
+    <Project Path="src/Git.CommonCommands/Git.CommonCommands.csproj" />
+    <Project Path="src/Git.Worktrees/Git.Worktrees.csproj" />
+  </Folder>
+  <Folder Name="/src/GraphQL/">
+    <Project Path="src/GraphQL.Authorization/GraphQL.Authorization.csproj" />
+    <Project Path="src/GraphQL.DatabaseIntegration/GraphQL.DatabaseIntegration.csproj" />
+    <Project Path="src/GraphQL.DataLoaderPatterns/GraphQL.DataLoaderPatterns.csproj" />
+    <Project Path="src/GraphQL.ErrorHandling/GraphQL.ErrorHandling.csproj" />
+    <Project Path="src/GraphQL.MLNetIntegration/GraphQL.MLNetIntegration.csproj" />
+    <Project Path="src/GraphQL.MutationPatterns/GraphQL.MutationPatterns.csproj" />
+    <Project Path="src/GraphQL.OrleansIntegration/GraphQL.OrleansIntegration.csproj" />
+    <Project Path="src/GraphQL.PerformanceOptimization/GraphQL.PerformanceOptimization.csproj" />
+    <Project Path="src/GraphQL.QueryPatterns/GraphQL.QueryPatterns.csproj" />
+    <Project Path="src/GraphQL.RealtimeProcessing/GraphQL.RealtimeProcessing.csproj" />
+    <Project Path="src/GraphQL.SchemaDesign/GraphQL.SchemaDesign.csproj" />
+    <Project Path="src/GraphQL.SubscriptionPatterns/GraphQL.SubscriptionPatterns.csproj" />
+  </Folder>
+  <Folder Name="/src/Integration/">
+    <Project Path="src/Integration.AuditCompliance/Integration.AuditCompliance.csproj" />
+    <Project Path="src/Integration.AuthenticationFlow/Integration.AuthenticationFlow.csproj" />
+    <Project Path="src/Integration.AuthorizationPatterns/Integration.AuthorizationPatterns.csproj" />
+    <Project Path="src/Integration.CICDPipelines/Integration.CICDPipelines.csproj" />
+    <Project Path="src/Integration.ContainerOrchestration/Integration.ContainerOrchestration.csproj" />
+    <Project Path="src/Integration.DataFlow/Integration.DataFlow.csproj" />
+    <Project Path="src/Integration.DataGovernance/Integration.DataGovernance.csproj" />
+    <Project Path="src/Integration.DistributedTracing/Integration.DistributedTracing.csproj" />
+    <Project Path="src/Integration.EndToEndWorkflow/Integration.EndToEndWorkflow.csproj" />
+    <Project Path="src/Integration.EnvironmentManagement/Integration.EnvironmentManagement.csproj" />
+    <Project Path="src/Integration.ErrorHandling/Integration.ErrorHandling.csproj" />
+    <Project Path="src/Integration.HealthMonitoring/Integration.HealthMonitoring.csproj" />
+    <Project Path="src/Integration.LoggingStrategy/Integration.LoggingStrategy.csproj" />
+    <Project Path="src/Integration.MetricsCollection/Integration.MetricsCollection.csproj" />
+    <Project Path="src/Integration.ScalingStrategies/Integration.ScalingStrategies.csproj" />
+    <Project Path="src/Integration.ServiceCommunication/Integration.ServiceCommunication.csproj" />
+  </Folder>
+  <Folder Name="/src/JavaScript/">
+    <Project Path="src/JavaScript.ArrayMethods/JavaScript.ArrayMethods.csproj" />
+  </Folder>
+  <Folder Name="/src/MLNet/">
+    <Project Path="src/MLNet.BatchProcessing/MLNet.BatchProcessing.csproj" />
+    <Project Path="src/MLNet.CustomModelTraining/MLNet.CustomModelTraining.csproj" />
+    <Project Path="src/MLNet.FeatureEngineering/MLNet.FeatureEngineering.csproj" />
+    <Project Path="src/MLNet.ModelDeployment/MLNet.ModelDeployment.csproj" />
+    <Project Path="src/MLNet.ModelEvaluation/MLNet.ModelEvaluation.csproj" />
+    <Project Path="src/MLNet.NamedEntityRecognition/MLNet.NamedEntityRecognition.csproj" />
+    <Project Path="src/MLNet.OrleansIntegration/MLNet.OrleansIntegration.csproj" />
+    <Project Path="src/MLNet.RealtimeProcessing/MLNet.RealtimeProcessing.csproj" />
+    <Project Path="src/MLNet.SentimentAnalysis/MLNet.SentimentAnalysis.csproj" />
+    <Project Path="src/MLNet.TextClassification/MLNet.TextClassification.csproj" />
+    <Project Path="src/MLNet.TopicModeling/MLNet.TopicModeling.csproj" />
+  </Folder>
+  <Folder Name="/src/Notebook/">
+    <Project Path="src/Notebooks.MLDatabaseExamples/Notebooks.MLDatabaseExamples.csproj" />
+  </Folder>
+  <Folder Name="/src/Orleans/">
+    <Project Path="src/Orleans.DatabaseIntegration/Orleans.DatabaseIntegration.csproj" />
+    <Project Path="src/Orleans.DocumentProcessingGrains/Orleans.DocumentProcessingGrains.csproj" />
+    <Project Path="src/Orleans.ErrorHandling/Orleans.ErrorHandling.csproj" />
+    <Project Path="src/Orleans.ExternalServices/Orleans.ExternalServices.csproj" />
+    <Project Path="src/Orleans.GrainFundamentals/Orleans.GrainFundamentals.csproj" />
+    <Project Path="src/Orleans.GrainPlacement/Orleans.GrainPlacement.csproj" />
+    <Project Path="src/Orleans.MonitoringDiagnostics/Orleans.MonitoringDiagnostics.csproj" />
+    <Project Path="src/Orleans.PerformanceOptimization/Orleans.PerformanceOptimization.csproj" />
+    <Project Path="src/Orleans.StateManagement/Orleans.StateManagement.csproj" />
+    <Project Path="src/Orleans.StreamingPatterns/Orleans.StreamingPatterns.csproj" />
+    <Project Path="src/Orleans.TestingStrategies/Orleans.TestingStrategies.csproj" />
+  </Folder>
+  <Folder Name="/src/PowerSHell/">
+    <Project Path="src/PowerShell.ActiveDirectory/PowerShell.ActiveDirectory.csproj" />
+    <Project Path="src/PowerShell.AutomationScripts/PowerShell.AutomationScripts.csproj" />
+    <Project Path="src/PowerShell.FileOperations/PowerShell.FileOperations.csproj" />
+    <Project Path="src/PowerShell.NetworkOperations/PowerShell.NetworkOperations.csproj" />
+    <Project Path="src/PowerShell.PowerShellBasics/PowerShell.PowerShellBasics.csproj" />
+    <Project Path="src/PowerShell.SystemAdmin/PowerShell.SystemAdmin.csproj" />
+  </Folder>
+  <Folder Name="/src/Python/">
+    <Project Path="src/Python.FileOperations/Python.FileOperations.csproj" />
+  </Folder>
+  <Folder Name="/src/Sql/">
+    <Project Path="src/SQL.CommonQueries/SQL.CommonQueries.csproj" />
+  </Folder>
+  <Folder Name="/src/Utilities/">
+    <Project Path="src/Utilities.ConfigurationHelpers/Utilities.ConfigurationHelpers.csproj" />
+    <Project Path="src/Utilities.GeneralUtilities/Utilities.GeneralUtilities.csproj" />
+    <Project Path="src/Utilities.LoggingUtilities/Utilities.LoggingUtilities.csproj" />
+  </Folder>
+  <Folder Name="/src/Web/">
+    <Project Path="src/Web.Accessibility/Web.Accessibility.csproj" />
+    <Project Path="src/Web.CSSLayouts/Web.CSSLayouts.csproj" />
+    <Project Path="src/Web.HTMLTemplates/Web.HTMLTemplates.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+</Solution>

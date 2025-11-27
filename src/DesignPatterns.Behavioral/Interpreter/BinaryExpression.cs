@@ -1,5 +1,3 @@
-using System.Dynamic;
-
 namespace Snippets.DesignPatterns.Behavioral.Interpreter;
 
 public abstract class BinaryExpression(Expression left, Expression right) : Expression

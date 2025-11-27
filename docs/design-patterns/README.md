@@ -36,6 +36,10 @@ Collection of comprehensive Gang of Four design pattern examples implemented in 
 - [Iterator Pattern](iterator.md) - Provide way to access elements sequentially *(Coming Soon)*
 - [Interpreter Pattern](interpreter.md) - Define grammar and interpreter for language *(Coming Soon)*
 
+### Architectural Patterns
+
+- [Volatility-Based Decomposition](volatility-based-decomposition.md) - Organize components by rate of change to minimize ripple effects
+
 ## Pattern Categories Overview
 
 ### Creational Pattern Overview

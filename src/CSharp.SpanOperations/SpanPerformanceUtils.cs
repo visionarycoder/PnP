@@ -1,8 +1,6 @@
-using System;
 using System.Diagnostics;
-using System.Linq;
 
-namespace Snippets.CSharp.SpanOperations;
+namespace CSharp.SpanOperations;
 
 /// <summary>
 /// Performance comparison utilities for span operations

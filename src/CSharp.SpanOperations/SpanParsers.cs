@@ -1,7 +1,6 @@
-using System;
 using System.Globalization;
 
-namespace Snippets.CSharp.SpanOperations;
+namespace CSharp.SpanOperations;
 
 /// <summary>
 /// High-performance parsers using spans

@@ -53,7 +53,7 @@ var sorter = new Sorter(new QuickSortStrategy());
 var result = await sorter.SortAsync(new[] { 5, 2, 9 });
 ```
 
-# Notes
+## Notes
 
 - Prefer DI for strategy injection.
 - LINQ covers many cases, but Strategy is useful for pluggable algorithms.

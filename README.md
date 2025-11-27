@@ -87,7 +87,7 @@ Cross-platform utility scripts and general-purpose tools.
 ### Finding Snippets
 
 1. Browse the category folders in the `snippets/` directory
-2. Check the README.md in each category for an index of available snippets
+2. Check the readme.md in each category for an index of available snippets
 3. Use GitHub's search functionality to find specific keywords
 
 ### Using a Snippet
@@ -133,7 +133,7 @@ This is a personal repository, but feel free to fork and adapt the structure for
 1. Choose the appropriate category folder
 2. Create a new `.md` file with a descriptive name
 3. Follow the snippet template format
-4. Update the category's README.md index
+4. Update the category's readme.md index
 5. Commit with a clear message
 
 ### Snippet Template

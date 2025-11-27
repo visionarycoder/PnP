@@ -26,7 +26,7 @@ Deliver scalable, resilient, and cost-effective solutions in cloud environments.
 ## 5. Anti-Patterns to Avoid
 
 - Lift-and-shift without modernization
-- Overprovisioning resources
+- Over-provisioning resources
 - Ignoring shared responsibility model
 
 ## 6. Tooling & Ecosystem

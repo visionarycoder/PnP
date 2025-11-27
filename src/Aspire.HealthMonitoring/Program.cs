@@ -1,49 +1,6 @@
 namespace Aspire.HealthMonitoring;
 
 // Health monitoring supporting classes and enums
-public enum HealthStatus
-{
-    Healthy,
-    Degraded,
-    Unhealthy
-}
-
-public record HealthCheckResult(HealthStatus Status, string Description)
-{
-    public static HealthCheckResult Healthy(string description) => new(HealthStatus.Healthy, description);
-    public static HealthCheckResult Degraded(string description) => new(HealthStatus.Degraded, description);
-    public static HealthCheckResult Unhealthy(string description) => new(HealthStatus.Unhealthy, description);
-}
-
-public record ComponentHealthStatus(string Name, HealthStatus Status, string Description, DateTime LastChecked, bool IsCritical);
-
-public record OverallHealthStatus(HealthStatus Status, int TotalComponents, int HealthyComponents, int DegradedComponents, int UnhealthyComponents);
-
-public record HealthStatusUpdate(string ComponentName, HealthStatus Status, string Message, DateTime Timestamp);
-
-public class HealthMonitoringService
-{
-    private readonly Dictionary<string, Func<HealthCheckResult>> _healthChecks = new();
-
-    public void RegisterComponent(string name, Func<HealthCheckResult> healthCheck)
-    {
-        _healthChecks[name] = healthCheck;
-    }
-
-    public OverallHealthStatus GetOverallHealth()
-    {
-        var results = _healthChecks.Values.Select(check => check()).ToList();
-        var total = results.Count;
-        var healthy = results.Count(r => r.Status == HealthStatus.Healthy);
-        var degraded = results.Count(r => r.Status == HealthStatus.Degraded);
-        var unhealthy = results.Count(r => r.Status == HealthStatus.Unhealthy);
-
-        var overallStatus = unhealthy > 0 ? HealthStatus.Unhealthy :
-                           degraded > 0 ? HealthStatus.Degraded : HealthStatus.Healthy;
-
-        return new OverallHealthStatus(overallStatus, total, healthy, degraded, unhealthy);
-    }
-}
 
 /// <summary>
 /// Demonstrates enterprise health monitoring and observability patterns with .NET Aspire

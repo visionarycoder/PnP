@@ -88,7 +88,7 @@ cp SNIPPET_TEMPLATE.md snippets/[category]/[snippet-name].md
 
 ### 5. Update the Category README
 
-After adding a snippet, update the category's `README.md`:
+After adding a snippet, update the category's `readme.md`:
 
 ```markdown
 ## Index

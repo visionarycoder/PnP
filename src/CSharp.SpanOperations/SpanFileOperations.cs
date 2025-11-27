@@ -1,10 +1,6 @@
-using System;
 using System.Buffers;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading.Tasks;
 
-namespace Snippets.CSharp.SpanOperations;
+namespace CSharp.SpanOperations;
 
 /// <summary>
 /// File I/O operations using Memory for async scenarios

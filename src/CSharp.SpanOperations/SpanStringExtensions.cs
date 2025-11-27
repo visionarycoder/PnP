@@ -1,14 +1,4 @@
-using System;
-using System.Buffers;
-using System.Collections.Generic;
-using System.IO;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Snippets.CSharp.SpanOperations;
+namespace CSharp.SpanOperations;
 
 /// <summary>
 /// Span-based string operations for zero-allocation string processing

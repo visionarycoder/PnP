@@ -52,7 +52,7 @@ Ensure that all generated code, documentation, and automation in this repository
 
 ## Documentation Standards
 
-- Every module/service must have a `README.md` with:
+- Every module/service must have a `readme.md` with:
   - Purpose
   - Setup instructions
   - Example usage

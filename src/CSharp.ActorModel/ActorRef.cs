@@ -1,10 +1,8 @@
-using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 
 namespace CSharp.ActorModel;
 
 // Ask message for request-response pattern
-public record AskMessage<TResponse>(IMessage OriginalMessage, TaskCompletionSource<TResponse> ResponsePromise) : ActorMessage;
 
 // Actor reference implementation
 public class ActorRef : IActorRef

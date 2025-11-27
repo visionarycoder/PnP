@@ -1,9 +1,6 @@
-using Microsoft.Extensions.Logging;
-
 namespace CSharp.ActorModel;
 
 // System message base class
-public abstract record SystemMessage() : ActorMessage;
 
 // Base actor implementation
 public abstract class ActorBase : IDisposable

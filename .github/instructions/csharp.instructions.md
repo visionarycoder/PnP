@@ -15,7 +15,7 @@ domain: csharp
 Applies to `.cs`, `.razor`, `.csproj`, and `.sln` files.
 
 ## Language Conventions
-- Target .NET 8.0 SDK.
+- Target .NET 8.0+ SDK (supports .NET 8.0, 9.0, and 10.0).
 - Use primary constructors and collection expressions.
 - Prefer `ref readonly` for public APIs.
 - Avoid `dynamic`; use strong typing.

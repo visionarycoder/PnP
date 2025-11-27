@@ -1,9 +1,6 @@
 namespace CSharp.ActorModel;
 
 // Demo messages for fault tolerance testing
-public record CauseArgumentExceptionMessage() : ActorMessage;
-public record CauseInvalidOperationMessage() : ActorMessage;
-public record NormalMessage(string Text) : ActorMessage;
 
 /// <summary>
 /// Demo actor that demonstrates supervision strategies by throwing various exceptions

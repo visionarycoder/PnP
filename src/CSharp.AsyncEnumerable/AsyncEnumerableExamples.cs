@@ -5,21 +5,6 @@ using System.Text.Json;
 namespace CSharp.AsyncEnumerable;
 
 // Supporting types
-public record SensorReading
-{
-    public DateTime Timestamp { get; init; }
-    public double Temperature { get; init; }
-    public double Humidity { get; init; }
-    public double Pressure { get; init; }
-}
-
-public class PagedResponse<T>
-{
-    public List<T>? Items { get; set; }
-    public bool HasNextPage { get; set; }
-    public int CurrentPage { get; set; }
-    public int TotalPages { get; set; }
-}
 
 // Basic async enumerable implementation
 public static class AsyncEnumerableExamples

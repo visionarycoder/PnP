@@ -6,12 +6,6 @@ using System.Text.RegularExpressions;
 namespace CSharp.AzureManagedIdentity;
 
 // Configuration service interface
-public interface IManagedIdentityConfigurationService
-{
-    Task<string> GetConfigurationValueAsync(string key, CancellationToken cancellationToken = default);
-    Task<T> GetConfigurationValueAsync<T>(string key, CancellationToken cancellationToken = default) where T : class;
-    Task RefreshConfigurationAsync(CancellationToken cancellationToken = default);
-}
 
 // Managed Identity configuration service
 public class ManagedIdentityConfigurationService : IManagedIdentityConfigurationService

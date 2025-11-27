@@ -1,8 +1,7 @@
-using System;
 using System.Numerics;
 using System.Runtime.InteropServices;
 
-namespace Snippets.CSharp.SpanOperations;
+namespace CSharp.SpanOperations;
 
 /// <summary>
 /// Span-based numerical operations with vectorization support

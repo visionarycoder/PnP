@@ -199,8 +199,3 @@ internal class Program
         Console.WriteLine($"  Average Operation Time: {stats.AverageOperationTime.TotalMilliseconds:F2}ms");
     }
 }
-
-public record UserData(string Id, string Name, string Email)
-{
-    public override string ToString() => $"User({Id}, {Name}, {Email})";
-}

@@ -3,6 +3,9 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Override global multi-targeting: Microsoft.DotNet.Interactive.Jupyter requires .NET 9.0 -->
+    <TargetFramework>net9.0</TargetFramework>
+    <TargetFrameworks></TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>

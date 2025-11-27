@@ -1,7 +1,6 @@
 namespace CSharp.ActorModel;
 
 // Demo message for coordination scenarios
-public record CoordinateWorkMessage(params string[] Tasks) : ActorMessage;
 
 /// <summary>
 /// Demo actor that demonstrates supervision and coordination patterns

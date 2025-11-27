@@ -1,8 +1,6 @@
-using System;
 using System.Buffers;
-using System.Linq;
 
-namespace Snippets.CSharp.SpanOperations;
+namespace CSharp.SpanOperations;
 
 /// <summary>
 /// Span-based formatting without allocations

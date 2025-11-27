@@ -1,5 +1,3 @@
-using System.Xml.Linq;
-
 namespace Snippets.DesignPatterns.Structural.Composite;
 
 

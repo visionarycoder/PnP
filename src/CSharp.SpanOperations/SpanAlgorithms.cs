@@ -1,6 +1,4 @@
-using System;
-
-namespace Snippets.CSharp.SpanOperations;
+namespace CSharp.SpanOperations;
 
 /// <summary>
 /// Span-based searching and sorting algorithms
